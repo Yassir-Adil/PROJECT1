@@ -67,3 +67,23 @@
 - Version bumped to 0.2.0 (`versionCode` 2) so the new APK is distinct from 0.1.0.
 - A successful detection still does not steer the tricycle. `HoldNavigationPolicy` keeps speed at 0.
 
+## 2026-10-18 — Phase 5 camera steering is directional only
+
+**Decision:** Drive the virtual tricycle from `NavigationDecisionEngine` → `SteeringCommand` → `SimulatedTricycleController`. Remove `HoldNavigationPolicy`. Do not add a floor segmenter in this build.
+
+**Why**
+
+- A 2D box has a position in the image. It does not have a range. Turning that box into meters would be an invented clearance.
+- An empty detector result is not open space. A box in the center of the image does not prove either side is free. Those cases return Hold. A missing frame, a contradictory sample, or a camera sample that claims metric depth returns Unknown.
+- Straight is reserved for the synthetic map, and only when the authored list has no obstacle in the forward corridor. The map is `left barrel` at (1.0 m, 0.20 m) and `right crate` at (2.6 m, −0.40 m) in the start frame. Those coordinates are written in code. They are not measured by the camera.
+- Decisions flicker if every frame can reverse the wheel. The smoother keeps Hold and Unknown immediate, waits 3 matching frames before a new direction, and waits 5 frames before swapping left and right.
+- MediaPipe’s image segmenter would be a second model, a second camera path, and another accuracy question. It is not required to steer from boxes. Floor segmentation stays `NOT_STARTED` and disabled. No floor mask is treated as open floor.
+- Version bumped to 0.3.0 (`versionCode` 3) so the APK is distinct from 0.2.0.
+
+**Consequences**
+
+- Positive front-wheel angle is still a left turn, matching the kinematic model. Full steer is 0.35 rad and slight steer is 0.15 rad, both inside the existing 30-degree clamp.
+- Camera decision confidence is capped at 0.75. The spoken reason quotes the detector score separately and states that depth is not measured.
+- The on-screen path is a short kinematic sketch of the current command. It is labeled “Illustrative path, not verified.”
+- The physical controller remains a mock and still refuses commands.
+

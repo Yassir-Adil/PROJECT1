@@ -16,8 +16,13 @@ Package `com.triguide.ai`.
 | `CameraSource` | `CameraXSource` binds preview and analysis. Analysis is RGBA, 4:3, about 640×480, `STRATEGY_KEEP_ONLY_LATEST`, same `FILL_CENTER` viewport as the preview |
 | `ObjectDetectionEngine` | `MediaPipeObjectDetectorEngine` — EfficientDet-Lite0 int8, CPU, `LIVE_STREAM`. States: `LOADING`, `READY`, `MODEL_MISSING`, `LOAD_FAILED`. Boxes come only from the result listener |
 | `EnvironmentObservation` | Real labels only after a successful frame. Otherwise `realDetector = false` and the list is empty |
-| `NavigationDecision` | `HoldNavigationPolicy` — speed 0. A detection does not steer |
-| `SteeringCommand` | Speed (m/s) and front-wheel angle (radians) |
+| `SceneObservation` | Camera samples carry preview-space box centers and area fractions. `metricDepthAvailable` stays false. Synthetic samples carry authored robot-frame obstacles |
+| `NavigationDecisionEngine` | Maps one sample to `GuidanceAction`: Straight, Slight left, Left, Slight right, Right, Hold, Unknown. Each decision has a reason and a confidence. Straight is not emitted for camera samples |
+| `TemporalDecisionSmoother` | Hold and Unknown apply immediately. A new direction needs 3 matching frames. A left/right reversal needs 5 |
+| `GuidanceSession` | Separate smoothers for the camera and the synthetic map. Publishes the decision that is currently applied |
+| `SteeringCommand` | Speed (m/s) and front-wheel angle (radians). Positive angle is left |
+| `SyntheticObstacleWorld` | Authored obstacles: left barrel (1.0 m, 0.20 m), right crate (2.6 m, −0.40 m) |
+| `Floor segmentation` | `NOT_STARTED`. Disabled. No segmenter is loaded |
 | `RobotState` | Pose of the rear-axle midpoint plus the applied command |
 | `VirtualRobotController` | `SimulatedTricycleController` steps `TricycleKinematics` |
 | `FutureHardwareController` | `MockHardwareController` — `isMock = true`, `dispatch` returns `accepted = false` |
@@ -30,5 +35,7 @@ Bicycle model of a tricycle: two fixed rear wheels (track width ignored) and one
 ## Screens
 
 Home, Live Vision, Robot Simulation, Test Scenarios (labels only, status `NOT_STARTED`), Diagnostics, Settings.
+
+Live Vision applies camera observations to the virtual robot while the preview is open. The simulator can run manual buttons, the same camera path (it holds when the preview is closed), or the synthetic map. Both screens show the decision, the reason, the confidence, the front-wheel angle, the research-mode line, and the non-verified path label.
 
 `minSdk` 26, `compileSdk` / `targetSdk` 35. JDK 17. Chosen because platforms 34 and 35 are installed on this PC and MediaPipe Tasks samples support API 24+, so 26 stays inside that range.

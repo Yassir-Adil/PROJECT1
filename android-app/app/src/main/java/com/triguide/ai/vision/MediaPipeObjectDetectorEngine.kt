@@ -221,6 +221,7 @@ class MediaPipeObjectDetectorEngine(
             mirrorHorizontally = meta?.mirrorHorizontally == true,
             inferenceLatencyMs = latencyMs,
             fromRealDetector = true,
+            completedAtElapsedMs = SystemClock.elapsedRealtime(),
         )
         errorState.value = null
         if (loggedFirstInference.compareAndSet(false, true)) {

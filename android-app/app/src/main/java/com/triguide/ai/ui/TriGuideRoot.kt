@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -54,14 +55,20 @@ import com.triguide.ai.domain.CameraStartResult
 import com.triguide.ai.domain.DetectionReports
 import com.triguide.ai.domain.DetectorConfig
 import com.triguide.ai.domain.DetectorReadiness
-import com.triguide.ai.domain.HoldNavigationPolicy
+import com.triguide.ai.domain.FloorSegmentationStatus
+import com.triguide.ai.domain.GuidanceSession
+import com.triguide.ai.domain.IllustrativePath
 import com.triguide.ai.domain.MockHardwareController
+import com.triguide.ai.domain.NavigationDecisions
 import com.triguide.ai.domain.PerformanceMonitor
+import com.triguide.ai.domain.SceneObservations
 import com.triguide.ai.domain.SteeringCommand
+import com.triguide.ai.domain.SyntheticObstacleWorld
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
 import com.triguide.ai.vision.MediaPipeObjectDetectorEngine
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 private enum class Screen {
@@ -73,10 +80,25 @@ private enum class Screen {
     Settings,
 }
 
+private enum class RobotDriveMode(val label: String, val description: String) {
+    Manual(
+        label = "Manual drive",
+        description = "Buttons set the virtual speed and front wheel.",
+    ),
+    CameraInformed(
+        label = "Camera-informed",
+        description = "Uses the horizontal position of detection boxes. This screen does not open the camera.",
+    ),
+    SyntheticWorld(
+        label = "Synthetic world",
+        description = "Uses an authored obstacle map. Those positions are not from the camera.",
+    ),
+}
+
 private class AppServices(context: android.content.Context) {
     val performance = PerformanceMonitor()
     val detection = MediaPipeObjectDetectorEngine(context, performance)
-    val navigation = HoldNavigationPolicy()
+    val guidance = GuidanceSession()
     val robot = SimulatedTricycleController()
     val hardware = MockHardwareController()
     val camera = CameraXSource()
@@ -128,6 +150,7 @@ fun TriGuideRoot() {
 private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
     val readiness by services.detection.readiness.collectAsStateWithLifecycle()
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
+    val decision by services.guidance.decision.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -141,7 +164,7 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. Detection does not drive the robot. No physical robot is connected.",
+                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. Camera boxes can steer the virtual robot from their position in the image. That is not a measured clearance. No physical robot is connected.",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 8.dp),
@@ -149,6 +172,8 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
         }
         item { StatusLine("Mode", "Research and Simulation") }
         item { StatusLine("Object detection", "$readiness. $detail") }
+        item { StatusLine("Navigation", "${decision.action.userLabel}. ${decision.perceptionLabel}") }
+        item { StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}") }
         item { StatusLine("Virtual robot", "Kinematic simulator ready") }
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
         item { NavButton("Start Camera", "Open the live camera preview") { onNavigate(Screen.Camera) } }
@@ -190,9 +215,21 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
     )
     val detectorFailed = readiness == DetectorReadiness.MODEL_MISSING || readiness == DetectorReadiness.LOAD_FAILED
     val showBoxes = readiness == DetectorReadiness.READY && frame?.fromRealDetector == true
+    val decision by services.guidance.decision.collectAsStateWithLifecycle()
+    val robotState by services.robot.state.collectAsStateWithLifecycle()
+    val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
+    AssistCameraDrive(services)
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
         Text("Live Vision", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(Modifier.height(8.dp))
+        GuidanceReadout(decision = decision, applied = applied, showPath = true)
+        Spacer(Modifier.height(8.dp))
         Text(
             observation.summary,
             color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
@@ -265,20 +302,21 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(240.dp),
                 ) {
                     AndroidView(
                         factory = { previewView },
                         update = { view ->
+                            val guidance = decision.spokenCue
                             view.contentDescription = when (readiness) {
                                 DetectorReadiness.READY ->
-                                    "Live camera preview. ${observation.summary}"
+                                    "Live camera preview. ${observation.summary} $guidance"
                                 DetectorReadiness.LOADING ->
-                                    "Live camera preview. Detection model is loading. No boxes yet."
+                                    "Live camera preview. Detection model is loading. No boxes yet. $guidance"
                                 DetectorReadiness.MODEL_MISSING ->
-                                    "Live camera preview. Detection model is missing. No boxes."
+                                    "Live camera preview. Detection model is missing. No boxes. $guidance"
                                 DetectorReadiness.LOAD_FAILED ->
-                                    "Live camera preview. Detection model failed to load. No boxes."
+                                    "Live camera preview. Detection model failed to load. No boxes. $guidance"
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -321,12 +359,84 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
 }
 
 @Composable
+private fun AssistCameraDrive(services: AppServices) {
+    LaunchedEffect(services) {
+        var last = android.os.SystemClock.elapsedRealtime()
+        var logged = ""
+        try {
+            while (isActive) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                val dt = ((now - last) / 1000.0).coerceIn(0.0, 0.1)
+                last = now
+                val scene = SceneObservations.fromCamera(
+                    readiness = services.detection.readiness.value,
+                    frame = services.detection.latestFrame.value,
+                    nowElapsedMs = now,
+                )
+                val decision = services.guidance.onCamera(scene)
+                services.robot.setCommand(decision.toSteeringCommand())
+                services.robot.tick(dt)
+                val key = "${decision.action.name}:${decision.reason}"
+                if (key != logged) {
+                    logged = key
+                    android.util.Log.i("TriGuideNav", "${decision.perceptionLabel} ${decision.action} ${decision.reason}")
+                }
+                delay(50)
+            }
+        } finally {
+            services.guidance.resetCamera()
+            services.robot.setCommand(SteeringCommand(0.0, 0.0))
+            services.guidance.markIdle("Camera preview is closed. The virtual robot is holding.")
+        }
+    }
+}
+
+@Composable
 private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
+    var mode by remember { mutableStateOf(RobotDriveMode.Manual) }
     val robotState by services.robot.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) {
-        while (true) {
-            services.robot.tick(0.05)
-            delay(50)
+    val guided by services.guidance.decision.collectAsStateWithLifecycle()
+    val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
+    val readout = if (mode == RobotDriveMode.Manual) NavigationDecisions.manual() else guided
+    LaunchedEffect(mode) {
+        var last = android.os.SystemClock.elapsedRealtime()
+        try {
+            while (isActive) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                val dt = ((now - last) / 1000.0).coerceIn(0.0, 0.1)
+                last = now
+                when (mode) {
+                    RobotDriveMode.Manual -> services.robot.tick(dt)
+                    RobotDriveMode.CameraInformed -> {
+                        val scene = SceneObservations.fromCamera(
+                            readiness = services.detection.readiness.value,
+                            frame = services.detection.latestFrame.value,
+                            nowElapsedMs = now,
+                        )
+                        val decision = services.guidance.onCamera(scene)
+                        services.robot.setCommand(decision.toSteeringCommand())
+                        services.robot.tick(dt)
+                    }
+                    RobotDriveMode.SyntheticWorld -> {
+                        val scene = SyntheticObstacleWorld.observe(services.robot.state.value.pose)
+                        val decision = services.guidance.onSynthetic(scene)
+                        services.robot.setCommand(decision.toSteeringCommand())
+                        services.robot.tick(dt)
+                    }
+                }
+                delay(50)
+            }
+        } finally {
+            if (mode == RobotDriveMode.CameraInformed) {
+                services.guidance.resetCamera()
+            }
+            if (mode == RobotDriveMode.SyntheticWorld) {
+                services.guidance.resetSynthetic()
+            }
+            if (mode != RobotDriveMode.Manual) {
+                services.robot.setCommand(SteeringCommand(0.0, 0.0))
+                services.guidance.markIdle("Assist mode stopped. The virtual robot is holding.")
+            }
         }
     }
     Column(
@@ -338,28 +448,66 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
     ) {
         Text("Robot Simulation", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Text(
-            "Manual tricycle model. Vision is not driving this robot. Wheelbase ${TricycleKinematics.DEFAULT_WHEELBASE_METERS} m.",
+            "Virtual tricycle. Wheelbase ${TricycleKinematics.DEFAULT_WHEELBASE_METERS} m. ${mode.description}",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
+        RobotDriveMode.entries.forEach { entry ->
+            val selected = mode == entry
+            if (selected) {
+                Button(
+                    onClick = { mode = entry },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .semantics { contentDescription = "${entry.label}, selected" },
+                ) {
+                    Text("${entry.label}, selected", fontSize = 18.sp)
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { mode = entry },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .semantics { contentDescription = entry.label },
+                ) {
+                    Text(entry.label, fontSize = 18.sp)
+                }
+            }
+        }
+        GuidanceReadout(decision = readout, applied = applied, showPath = false)
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
                 .semantics {
-                    contentDescription = "Top-down drawing of the virtual robot heading"
+                    contentDescription = "Top-down drawing of the virtual robot. ${IllustrativePath.LABEL}"
                 },
         ) {
             val center = Offset(size.width / 2f, size.height / 2f)
+            val scale = 70f
             drawCircle(color = androidx.compose.ui.graphics.Color(0xFF333333), radius = 8f, center = center)
             rotate(degrees = Math.toDegrees(-robotState.pose.headingRadians).toFloat(), pivot = center) {
-                val path = Path().apply {
+                val sketch = IllustrativePath.preview(applied)
+                val trail = Path()
+                sketch.forEachIndexed { index, pose ->
+                    val x = center.x - (pose.yMeters * scale).toFloat()
+                    val y = center.y - (pose.xMeters * scale).toFloat()
+                    if (index == 0) trail.moveTo(x, y) else trail.lineTo(x, y)
+                }
+                drawPath(
+                    trail,
+                    color = androidx.compose.ui.graphics.Color(0xFFBDBDBD),
+                    style = Stroke(width = 4f),
+                )
+                val body = Path().apply {
                     moveTo(center.x, center.y - 70f)
                     lineTo(center.x - 28f, center.y + 36f)
                     lineTo(center.x + 28f, center.y + 36f)
                     close()
                 }
-                drawPath(path, color = androidx.compose.ui.graphics.Color(0xFFFFE14A))
+                drawPath(body, color = androidx.compose.ui.graphics.Color(0xFFFFE14A))
             }
         }
         Text(
@@ -367,33 +515,45 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
-        Text(
-            "speed ${format(robotState.linearSpeedMps)} m/s, steer ${format(Math.toDegrees(robotState.steeringRadians))} degrees",
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            SmallAction("Forward", "Drive the virtual robot forward") {
-                services.robot.setCommand(SteeringCommand(0.6, robotState.steeringRadians))
+        if (mode == RobotDriveMode.Manual) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SmallAction("Forward", "Drive the virtual robot forward") {
+                    services.robot.setCommand(SteeringCommand(0.6, robotState.steeringRadians))
+                }
+                SmallAction("Back", "Drive the virtual robot backward") {
+                    services.robot.setCommand(SteeringCommand(-0.4, robotState.steeringRadians))
+                }
             }
-            SmallAction("Back", "Drive the virtual robot backward") {
-                services.robot.setCommand(SteeringCommand(-0.4, robotState.steeringRadians))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SmallAction("Steer left", "Steer the virtual front wheel left") {
+                    services.robot.setCommand(SteeringCommand(robotState.linearSpeedMps, 0.35))
+                }
+                SmallAction("Steer right", "Steer the virtual front wheel right") {
+                    services.robot.setCommand(SteeringCommand(robotState.linearSpeedMps, -0.35))
+                }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            SmallAction("Steer left", "Steer the virtual front wheel left") {
-                services.robot.setCommand(SteeringCommand(robotState.linearSpeedMps, 0.35))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SmallAction("Stop", "Stop the virtual robot") {
+                    services.robot.setCommand(SteeringCommand(0.0, 0.0))
+                }
+                SmallAction("Reset", "Reset the virtual robot pose") {
+                    services.robot.reset()
+                }
             }
-            SmallAction("Steer right", "Steer the virtual front wheel right") {
-                services.robot.setCommand(SteeringCommand(robotState.linearSpeedMps, -0.35))
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            SmallAction("Stop", "Stop the virtual robot") {
-                services.robot.setCommand(SteeringCommand(0.0, 0.0))
-            }
-            SmallAction("Reset", "Reset the virtual robot pose") {
-                services.robot.reset()
+        } else {
+            Text(
+                "Manual buttons are off while this mode is driving. Reset is still available.",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+            )
+            Button(
+                onClick = { services.robot.reset() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .semantics { contentDescription = "Reset the virtual robot pose" },
+            ) {
+                Text("Reset pose", fontSize = 18.sp)
             }
         }
         BackButton(onBack)
@@ -411,7 +571,7 @@ private fun ScenariosScreen(onBack: () -> Unit) {
     ) {
         Text("Test Scenarios", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Text(
-            "These labels have not been run. Live Vision can show real boxes when the model loads. These cards do not inject detections.",
+            "These cards are not an indoor evaluation. They do not inject detections. The synthetic map and the navigation unit tests are separate from this list.",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
@@ -444,7 +604,14 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         modelName = DetectorConfig.MODEL_DISPLAY_NAME,
         scoreThreshold = DetectorConfig.SCORE_THRESHOLD,
     )
-    val decision = services.navigation.decide(observation)
+    val smoothed by services.guidance.decision.collectAsStateWithLifecycle()
+    val raw = services.guidance.rawDecision(
+        SceneObservations.fromCamera(
+            readiness = readiness,
+            frame = frame,
+            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+        ),
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -460,8 +627,12 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Real detector loaded", (readiness == DetectorReadiness.READY).toString())
         StatusLine("Observation", observation.summary)
         StatusLine("Observation from a real result", observation.realDetector.toString())
-        StatusLine("Navigation cue", decision.spokenCue)
-        StatusLine("Vision steers the robot", decision.basedOnRealVision.toString())
+        StatusLine("Smoothed decision", "${smoothed.action.userLabel}. ${smoothed.reason}")
+        StatusLine("Smoothed confidence", NavigationDecisions.formatConfidence(smoothed.confidence))
+        StatusLine("Raw decision", "${raw.action.userLabel}. ${raw.reason}")
+        StatusLine("Metric depth used", smoothed.metricDepthUsed.toString())
+        StatusLine("Vision sample", smoothed.basedOnRealVision.toString())
+        StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine(
             "Performance",
             performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
@@ -488,6 +659,8 @@ private fun SettingsScreen(onBack: () -> Unit) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         StatusLine("Research and Simulation Mode", "On. This cannot be turned off in this build.")
         StatusLine("Object detection", "${DetectorConfig.MODEL_DISPLAY_NAME} on device. Confidence floor ${DetectorConfig.SCORE_THRESHOLD}.")
+        StatusLine("Navigation", "Camera mode uses box position in the image. It does not measure distance.")
+        StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
         StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels.")
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")

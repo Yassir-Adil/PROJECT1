@@ -28,6 +28,7 @@ data class DetectionFrame(
     val mirrorHorizontally: Boolean,
     val inferenceLatencyMs: Double?,
     val fromRealDetector: Boolean,
+    val completedAtElapsedMs: Long? = null,
 )
 
 enum class HorizontalZone {

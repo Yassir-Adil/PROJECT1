@@ -14,6 +14,8 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
 | Redmi install | NOT_STARTED | No phone on ADB |
 | Real obstacle detection | PASS_WITH_WARNINGS | MediaPipe EfficientDet-Lite0 loads and runs on the emulator. Accuracy and Redmi are open. See `docs/TEST_RESULTS.md` |
+| Floor segmentation | NOT_STARTED | Disabled in 0.3.0. No floor model is loaded |
+| Camera boxes to virtual steering | PASS_WITH_WARNINGS | Unit tests 48/48 app + 9/9 kinematics. Emulator synthetic wheel moved. Emulator camera held because it saw zero objects. Redmi open |
 
 ## Phase 0 — Bootstrap
 
@@ -48,7 +50,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 - [x] MediaPipe Object Detector on CameraX (`STRATEGY_KEEP_ONLY_LATEST`), real boxes only when the model returns them.
 - [x] Missing-model and load-failure states with no invented boxes.
 - [x] Measured inference latency / FPS on the emulator (not on a phone).
-- [ ] Map detections into guidance that drives the virtual robot. Screen zone text is shown; it is not a distance and it does not steer.
+- [x] Map detections into guidance that drives the virtual robot. Screen zone is image position, not a distance. 0.3.0 steers the virtual robot from that position. Redmi and accuracy remain open.
 - [ ] Audio / haptic feedback.
 - [ ] Controlled indoor test with recorded true positives and false alarms.
 
@@ -57,18 +59,20 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 ## Phase 4 — Virtual steering + three-wheel simulator
 
 - [x] Software model of a three-wheel tricycle (bicycle kinematics) with JVM tests. Manual control screen is in the APK.
-- [ ] Obstacle response and vision-driven commands (detection is not implemented).
+- [x] Obstacle response and vision-driven commands for the virtual robot. Camera commands use image position only. The synthetic map uses authored coordinates.
 - Draw from OpenBot control concepts without requiring a USB robot body.
+- Floor segmentation is a separate item and is NOT_STARTED. It is disabled in 0.3.0.
 
-**Exit criteria:** Simulator responds correctly to synthetic + camera-derived commands. Manual kinematics pass; vision coupling does not.
+**Exit criteria:** Simulator responds correctly to synthetic + camera-derived commands. Synthetic response was seen on the emulator. Camera-derived Hold was seen because the emulator returned zero objects. A camera-derived turn on a real scene is still open.
 
 ## Phase 5 — Integrated navigation mode
 
-- Combine vision → guidance → virtual steering into one “assist” mode.
-- Logging for sessions (privacy-aware; no accidental cloud upload of camera by default).
-- Polish accessibility (TalkBack, large controls if any).
+- [x] Combine vision → guidance → virtual steering while Live Vision is open, and synthetic steering on the simulator.
+- [x] No camera upload. The manifest still has no internet permission.
+- [ ] End-to-end demo on a Redmi.
+- [ ] TalkBack pass. Controls have labels; TalkBack itself was not run.
 
-**Exit criteria:** End-to-end demo script on Redmi, documented limitations.
+**Exit criteria:** End-to-end demo script on Redmi, documented limitations. The virtual path is in 0.3.0. The Redmi script has not been run.
 
 ## Phase 6 — Hardening (later)
 

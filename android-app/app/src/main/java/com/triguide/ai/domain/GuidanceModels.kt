@@ -27,15 +27,32 @@ data class EnvironmentObservation(
 )
 
 interface NavigationDecisionPolicy {
-    fun decide(observation: EnvironmentObservation): NavigationDecision
+    fun decide(observation: SceneObservation): NavigationDecision
 }
 
 data class NavigationDecision(
+    val action: GuidanceAction,
+    val reason: String,
+    val confidence: Float,
     val linearSpeedMps: Double,
     val steeringRadians: Double,
     val spokenCue: String,
     val basedOnRealVision: Boolean,
-)
+    /** True only when authored synthetic positions were used. Camera decisions leave this false. */
+    val metricDepthUsed: Boolean,
+    val perceptionLabel: String,
+) {
+    fun toSteeringCommand(): SteeringCommand = SteeringCommand(linearSpeedMps, steeringRadians)
+
+    fun withNarration(reason: String, confidence: Float): NavigationDecision {
+        val bounded = confidence.coerceIn(0f, 1f)
+        return copy(
+            reason = reason,
+            confidence = bounded,
+            spokenCue = NavigationSpeech.of(action, reason, bounded, perceptionLabel),
+        )
+    }
+}
 
 data class SteeringCommand(
     val linearSpeedMps: Double,
