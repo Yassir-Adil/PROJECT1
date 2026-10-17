@@ -13,7 +13,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
 | Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
 | Redmi install | NOT_STARTED | No phone on ADB |
-| Real obstacle detection | NOT_STARTED | Engine is `NOT_IMPLEMENTED` |
+| Real obstacle detection | PASS_WITH_WARNINGS | MediaPipe EfficientDet-Lite0 loads and runs on the emulator. Accuracy and Redmi are open. See `docs/TEST_RESULTS.md` |
 
 ## Phase 0 — Bootstrap
 
@@ -37,18 +37,22 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 
 ## Phase 2 — Real-time camera pipeline
 
-- CameraX preview + frame analysis pipeline.
-- Performance budget for mid-range phones (target FPS documented).
+- [x] CameraX preview + frame analysis pipeline (`STRATEGY_KEEP_ONLY_LATEST`).
+- [x] Timed analysis callbacks on the emulator (preview about 9–20 FPS in the Phase 3 smoke test).
+- [ ] Same measurement on a Redmi. A mid-range phone budget is still open.
 
-**Exit criteria:** Live preview + timed frame callback measured on device.
+**Exit criteria:** Live preview + timed frame callback measured on device. Emulator only so far.
 
 ## Phase 3 — On-device obstacle / scene cues
 
-- Integrate MediaPipe (and/or TFLite) for detection or depth/segmentation cues.
-- Map detections → left / center / right + near / far style guidance signals.
-- Audio / haptic feedback (TTS or tones); keep UI secondary.
+- [x] MediaPipe Object Detector on CameraX (`STRATEGY_KEEP_ONLY_LATEST`), real boxes only when the model returns them.
+- [x] Missing-model and load-failure states with no invented boxes.
+- [x] Measured inference latency / FPS on the emulator (not on a phone).
+- [ ] Map detections into guidance that drives the virtual robot. Screen zone text is shown; it is not a distance and it does not steer.
+- [ ] Audio / haptic feedback.
+- [ ] Controlled indoor test with recorded true positives and false alarms.
 
-**Exit criteria:** Controlled indoor test with recorded true positives/false alarms.
+**Exit criteria:** Controlled indoor test with recorded true positives/false alarms. Not met. The detector runs; the evaluation does not.
 
 ## Phase 4 — Virtual steering + three-wheel simulator
 

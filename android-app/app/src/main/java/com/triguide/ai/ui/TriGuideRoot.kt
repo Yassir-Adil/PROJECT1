@@ -51,13 +51,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.triguide.ai.BuildConfig
 import com.triguide.ai.camera.CameraXSource
 import com.triguide.ai.domain.CameraStartResult
+import com.triguide.ai.domain.DetectionReports
+import com.triguide.ai.domain.DetectorConfig
+import com.triguide.ai.domain.DetectorReadiness
 import com.triguide.ai.domain.HoldNavigationPolicy
 import com.triguide.ai.domain.MockHardwareController
 import com.triguide.ai.domain.PerformanceMonitor
 import com.triguide.ai.domain.SteeringCommand
-import com.triguide.ai.domain.UnavailableObjectDetectionEngine
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
+import com.triguide.ai.vision.MediaPipeObjectDetectorEngine
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -70,12 +73,12 @@ private enum class Screen {
     Settings,
 }
 
-private class AppServices {
-    val detection = UnavailableObjectDetectionEngine()
+private class AppServices(context: android.content.Context) {
+    val performance = PerformanceMonitor()
+    val detection = MediaPipeObjectDetectorEngine(context, performance)
     val navigation = HoldNavigationPolicy()
     val robot = SimulatedTricycleController()
     val hardware = MockHardwareController()
-    val performance = PerformanceMonitor()
     val camera = CameraXSource()
 }
 
@@ -84,8 +87,12 @@ private const val DISCLAIMER =
 
 @Composable
 fun TriGuideRoot() {
-    val services = remember { AppServices() }
+    val context = LocalContext.current
+    val services = remember { AppServices(context.applicationContext) }
     var screen by remember { mutableStateOf(Screen.Home) }
+    DisposableEffect(services) {
+        onDispose { services.detection.close() }
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
@@ -119,6 +126,8 @@ fun TriGuideRoot() {
 
 @Composable
 private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
+    val readiness by services.detection.readiness.collectAsStateWithLifecycle()
+    val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -132,14 +141,14 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Phone camera, on-device guidance later, and a virtual three-wheel robot. No physical robot is connected.",
+                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. Detection does not drive the robot. No physical robot is connected.",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
         item { StatusLine("Mode", "Research and Simulation") }
-        item { StatusLine("Object detection", services.detection.statusLabel) }
+        item { StatusLine("Object detection", "$readiness. $detail") }
         item { StatusLine("Virtual robot", "Kinematic simulator ready") }
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
         item { NavButton("Start Camera", "Open the live camera preview") { onNavigate(Screen.Camera) } }
@@ -162,15 +171,35 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
         granted = allowed
     }
     var cameraState by remember { mutableStateOf("Idle") }
+    val readiness by services.detection.readiness.collectAsStateWithLifecycle()
+    val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
+    val frame by services.detection.latestFrame.collectAsStateWithLifecycle()
+    val inferenceError by services.detection.inferenceError.collectAsStateWithLifecycle()
     val fps by services.performance.framesPerSecond.collectAsStateWithLifecycle()
+    val frames by services.performance.framesSeen.collectAsStateWithLifecycle()
+    val inferenceFps by services.performance.inferenceFramesPerSecond.collectAsStateWithLifecycle()
+    val lastLatency by services.performance.lastInferenceLatencyMs.collectAsStateWithLifecycle()
+    val averageLatency by services.performance.averageInferenceLatencyMs.collectAsStateWithLifecycle()
+    val inferences by services.performance.inferencesCompleted.collectAsStateWithLifecycle()
+    val observation = DetectionReports.observation(
+        readiness = readiness,
+        detail = detail,
+        frame = frame,
+        modelName = DetectorConfig.MODEL_DISPLAY_NAME,
+        scoreThreshold = DetectorConfig.SCORE_THRESHOLD,
+    )
+    val detectorFailed = readiness == DetectorReadiness.MODEL_MISSING || readiness == DetectorReadiness.LOAD_FAILED
+    val showBoxes = readiness == DetectorReadiness.READY && frame?.fromRealDetector == true
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Live Vision", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Text(
-            "Camera preview only. Object detection is not running.",
-            color = MaterialTheme.colorScheme.onBackground,
+            observation.summary,
+            color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .semantics { contentDescription = observation.summary },
         )
         when {
             !granted -> {
@@ -195,7 +224,6 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                     PreviewView(context).apply {
                         scaleType = PreviewView.ScaleType.FILL_CENTER
                         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                        contentDescription = "Live camera preview. Object detection is off."
                     }
                 }
                 LaunchedEffect(previewView) {
@@ -205,6 +233,7 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                         lifecycleOwner = context as LifecycleOwner,
                         previewView = previewView,
                         onFrameTimestampNs = services.performance::onFrame,
+                        onAnalysisFrame = services.detection::analyze,
                         onResult = { result ->
                             cameraState = when (result) {
                                 CameraStartResult.Streaming -> "Streaming"
@@ -215,9 +244,23 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                     )
                 }
                 Text(
-                    "Status: $cameraState. Preview frames per second: ${fps.roundToInt()}.",
+                    "Camera: $cameraState. ${performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences)}",
                     color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
                 )
+                inferenceError?.let { message ->
+                    val stale = if (showBoxes) {
+                        " Last successful boxes are still shown."
+                    } else {
+                        " No boxes are shown for this error."
+                    }
+                    Text(
+                        "Inference error: $message.$stale",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
@@ -226,18 +269,35 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 ) {
                     AndroidView(
                         factory = { previewView },
+                        update = { view ->
+                            view.contentDescription = when (readiness) {
+                                DetectorReadiness.READY ->
+                                    "Live camera preview. ${observation.summary}"
+                                DetectorReadiness.LOADING ->
+                                    "Live camera preview. Detection model is loading. No boxes yet."
+                                DetectorReadiness.MODEL_MISSING ->
+                                    "Live camera preview. Detection model is missing. No boxes."
+                                DetectorReadiness.LOAD_FAILED ->
+                                    "Live camera preview. Detection model failed to load. No boxes."
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
-                    if (cameraState == "Starting camera") {
+                    DetectionOverlay(
+                        frame = frame,
+                        showBoxes = showBoxes,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    if (cameraState == "Starting camera" || readiness == DetectorReadiness.LOADING) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .semantics { contentDescription = "Camera is starting" },
+                                .semantics { contentDescription = "Camera or detection model is starting" },
                         )
                     }
-                    if (cameraState.startsWith("Failed") || cameraState.startsWith("No camera")) {
+                    if (cameraState.startsWith("Failed") || cameraState.startsWith("No camera") || detectorFailed) {
                         Text(
-                            cameraState,
+                            if (detectorFailed) observation.summary else cameraState,
                             modifier = Modifier
                                 .align(Alignment.Center)
                                 .padding(16.dp),
@@ -253,7 +313,10 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
     }
 
     DisposableEffect(Unit) {
-        onDispose { services.camera.stop() }
+        onDispose {
+            services.camera.stop()
+            services.detection.clearFrame()
+        }
     }
 }
 
@@ -348,13 +411,13 @@ private fun ScenariosScreen(onBack: () -> Unit) {
     ) {
         Text("Test Scenarios", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Text(
-            "These are labels only. None of them have been run, and none of them produce detection results.",
+            "These labels have not been run. Live Vision can show real boxes when the model loads. These cards do not inject detections.",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
-        ScenarioCard("Straight corridor", "NOT_STARTED. Placeholder for a later synthetic path.")
-        ScenarioCard("Obstacle on the left", "NOT_STARTED. No detector is attached.")
-        ScenarioCard("Blocked path", "NOT_STARTED. No detector is attached.")
+        ScenarioCard("Straight corridor", "NOT_STARTED. Not an evaluation set.")
+        ScenarioCard("Obstacle on the left", "NOT_STARTED. This card does not inject an obstacle.")
+        ScenarioCard("Blocked path", "NOT_STARTED. This card does not inject a detection.")
         BackButton(onBack)
     }
 }
@@ -363,10 +426,25 @@ private fun ScenariosScreen(onBack: () -> Unit) {
 private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
     val context = LocalContext.current
     val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    val readiness by services.detection.readiness.collectAsStateWithLifecycle()
+    val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
+    val frame by services.detection.latestFrame.collectAsStateWithLifecycle()
+    val inferenceError by services.detection.inferenceError.collectAsStateWithLifecycle()
     val fps by services.performance.framesPerSecond.collectAsStateWithLifecycle()
     val frames by services.performance.framesSeen.collectAsStateWithLifecycle()
+    val inferenceFps by services.performance.inferenceFramesPerSecond.collectAsStateWithLifecycle()
+    val lastLatency by services.performance.lastInferenceLatencyMs.collectAsStateWithLifecycle()
+    val averageLatency by services.performance.averageInferenceLatencyMs.collectAsStateWithLifecycle()
+    val inferences by services.performance.inferencesCompleted.collectAsStateWithLifecycle()
     val robot by services.robot.state.collectAsStateWithLifecycle()
-    val decision = services.navigation.decide(services.detection.currentObservation())
+    val observation = DetectionReports.observation(
+        readiness = readiness,
+        detail = detail,
+        frame = frame,
+        modelName = DetectorConfig.MODEL_DISPLAY_NAME,
+        scoreThreshold = DetectorConfig.SCORE_THRESHOLD,
+    )
+    val decision = services.navigation.decide(observation)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -377,12 +455,20 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         Text("Diagnostics", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         StatusLine("Version", BuildConfig.VERSION_NAME)
         StatusLine("Camera permission", if (granted) "granted" else "not granted")
-        StatusLine("Detection engine", services.detection.statusLabel)
-        StatusLine("Real detector", services.detection.isRealDetector.toString())
-        StatusLine("Observation", services.detection.currentObservation().summary)
+        StatusLine("Detection engine", readiness.name)
+        StatusLine("Detection detail", detail)
+        StatusLine("Real detector loaded", (readiness == DetectorReadiness.READY).toString())
+        StatusLine("Observation", observation.summary)
+        StatusLine("Observation from a real result", observation.realDetector.toString())
         StatusLine("Navigation cue", decision.spokenCue)
-        StatusLine("Preview FPS", fps.roundToInt().toString())
+        StatusLine("Vision steers the robot", decision.basedOnRealVision.toString())
+        StatusLine(
+            "Performance",
+            performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
+        )
         StatusLine("Preview frames seen", frames.toString())
+        StatusLine("Inferences completed", inferences.toString())
+        StatusLine("Inference error", inferenceError ?: "none")
         StatusLine("Hardware", services.hardware.connectionLabel)
         StatusLine("Hardware accepts commands", services.hardware.dispatch(SteeringCommand(0.0, 0.0)).accepted.toString())
         StatusLine("Sim speed m/s", format(robot.linearSpeedMps))
@@ -401,8 +487,9 @@ private fun SettingsScreen(onBack: () -> Unit) {
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         StatusLine("Research and Simulation Mode", "On. This cannot be turned off in this build.")
+        StatusLine("Object detection", "${DetectorConfig.MODEL_DISPLAY_NAME} on device. Confidence floor ${DetectorConfig.SCORE_THRESHOLD}.")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
-        StatusLine("TalkBack", "Buttons and the camera preview have spoken labels.")
+        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels.")
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text(
             DISCLAIMER,
@@ -475,3 +562,26 @@ private fun ScenarioCard(title: String, body: String) {
 }
 
 private fun format(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)
+
+private fun performanceLine(
+    previewFps: Double,
+    previewFrames: Long,
+    inferenceFps: Double?,
+    lastLatencyMs: Double?,
+    averageLatencyMs: Double?,
+    inferences: Long,
+): String {
+    val preview = when {
+        previewFrames == 0L -> "Preview FPS not measured yet"
+        previewFps == 0.0 -> "Preview frames seen: $previewFrames. FPS window not complete yet"
+        else -> "Preview ${previewFps.roundToInt()} FPS"
+    }
+    val inference = when {
+        inferences == 0L || lastLatencyMs == null -> "Inference latency not measured yet"
+        inferenceFps == null ->
+            "Last inference ${lastLatencyMs.roundToInt()} ms. Inference FPS not measured yet"
+        else ->
+            "Inference ${inferenceFps.roundToInt()} FPS, last ${lastLatencyMs.roundToInt()} ms, average ${averageLatencyMs?.roundToInt() ?: lastLatencyMs.roundToInt()} ms"
+    }
+    return "$preview. $inference."
+}

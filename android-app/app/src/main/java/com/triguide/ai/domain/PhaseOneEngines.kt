@@ -1,31 +1,19 @@
 package com.triguide.ai.domain
 
 /**
- * Explicit non-detector. Returns no objects and never marks the result as real vision.
- */
-class UnavailableObjectDetectionEngine : ObjectDetectionEngine {
-    override val statusLabel: String = "NOT_IMPLEMENTED"
-    override val isRealDetector: Boolean = false
-
-    override fun currentObservation(): EnvironmentObservation {
-        return EnvironmentObservation(
-            summary = "No detection model is loaded. This is not an obstacle reading.",
-            detections = emptyList(),
-            synthetic = false,
-            realDetector = false,
-        )
-    }
-}
-
-/**
- * Holds still. Vision does not steer the virtual robot in this phase.
+ * Holds still. A loaded detector does not steer the virtual robot.
  */
 class HoldNavigationPolicy : NavigationDecisionPolicy {
     override fun decide(observation: EnvironmentObservation): NavigationDecision {
+        val spokenCue = if (observation.realDetector) {
+            "Vision is not steering the robot. ${observation.summary}"
+        } else {
+            "No guidance. ${observation.summary}"
+        }
         return NavigationDecision(
             linearSpeedMps = 0.0,
             steeringRadians = 0.0,
-            spokenCue = "No guidance. Object detection is not implemented.",
+            spokenCue = spokenCue,
             basedOnRealVision = false,
         )
     }

@@ -9,11 +9,11 @@
 5. Persistent on-screen notice: Research and Simulation Mode. Not a certified mobility aid.
 6. TalkBack labels on primary controls and the camera preview.
 7. No internet permission and no camera upload in this build.
-8. Detection interface present, with status `NOT_IMPLEMENTED` and an empty observation. Not a fake detector.
+8. On-device object detection when the bundled model loads. If the model is missing or fails to load, the observation stays empty. No fake boxes.
 
 ## Out of scope
 
 - Buying or building a physical robot.
 - Cloud vision as the default path.
 - Copying GuideLens GPL-3.0 code or its ONNX weights into this app.
-- Claiming on-device obstacle detection before a real model is integrated and measured.
+- Claiming a measured detection accuracy before a labeled indoor test.

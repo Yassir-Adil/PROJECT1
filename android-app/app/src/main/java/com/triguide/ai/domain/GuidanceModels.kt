@@ -4,12 +4,19 @@ import com.triguide.ai.sim.PlanarPose
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Phase 1 does not run a detector. Implementations must not invent objects.
+ * On-device detector. Implementations must not invent objects when the model
+ * is missing, still loading, or failing.
  */
 interface ObjectDetectionEngine {
     val statusLabel: String
     val isRealDetector: Boolean
+    val readiness: kotlinx.coroutines.flow.StateFlow<DetectorReadiness>
+    val statusDetail: kotlinx.coroutines.flow.StateFlow<String>
+    val latestFrame: kotlinx.coroutines.flow.StateFlow<DetectionFrame?>
+    val inferenceError: kotlinx.coroutines.flow.StateFlow<String?>
     fun currentObservation(): EnvironmentObservation
+    fun clearFrame()
+    fun close()
 }
 
 data class EnvironmentObservation(
@@ -68,6 +75,7 @@ interface CameraSource {
         lifecycleOwner: androidx.lifecycle.LifecycleOwner,
         previewView: androidx.camera.view.PreviewView,
         onFrameTimestampNs: (Long) -> Unit,
+        onAnalysisFrame: (androidx.camera.core.ImageProxy, Boolean) -> Unit,
         onResult: (CameraStartResult) -> Unit,
     )
 

@@ -13,15 +13,15 @@ Package `com.triguide.ai`.
 
 | Type | Phase 1–2 behavior |
 | --- | --- |
-| `CameraSource` | `CameraXSource` binds a preview and an analysis callback that only counts frames, then closes each image |
-| `ObjectDetectionEngine` | `UnavailableObjectDetectionEngine` — status `NOT_IMPLEMENTED`, no boxes |
-| `EnvironmentObservation` | Empty detection list; `realDetector = false` |
-| `NavigationDecision` | `HoldNavigationPolicy` — speed 0, cue says detection is not implemented |
+| `CameraSource` | `CameraXSource` binds preview and analysis. Analysis is RGBA, 4:3, about 640×480, `STRATEGY_KEEP_ONLY_LATEST`, same `FILL_CENTER` viewport as the preview |
+| `ObjectDetectionEngine` | `MediaPipeObjectDetectorEngine` — EfficientDet-Lite0 int8, CPU, `LIVE_STREAM`. States: `LOADING`, `READY`, `MODEL_MISSING`, `LOAD_FAILED`. Boxes come only from the result listener |
+| `EnvironmentObservation` | Real labels only after a successful frame. Otherwise `realDetector = false` and the list is empty |
+| `NavigationDecision` | `HoldNavigationPolicy` — speed 0. A detection does not steer |
 | `SteeringCommand` | Speed (m/s) and front-wheel angle (radians) |
 | `RobotState` | Pose of the rear-axle midpoint plus the applied command |
 | `VirtualRobotController` | `SimulatedTricycleController` steps `TricycleKinematics` |
 | `FutureHardwareController` | `MockHardwareController` — `isMock = true`, `dispatch` returns `accepted = false` |
-| `PerformanceMonitor` | Frames per second from real preview callbacks |
+| `PerformanceMonitor` | Preview FPS from analysis callbacks, plus inference latency, rolling average, and inference FPS from completed results only |
 
 ## Virtual chassis
 

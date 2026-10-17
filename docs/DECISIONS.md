@@ -48,3 +48,22 @@
 - No GuideLens source or ONNX file is copied into `android-app/`.
 - Detection status stays `NOT_IMPLEMENTED` until a licensed on-device model is integrated and measured.
 
+## 2026-10-18 — Phase 3 MediaPipe Object Detector
+
+**Decision:** Use MediaPipe Tasks Object Detector (`com.google.mediapipe:tasks-vision:1.1.1`, Apache-2.0) with the official EfficientDet-Lite0 int8 model, CPU delegate, live-stream mode.
+
+**Why**
+
+- 1.1.1 was the newest stable `tasks-vision` on Maven (14 Oct 2026) when this was pinned. `latest.release` was not used, so the build stays reproducible.
+- Google’s object-detector guide recommends EfficientDet-Lite0 as the latency/accuracy default. The int8 file is the mobile size. Input is 320×320, trained on COCO (80 labels).
+- Downloaded from `https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/latest/efficientdet_lite0.tflite`.
+- File size 4,602,795 bytes. SHA-256 `0720BF247BD76E6594EA28FA9C6F7C5242BE774818997DBBEFFC4DA460C723BB`. Header bytes 4–7 are `TFL3`.
+- License: Apache-2.0 for the MediaPipe Tasks library and this EfficientDet-Lite model. COCO 2017 annotations are CC BY 4.0. The `.tflite` is stored at `android-app/app/src/main/assets/models/efficientdet_lite0.tflite` and marked `noCompress` so it can be mapped from assets.
+- CPU delegate only. The official sample’s GPU path is a known crash when the delegate is missing. CPU loaded on the 16 KB-page emulator.
+- Score floor 0.50 and max 5 results, matching the sample’s default threshold and a slightly higher cap so a few obstacles can show.
+- Camera path follows the official Android sample: `ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST`, `OUTPUT_IMAGE_FORMAT_RGBA_8888`, `detectAsync` with a monotonic timestamp, results only from the listener. The RGBA buffer is rotated upright before inference so boxes are in the same space as the preview. Front-camera preview mirroring is applied only when drawing.
+- Analysis is requested around 640×480, 4:3, with a `ViewPort` of `FILL_CENTER` shared with the preview. Phone alignment is still unchecked because the emulator returned no boxes.
+- `tasks-vision` pulls in Google data transport, which merges `INTERNET` and `ACCESS_NETWORK_STATE`. Those two permissions are removed in the app manifest. Detection does not download a model or upload frames. Confirmed with `aapt dump permissions` on the 0.2.0 APK.
+- Version bumped to 0.2.0 (`versionCode` 2) so the new APK is distinct from 0.1.0.
+- A successful detection still does not steer the tricycle. `HoldNavigationPolicy` keeps speed at 0.
+
