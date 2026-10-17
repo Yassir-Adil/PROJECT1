@@ -15,4 +15,7 @@
 - AVDs listed by `emulator -list-avds`: `Medium_Phone_API_36`, `Pixel_8a`.
 - `adb devices` on 2026-10-18 during the environment audit showed **no** authorized phone.
 
-On-device results are recorded in `docs/TEST_RESULTS.md` only when an install actually runs.
+## Checked on 2026-10-18
+
+- Emulator `Pixel_8a` (API 36 Play Store system image): APK installed and `MainActivity` became the visible resumed activity. Camera permission and buttons were not used.
+- Physical Redmi: not connected.

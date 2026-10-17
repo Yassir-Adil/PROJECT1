@@ -1,27 +1,25 @@
 # Progress Log
 
+## 2026-10-18 — Phase 1 APK and Phase 2 kinematics
+
+**Statuses:** environment PASS_WITH_WARNINGS, foundation Option B, Phase 1 build PASS, emulator launch PASS_WITH_WARNINGS, kinematics tests PASS, Redmi NOT_STARTED.
+
+### Done this session
+
+- Re-checked the toolchain (JDK 17, SDK 34/35, Studio already installed, adb, two AVDs, no phone).
+- Cloned GuideLens (full shallow), MediaPipe samples (sparse Android detection/segmentation), and OpenBot docs (sparse). Upstream trees stay gitignored.
+- Confirmed GuideLens ONNX files are real protobufs, GPL-3.0, and `compileSdk` 36. Did not build GuideLens. Did not copy its code or weights.
+- Chose Option B and created `android-app/` (Compose, CameraX, explicit non-detector, manual tricycle simulator).
+- `gradlew.bat :app:assembleDebug :sim-core:test` → BUILD SUCCESSFUL, 9/9 tests, APK at `outputs/apk/TriGuideAI-0.1.0-debug.apk`.
+- Installed that APK on emulator `Pixel_8a` and confirmed `MainActivity` was the resumed visible activity. Did not tap camera or simulator controls. Stopped the emulator afterward.
+
+### Still open
+
+- USB debugging on the Redmi, then install and a real camera check.
+- MediaPipe detection (later). No fake detector is in the APK.
+- Private git remote, if you want one.
+
 ## 2026-10-18 — Phase 0 mostly complete
 
-### Done
-
-- Workspace was empty → added `AGENTS.md`, `.cursor/rules/*`, plan, research, audit, progress, decisions, known issues, README, `.gitignore`, env script.
-- Cursor **user rule** added: strong models + TriGuide constraints.
-- Git repo initialized locally; bootstrap files staged (no commit until you ask).
-- Installed **JDK 17** (user-local ZIP; MSI needed admin and failed with 1603).
-- Set User env: `JAVA_HOME`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, PATH for JDK17 + platform-tools.
-- Android **cmdline-tools** installed; licenses accepted; confirmed platforms 34/35 and build-tools present.
-- Research notes drafted for OpenBot, GuideLens, MediaPipe, Project Guideline.
-
-### Not done yet
-
-- Android Studio (optional but recommended)
-- First Android app module / APK
-- Phone ADB pairing (`adb devices`)
-- GitHub Connect + Private remote
-- First git commit (waiting for your OK)
-
-### Next
-
-1. You: Cursor **Auto-review** + Update if shown + reconnect terminal/Cursor for new PATH.
-2. You: send the main project prompt.
-3. Agent: scaffold Android app (Phase 1) and attempt `assembleDebug`.
+- Docs, agent rules, JDK 17 user install, SDK packages 34/35, and research notes were already in the workspace before this session.
+- Android Studio is installed (the earlier note that it was missing was wrong and is corrected in `docs/ENVIRONMENT_AUDIT.md`).

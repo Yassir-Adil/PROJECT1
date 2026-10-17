@@ -4,7 +4,11 @@ Android AI navigation and **virtual** three-wheel robotic steering simulation fo
 
 ## Status
 
-**Phase 0 — Environment bootstrap.** Docs and agent rules are in place. Android toolchain setup is still required before the first APK build. See `docs/ENVIRONMENT_AUDIT.md` and `docs/PROGRESS.md`.
+**Debug APK 0.1.0 is built.** Live camera preview is wired. Object detection is not implemented. The robot screen is a manual virtual tricycle. See `docs/TEST_RESULTS.md` and `docs/PROGRESS.md`.
+
+APK: `outputs/apk/TriGuideAI-0.1.0-debug.apk`
+
+The app was installed and launched on the local `Pixel_8a` emulator. It has not been installed on a Redmi yet.
 
 ## Quick links
 
@@ -12,8 +16,10 @@ Android AI navigation and **virtual** three-wheel robotic steering simulation fo
 | --- | --- |
 | `AGENTS.md` | Standing instructions for AI agents |
 | `docs/DEVELOPMENT_PLAN.md` | Phased plan |
-| `docs/RESEARCH_NOTES.md` | OpenBot, GuideLens, MediaPipe, etc. |
-| `docs/DECISIONS.md` | Why we chose X |
+| `docs/DECISIONS.md` | Why Option B |
+| `docs/TEST_RESULTS.md` | Commands that actually ran |
+| `docs/SAFETY_LIMITATIONS.md` | What this build must not be used for |
+| `research/model-audit.md` | GuideLens ONNX files |
 | `docs/KNOWN_ISSUES.md` | Open blockers |
 
 ## Local setup (high level)

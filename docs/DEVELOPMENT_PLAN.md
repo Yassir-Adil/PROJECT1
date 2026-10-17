@@ -2,24 +2,38 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
-## Phase 0 — Bootstrap (current)
+## Execution status — 2026-10-18
+
+The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tricycle. The older headings below keep the longer roadmap.
+
+| Work | Status | Evidence |
+| --- | --- | --- |
+| Environment audit | PASS_WITH_WARNINGS | `docs/ENVIRONMENT_AUDIT.md` |
+| Foundation choice | Option B | `docs/DECISIONS.md` |
+| Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
+| Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
+| Redmi install | NOT_STARTED | No phone on ADB |
+| Real obstacle detection | NOT_STARTED | Engine is `NOT_IMPLEMENTED` |
+
+## Phase 0 — Bootstrap
 
 - [x] Environment audit
 - [x] `AGENTS.md` + `.cursor/rules`
 - [x] Progress / decisions / research docs
-- [ ] JDK 17 + complete Android SDK / Studio
+- [x] JDK 17 + Android SDK + Android Studio (Studio was already installed)
 - [ ] `adb devices` sees Redmi
-- [ ] Git init + optional Private GitHub remote
+- [x] Git init (local). Private GitHub remote still optional
 
-**Exit criteria:** `sdkmanager`/`adb` usable; empty Android app project can assemble.
+**Exit criteria:** `sdkmanager`/`adb` usable; Android app project can assemble. Assemble result is in `docs/TEST_RESULTS.md`.
 
 ## Phase 1 — Android skeleton APK
 
-- Create Kotlin Android app (CameraX placeholder, accessibility-friendly shell).
-- Gradle Wrapper, CI-friendly structure, debug APK.
-- Install on device via ADB.
+- [x] Kotlin Android app (CameraX preview, accessibility-minded shell).
+- [x] Gradle Wrapper and debug APK (`outputs/apk/TriGuideAI-0.1.0-debug.apk`).
+- [x] Install and launch on emulator `Pixel_8a` (activity visible). Interactive camera/TalkBack not tapped.
+- [ ] Install on a Redmi via ADB.
 
-**Exit criteria:** APK installs and launches on the phone (verified, not assumed).
+**Exit criteria:** APK installs and launches on the phone (verified, not assumed). Phone check is still open. Emulator launch is recorded in `docs/TEST_RESULTS.md`.
 
 ## Phase 2 — Real-time camera pipeline
 
@@ -38,11 +52,11 @@
 
 ## Phase 4 — Virtual steering + three-wheel simulator
 
-- Software model of three-wheel robot (kinematics + simple obstacle response).
-- Overlay or debug view of commanded steering from vision signals.
-- Draw from OpenBot control concepts without requiring USB robot body.
+- [x] Software model of a three-wheel tricycle (bicycle kinematics) with JVM tests. Manual control screen is in the APK.
+- [ ] Obstacle response and vision-driven commands (detection is not implemented).
+- Draw from OpenBot control concepts without requiring a USB robot body.
 
-**Exit criteria:** Simulator responds correctly to synthetic + camera-derived commands.
+**Exit criteria:** Simulator responds correctly to synthetic + camera-derived commands. Manual kinematics pass; vision coupling does not.
 
 ## Phase 5 — Integrated navigation mode
 

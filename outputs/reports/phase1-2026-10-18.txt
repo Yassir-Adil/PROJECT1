@@ -1,0 +1,17 @@
+TriGuide Phase 1–2 local results — 2026-10-18
+
+Gradle (android-app, JAVA_HOME=JDK 17.0.20.1):
+  gradlew.bat :app:assembleDebug :sim-core:test --stacktrace --no-daemon
+  BUILD SUCCESSFUL in 2m 49s, exit 0
+  stripDebugDebugSymbols warning: libandroidx.graphics.path.so, libimage_processing_util_jni.so packaged unstripped
+
+Unit tests: TricycleKinematicsTest 9 tests, 0 failures, 0 errors
+
+APK: outputs/apk/TriGuideAI-0.1.0-debug.apk (11504492 bytes)
+
+adb devices before emulator: none
+Emulator Pixel_8a (API 36 playstore image): boot_completed=1
+adb install -r: Success
+am start com.triguide.ai/.MainActivity: started, pid 1793, topResumedActivity visible
+Camera, buttons, TalkBack: not exercised
+Emulator stopped with adb emu kill
