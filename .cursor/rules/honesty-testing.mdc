@@ -1,0 +1,12 @@
+---
+description: Honest build/test reporting and documentation discipline
+alwaysApply: true
+---
+
+# Honesty and docs
+
+- Record actual commands and outcomes (pass/fail/skip with reason).
+- Update `docs/PROGRESS.md` when a phase starts or finishes.
+- Log architectural choices in `docs/DECISIONS.md` (date + why).
+- Known bugs go to `docs/KNOWN_ISSUES.md`; do not hide flaky results.
+- Prefer fixing a broken build over adding new features.

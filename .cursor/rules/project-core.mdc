@@ -1,0 +1,12 @@
+---
+description: Core TriGuide-AI mission, constraints, and workflow
+alwaysApply: true
+---
+
+# TriGuide-AI core
+
+- Goal: Android AI navigation + virtual three-wheel steering for visually impaired users.
+- Phone is the brain; **no physical robot hardware** unless the user explicitly asks.
+- Prefer MediaPipe / on-device ML; research OpenBot, GuideLens concepts, Project Guideline before inventing.
+- After each phase: build/test, fix failures, document in `docs/PROGRESS.md` and `docs/KNOWN_ISSUES.md`.
+- Never report unrun tests as passed. Ask the user only for approvals, USB/phone actions, or account login.

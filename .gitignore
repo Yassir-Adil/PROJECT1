@@ -1,0 +1,46 @@
+# Android / Gradle
+.gradle/
+build/
+**/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+*.iml
+.idea/
+*.hprof
+.DS_Store
+
+# Kotlin
+.kotlin/
+
+# Secrets / keys
+*.jks
+*.keystore
+google-services.json
+**/secrets.properties
+.env
+.env.*
+
+# Python / Node helpers (if added later)
+__pycache__/
+.venv/
+node_modules/
+dist/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Local upstream clones (GPL/large). Notes live in research/*.md
+research/upstream/GuideLens-Android-App/
+research/upstream/mediapipe-samples/
+research/upstream/OpenBot/
+
+# Generated logs
+outputs/logs/**
+!outputs/logs/.gitkeep

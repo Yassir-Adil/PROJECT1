@@ -1,0 +1,13 @@
+---
+description: Android/Kotlin conventions for TriGuide-AI app code
+globs: "**/*.{kt,kts,xml,gradle,properties}"
+alwaysApply: false
+---
+
+# Android / Kotlin
+
+- Prefer Kotlin, CameraX, coroutines, and clear package structure (`ui`, `vision`, `steering`, `sim`).
+- Keep accessibility in mind: TalkBack-friendly labels, high-contrast where UI is needed, audio cues for guidance.
+- Use Gradle Wrapper; pin SDK versions in version catalogs or root gradle files.
+- Target a modern `minSdk` suitable for MediaPipe on mid-range phones (document the choice in DECISIONS).
+- Do not commit secrets, keystores with passwords, or local `local.properties` SDK paths if they contain machine-specific secrets — `local.properties` is gitignored.
