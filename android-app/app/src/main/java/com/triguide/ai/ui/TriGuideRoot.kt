@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
@@ -67,8 +68,10 @@ import com.triguide.ai.BuildConfig
 import com.triguide.ai.camera.CameraXSource
 import com.triguide.ai.domain.DiagnosticsReport
 import com.triguide.ai.domain.DiagnosticsSnapshot
+import com.triguide.ai.domain.CameraLifecyclePhase
 import com.triguide.ai.domain.CameraPermissionAction
 import com.triguide.ai.domain.CameraPermissionPrompt
+import com.triguide.ai.domain.CameraSpeechGate
 import com.triguide.ai.domain.CameraStartResult
 import com.triguide.ai.domain.GuidanceSpeech
 import com.triguide.ai.domain.SessionSpeechTracker
@@ -392,18 +395,22 @@ private fun CameraScreen(
     val robotState by services.robot.state.collectAsStateWithLifecycle()
     val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
     val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
-    val cameraBlocked = remember { mutableStateOf(false) }
-    val cameraFailed = cameraState.startsWith("Failed") || cameraState.startsWith("No camera")
-    SideEffect {
-        cameraBlocked.value = !granted || !running || cameraFailed
+    val cameraPhase = when {
+        !granted -> CameraLifecyclePhase.PERMISSION_REQUIRED
+        !running -> CameraLifecyclePhase.IDLE
+        cameraState == "Starting camera" -> CameraLifecyclePhase.STARTING
+        cameraState.startsWith("Failed") || cameraState.startsWith("No camera") ->
+            CameraLifecyclePhase.FAILED
+        cameraState == "Streaming" -> CameraLifecyclePhase.STREAMING
+        else -> CameraLifecyclePhase.STARTING
     }
     if (running && granted) {
         SideEffect {
-            if (!sessionSpeech.disclaimerDelivered && sessionSpeech.suppressNavigationUntilMs == 0L) {
+            if (!sessionSpeech.startupLineDelivered && sessionSpeech.suppressNavigationUntilMs == 0L) {
                 sessionSpeech.suppressNavigationUntilMs = Long.MAX_VALUE
             }
         }
-        AssistCameraDrive(services, cameraBlocked, sessionSpeech)
+        AssistCameraDrive(services, cameraPhase, sessionSpeech)
     }
     LaunchedEffect(prompt.serial, running) {
         if (!running || hasCameraPermission(context)) return@LaunchedEffect
@@ -449,14 +456,13 @@ private fun CameraScreen(
                 }
                 if (services.speaker.ready.value) {
                     val lines = sessionSpeech.guidanceStartLines()
-                    val includesDisclaimer = lines.any { it.id == GuidanceSpeech.disclaimer.id }
                     val accepted = speakLinesInOrder(
                         speaker = services.speaker,
                         settings = services.voiceSettings::current,
                         lines = lines,
                     )
                     if (accepted) {
-                        if (includesDisclaimer) sessionSpeech.disclaimerDelivered = true
+                        sessionSpeech.startupLineDelivered = true
                         sessionSpeech.suppressAfter(lines, android.os.SystemClock.elapsedRealtime())
                         return@LaunchedEffect
                     }
@@ -732,30 +738,47 @@ private fun CameraScreen(
 @Composable
 private fun AssistCameraDrive(
     services: AppServices,
-    cameraBlocked: MutableState<Boolean>,
+    cameraPhase: CameraLifecyclePhase,
     sessionSpeech: SessionSpeechTracker,
 ) {
+    val phaseState = rememberUpdatedState(cameraPhase)
     LaunchedEffect(services, sessionSpeech) {
         var last = android.os.SystemClock.elapsedRealtime()
         val startedAt = last
         var logged = ""
+        val cameraGate = CameraSpeechGate()
         try {
             while (isActive) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 val dt = ((now - last) / 1000.0).coerceIn(0.0, 0.1)
                 last = now
+                val phase = phaseState.value
+                // Navigation decisions only while streaming; startup stays silent for camera cues.
+                val canNavigate = phase == CameraLifecyclePhase.STREAMING
                 val scene = SceneObservations.fromCamera(
                     readiness = services.detection.readiness.value,
                     frame = services.detection.latestFrame.value,
                     nowElapsedMs = now,
                 )
-                val decision = services.guidance.onCamera(scene)
-                services.robot.setCommand(decision.toSteeringCommand())
-                services.robot.tick(dt)
-                val candidate = if (cameraBlocked.value) {
-                    VoiceCues.cameraUnavailable()
+                val decision = if (canNavigate) {
+                    services.guidance.onCamera(scene)
                 } else {
+                    services.guidance.decision.value
+                }
+                if (canNavigate) {
+                    services.robot.setCommand(decision.toSteeringCommand())
+                    services.robot.tick(dt)
+                } else {
+                    services.robot.setCommand(SteeringCommand(0.0, 0.0))
+                }
+                val cameraCue = cameraGate.cueForTransition(phase)
+                if (cameraCue != null) {
+                    android.util.Log.i("TriGuideVoice", "camera phase=${phase.name} (UI/log; tick does not spam)")
+                }
+                val candidate = if (canNavigate) {
                     VoiceCues.fromDecision(decision)
+                } else {
+                    null
                 }
                 val cue = navigationCueForSpeech(
                     cue = candidate,

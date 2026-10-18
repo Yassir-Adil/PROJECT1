@@ -11,13 +11,22 @@ data class SpokenLine(
 )
 
 object GuidanceSpeech {
-    const val FIRST_INTRO_SUPPRESS_MS = 16_000L
-    const val RESTART_SUPPRESS_MS = 4_000L
+    /** Short hold after the one startup question so it is not stepped on. Obstacles still interrupt. */
+    const val FIRST_INTRO_SUPPRESS_MS = 2_500L
+    const val RESTART_SUPPRESS_MS = 2_000L
 
+    /** Shown on screen / in docs only — not spoken on open (owner UX 2026-10-18). */
     val disclaimer = SpokenLine(
         id = "disclaimer",
         english = "Research and Simulation Mode. TriGuide is not a certified mobility aid and does not replace a cane, a guide, or your own judgment.",
         arabic = "وضع البحث والمحاكاة. تراي جايد ليست أداة تنقل معتمدة، ولا تغني عن العصا أو المرافق أو حكمك الشخصي.",
+    )
+
+    /** The only automatic spoken line on a normal open. */
+    val whatsAhead = SpokenLine(
+        id = "whats-ahead",
+        english = "What's ahead?",
+        arabic = "قدامك في شنو؟",
     )
 
     val guidanceOn = SpokenLine(
@@ -26,6 +35,7 @@ object GuidanceSpeech {
         arabic = "بدأت الكاميرا. التوجيه يعمل.",
     )
 
+    /** On-screen / log only — not spoken on open. */
     val gestureHint = SpokenLine(
         id = "gesture-hint",
         english = "The fingerprint button cannot control this app. Triple-tap the screen to restart guidance.",
@@ -63,30 +73,61 @@ object GuidanceSpeech {
 }
 
 class SessionSpeechTracker {
-    var disclaimerDelivered: Boolean = false
+    /** True after the one open-line has been accepted (or speech is off). */
+    var startupLineDelivered: Boolean = false
 
-    /** Navigation cues wait until this time so the disclaimer is not spoken on every frame. */
+    /** Navigation cues wait until this time so the open question is not stepped on. */
     var suppressNavigationUntilMs: Long = 0L
 
+    /** Exactly one short open line. Disclaimer / gesture stay off the speaker. */
     fun guidanceStartLines(): List<SpokenLine> {
-        return if (disclaimerDelivered) {
-            listOf(GuidanceSpeech.guidanceOn)
-        } else {
-            listOf(
-                GuidanceSpeech.disclaimer,
-                GuidanceSpeech.guidanceOn,
-                GuidanceSpeech.gestureHint,
-            )
-        }
+        return listOf(GuidanceSpeech.whatsAhead)
     }
 
     fun suppressAfter(lines: List<SpokenLine>, nowElapsedMs: Long) {
-        val hold = if (lines.any { it.id == GuidanceSpeech.disclaimer.id }) {
+        val hold = if (lines.any { it.id == GuidanceSpeech.whatsAhead.id }) {
             GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS
         } else {
             GuidanceSpeech.RESTART_SUPPRESS_MS
         }
         suppressNavigationUntilMs = nowElapsedMs + hold
+    }
+}
+
+/**
+ * Camera lifecycle for speech. Startup and streaming never invent a spoken
+ * "camera unavailable" from the navigation tick.
+ */
+enum class CameraLifecyclePhase {
+    IDLE,
+    STARTING,
+    STREAMING,
+    FAILED,
+    PERMISSION_REQUIRED,
+}
+
+/**
+ * Emits a camera cue only when the phase newly enters FAILED or PERMISSION_REQUIRED.
+ * STARTING / STREAMING / IDLE never produce a voice cue here.
+ */
+class CameraSpeechGate {
+    private var lastAnnounced: CameraLifecyclePhase? = null
+
+    fun reset() {
+        lastAnnounced = null
+    }
+
+    fun cueForTransition(phase: CameraLifecyclePhase): VoiceCue? {
+        if (phase == lastAnnounced) return null
+        lastAnnounced = phase
+        return when (phase) {
+            CameraLifecyclePhase.PERMISSION_REQUIRED -> VoiceCues.cameraUnavailable()
+            CameraLifecyclePhase.FAILED -> VoiceCues.cameraUnavailable()
+            CameraLifecyclePhase.IDLE,
+            CameraLifecyclePhase.STARTING,
+            CameraLifecyclePhase.STREAMING,
+            -> null
+        }
     }
 }
 
@@ -102,9 +143,9 @@ fun navigationCueForSpeech(
 ): VoiceCue? {
     if (cue == null) return null
     val introHolding = nowElapsedMs < suppressNavigationUntilMs
+    // Camera-unavailable must not ride the navigation tick during startup.
     if (cue.kind == VoiceAlertKind.CAMERA_UNAVAILABLE) {
-        val starting = nowElapsedMs - guidanceStartedAtMs < VoiceConfig.CAMERA_START_GRACE_MS
-        if (starting || introHolding) return null
+        return null
     }
     if (introHolding &&
         cue.kind != VoiceAlertKind.TURN_SUGGESTION &&

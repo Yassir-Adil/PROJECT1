@@ -8,42 +8,35 @@ import org.junit.Test
 
 class GuidanceSpeechTest {
     @Test
-    fun disclaimerIsSpokenOnceAtSessionStart() {
+    fun openSpeaksExactlyOneWhatsAheadLine() {
         val tracker = SessionSpeechTracker()
         val first = tracker.guidanceStartLines()
-        assertEquals(
-            listOf("disclaimer", "guidance-on", "gesture-hint"),
-            first.map { it.id },
-        )
-        assertTrue(first.first().english.startsWith("Research and Simulation Mode."))
-        assertTrue(GuidanceSpeech.gestureHint.english.contains("fingerprint button cannot control"))
-        assertTrue(GuidanceSpeech.gestureHint.english.contains("Triple-tap"))
-        assertTrue(GuidanceSpeech.gestureHint.arabic.contains("ثلاث نقرات"))
-        assertTrue(GuidanceSpeech.GESTURE_ON_SCREEN.contains("Triple-tap the screen to restart guidance"))
-
-        tracker.disclaimerDelivered = true
-        assertEquals(listOf("guidance-on"), tracker.guidanceStartLines().map { it.id })
-        assertEquals("Camera started. Guidance on.", tracker.guidanceStartLines().single().english)
+        assertEquals(listOf("whats-ahead"), first.map { it.id })
+        assertEquals("What's ahead?", first.single().english)
+        assertEquals("قدامك في شنو؟", first.single().arabic)
+        assertFalse(first.any { it.id == "disclaimer" })
+        assertFalse(first.any { it.id == "gesture-hint" })
+        // Still available for on-screen copy, not for the open speaker path.
+        assertTrue(GuidanceSpeech.disclaimer.english.startsWith("Research and Simulation Mode."))
+        assertTrue(GuidanceSpeech.GESTURE_ON_SCREEN.contains("Triple-tap"))
     }
 
     @Test
-    fun introHoldIsLongerWhenTheDisclaimerIsIncluded() {
+    fun introHoldIsShortAfterTheOpenQuestion() {
         val tracker = SessionSpeechTracker()
         val first = tracker.guidanceStartLines()
         tracker.suppressAfter(first, nowElapsedMs = 1_000L)
         assertEquals(1_000L + GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS, tracker.suppressNavigationUntilMs)
 
-        tracker.disclaimerDelivered = true
         val restart = tracker.guidanceStartLines()
         tracker.suppressAfter(restart, nowElapsedMs = 5_000L)
-        assertEquals(5_000L + GuidanceSpeech.RESTART_SUPPRESS_MS, tracker.suppressNavigationUntilMs)
+        assertEquals(5_000L + GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS, tracker.suppressNavigationUntilMs)
     }
 
     @Test
-    fun aCommittedTurnIsNotDroppedDuringTheIntroduction() {
+    fun aCommittedTurnAndObstacleStillPassDuringTheIntroduction() {
         val turn = VoiceCues.turn(GuidanceAction.LEFT)
         val obstacle = VoiceCues.obstacle()
-        val camera = VoiceCues.cameraUnavailable()
         assertEquals(
             turn,
             navigationCueForSpeech(
@@ -70,28 +63,10 @@ class GuidanceSpeechTest {
                 suppressNavigationUntilMs = 16_000L,
             ),
         )
-        assertNull(
-            navigationCueForSpeech(
-                cue = camera,
-                nowElapsedMs = 3_000L,
-                guidanceStartedAtMs = 0L,
-                suppressNavigationUntilMs = 16_000L,
-            ),
-        )
-        assertEquals(
-            turn,
-            navigationCueForSpeech(
-                cue = turn,
-                nowElapsedMs = 16_000L,
-                guidanceStartedAtMs = 0L,
-                suppressNavigationUntilMs = 16_000L,
-            ),
-        )
-        assertFalse(trackerWouldRepeatDisclaimer())
     }
 
     @Test
-    fun cameraUnavailableStaysQuietDuringStartupGrace() {
+    fun cameraUnavailableNeverRidesTheNavigationTick() {
         assertNull(
             navigationCueForSpeech(
                 cue = VoiceCues.cameraUnavailable(),
@@ -100,20 +75,26 @@ class GuidanceSpeechTest {
                 suppressNavigationUntilMs = 0L,
             ),
         )
-        assertEquals(
-            VoiceCues.cameraUnavailable(),
+        assertNull(
             navigationCueForSpeech(
                 cue = VoiceCues.cameraUnavailable(),
-                nowElapsedMs = VoiceConfig.CAMERA_START_GRACE_MS,
+                nowElapsedMs = VoiceConfig.CAMERA_START_GRACE_MS + 5_000L,
                 guidanceStartedAtMs = 0L,
                 suppressNavigationUntilMs = 0L,
             ),
         )
     }
 
-    private fun trackerWouldRepeatDisclaimer(): Boolean {
-        val tracker = SessionSpeechTracker()
-        tracker.disclaimerDelivered = true
-        return tracker.guidanceStartLines().any { it.id == "disclaimer" }
+    @Test
+    fun cameraSpeechGateIsSilentWhileStartingAndOnlyFiresOnceOnFailure() {
+        val gate = CameraSpeechGate()
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STREAMING))
+        val failed = gate.cueForTransition(CameraLifecyclePhase.FAILED)
+        assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, failed?.kind)
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.FAILED))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STREAMING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
     }
 }

@@ -1,5 +1,15 @@
 # Progress Log
 
+## 2026-10-18 — Quiet open + camera phase gate (0.9.1) BUILDER
+
+**Status:** Code + unit tests + APK PASS. Redmi install BLOCKED (ADB empty after build).
+
+- One spoken open line only: «قدامك في شنو؟» / What's ahead?
+- Disclaimer / triple-tap / fingerprint not spoken on open.
+- Camera STARTING no longer feeds repeating camera-unavailable speech from the 50 ms loop.
+- Codex P0 from `BRIDGE_FROM_GPT.md` executed; evidence in `BRIDGE_TO_GPT.md`.
+- APK: `outputs/apk/TriGuideAI-0.9.1-debug.apk` (versionCode 14).
+
 ## 2026-10-18 — Path risk / silence-by-default (0.9.0)
 
 **Status:** 0.9.0 built. Unit tests PASS. Redmi not on USB at install time — install pending.
