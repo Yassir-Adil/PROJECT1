@@ -8,6 +8,36 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — Redmi 0.5.1 open-into-guidance, fingerprint API check
+
+**Status: PASS_WITH_WARNINGS**
+
+Physical device only. `adb devices -l` listed only:
+
+```
+55aqpfqkvw9xbafe       device product:ruby_global model:22101316G device:ruby transport_id:1
+```
+
+No emulator was attached. `adb` binary: `C:\Users\yassi\AppData\Local\Android\Sdk\platform-tools\adb.exe`.
+
+### Fingerprint hardware (read, not a gesture test)
+
+`adb shell dumpsys fingerprint` included `isUdfps: false` and `isPowerbuttonFps: true`. `getprop` included `ro.hardware.fp.sideCap=true` and `persist.vendor.sys.fp.vendor=goodix`. `getevent -pl` shows `uinput-goodix` with `KEY_POWER` and other ordinary keys. `settings get` equivalent via `settings list secure` showed `fingerprint_double_tap=none`. No fingerprint tap was injected. The power button was not pressed from the PC, because a press can turn the screen off.
+
+### Install and cold start
+
+- `adb -s 55aqpfqkvw9xbafe install -r outputs/apk/TriGuideAI-0.5.1-debug.apk` → `Success`. Package `versionName=0.5.1` `versionCode=7`. File size 81,495,956 bytes.
+- `am force-stop` then `am start -n com.triguide.ai/.MainActivity`. Resumed activity was `com.triguide.ai/.MainActivity` (pid 29066). Logcat had no FATAL for the app.
+- `TriGuideVoice` lines, all `speak result=0` (engine accepted; the speaker was not confirmed by ear):
+  - Research and Simulation Mode disclaimer
+  - `Camera started. Guidance on.`
+  - `Guidance starts when you open TriGuide. This phone's fingerprint control is the power button, and Android does not give those presses to apps.`
+- After a second `am start` brought the existing task forward, `uiautomator dump` text included `Live Vision`, the fingerprint limitation line, `READY. MediaPipe EfficientDet-Lite0 int8`, `Camera: Streaming. Preview 30 FPS. Inference 10 FPS, last 142 ms, average 95 ms`, `Decision: Hold`, `Front wheel: 0.0 degrees`, and `More`.
+
+### Unit tests on the PC
+
+`:app:testDebugUnitTest` 75/75 PASS (0 failures). A TalkBack sentence was edited after that run, and `:app:assembleDebug` then succeeded. `:sim-core:test` was not re-run.
+
 ## 2026-10-18 — Redmi 0.4.1 install, plus 0.4.0 camera lines
 
 **Status: PASS_WITH_WARNINGS**

@@ -122,3 +122,21 @@
 - Version 0.4.1 (`versionCode` 5). System Back returns Home. A camera denial that will not show the dialog again opens app settings. The detector line says READY only when the engine is ready.
 - No new model, no depth, no network permission.
 
+## 2026-10-18 — Fingerprint taps are not available to this app
+
+**Decision:** Do not ship a fingerprint triple-tap, a screen-wide triple-tap, or a volume-key shortcut. Opening TriGuide enters Live Vision and starts the camera and voice. Say once, in speech and on screen, that the fingerprint control cannot be used.
+
+**Why this phone cannot do it**
+
+- The connected phone is `55aqpfqkvw9xbafe`, model `22101316G`, market name Redmi Note 12 Pro 5G, HyperOS `OS2.0.16.0.UMOMIXM`. `adb shell dumpsys fingerprint` reports `isUdfps: false` and `isPowerbuttonFps: true`. The reader is in the power button. It is not under the display. `ro.hardware.fp.sideCap` is `true`. The vendor node is Goodix (`uinput-goodix`, `persist.vendor.sys.fp.vendor=goodix`).
+- `uinput-goodix` can emit ordinary keys (`KEY_POWER`, volume, directions, `KEY_CAMERA`, and others). Those are vendor gesture injections, not a tap counter. With the screen on, Android’s window policy consumes `KEY_POWER` before a normal app sees it. A short press sleeps the phone. An app cannot count three of those presses.
+- `settings` value `fingerprint_double_tap` is `none`. That is a Xiaomi system action (camera, notifications, and similar). It is not a callback an app can register.
+- `BiometricPrompt` and the deprecated `FingerprintManager` authenticate an enrolled finger. They do not report “tapped three times,” and a failed match can lock the sensor. `FingerprintGestureController` (an accessibility API) reports swipes only, and only if a service is enabled and the HAL says gestures exist. This power-button reader does not expose that to a third-party app.
+- No public HyperOS intent was found that delivers fingerprint-area touches to a normal app while it is in front.
+
+**What ships instead**
+
+- Version 0.5.1 (`versionCode` 7). Cold start opens Live Vision. The research disclaimer is spoken once per process, then “Camera started. Guidance on.”, then one sentence that the fingerprint button is not given to apps.
+- If the camera permission dialog cannot be shown again, the app speaks and opens TriGuide’s system settings. More still opens the simulator, settings, and diagnostics.
+- Screen triple-tap and the volume-key double-press from the earlier 0.5.0 experiment are not in this APK. 0.5.0 was installed earlier the same morning and is superseded.
+

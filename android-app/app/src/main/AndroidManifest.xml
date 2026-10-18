@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- tasks-vision pulls in Google data transport, which requests a network.
          Detection uses the bundled model only, so those permissions are removed. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />

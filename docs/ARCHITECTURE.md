@@ -38,7 +38,11 @@ Bicycle model of a tricycle: two fixed rear wheels (track width ignored) and one
 
 ## Screens
 
-Home, Live Vision, Robot Simulation, Test Scenarios (labels only, status `NOT_STARTED`), Diagnostics, Settings.
+Live Vision is the start screen. More, Robot Simulation, Test Scenarios (labels only, status `NOT_STARTED`), Diagnostics, and Settings are reached from More.
+
+Opening the app enters Live Vision, binds the rear camera (`STRATEGY_KEEP_ONLY_LATEST`), and speaks the research disclaimer once per process, then “Camera started. Guidance on.” A missing camera permission is spoken and the system dialog is requested immediately. If Android will not show that dialog again, the app opens TriGuide’s settings page and says so.
+
+The fingerprint reader on the project Redmi is the power button. This app does not receive those presses. There is no fingerprint triple-tap and no screen-wide tap shortcut.
 
 Live Vision applies camera observations to the virtual robot while the preview is open. The simulator can run manual buttons, the same camera path (it holds when the preview is closed), or the synthetic map. Both screens show the decision, the reason, the confidence, the front-wheel angle, the research-mode line, and the non-verified path label. Those two screens also ask the voice gate once per control tick. Settings stores speech, rate, quiet mode, and language.
 

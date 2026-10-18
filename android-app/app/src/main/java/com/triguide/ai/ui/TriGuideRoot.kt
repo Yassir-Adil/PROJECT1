@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,17 +36,21 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.triguide.ai.BuildConfig
@@ -60,6 +67,8 @@ import com.triguide.ai.camera.CameraXSource
 import com.triguide.ai.domain.CameraPermissionAction
 import com.triguide.ai.domain.CameraPermissionPrompt
 import com.triguide.ai.domain.CameraStartResult
+import com.triguide.ai.domain.GuidanceSpeech
+import com.triguide.ai.domain.SessionSpeechTracker
 import com.triguide.ai.domain.DetectionReports
 import com.triguide.ai.domain.DetectorStatusText
 import com.triguide.ai.domain.DetectorConfig
@@ -68,6 +77,7 @@ import com.triguide.ai.domain.FloorSegmentationStatus
 import com.triguide.ai.domain.GuidanceSession
 import com.triguide.ai.domain.IllustrativePath
 import com.triguide.ai.domain.MockHardwareController
+import com.triguide.ai.domain.navigationCueForSpeech
 import com.triguide.ai.domain.NavigationDecisions
 import com.triguide.ai.domain.PerformanceMonitor
 import com.triguide.ai.domain.SceneObservations
@@ -87,15 +97,45 @@ import com.triguide.ai.voice.AndroidVoiceSpeaker
 import com.triguide.ai.voice.VoiceSettingsStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private enum class Screen {
-    Home,
-    Camera,
+    LiveVision,
+    More,
     Simulator,
     Scenarios,
     Diagnostics,
     Settings,
+}
+
+private data class CameraPrompt(val serial: Int = 0, val fromGesture: Boolean = false)
+
+/**
+ * Held as one object so key-event collection does not close over a stale screen value.
+ * Cold start stays on Live Vision with epoch 0. Later starts increment the epoch.
+ */
+private class LiveNavState {
+    var screen by mutableStateOf(Screen.LiveVision)
+    var running by mutableStateOf(true)
+    var epoch by mutableIntStateOf(0)
+    var prompt by mutableStateOf(CameraPrompt())
+
+    fun start(fromGesture: Boolean) {
+        running = true
+        screen = Screen.LiveVision
+        epoch += 1
+        prompt = CameraPrompt(serial = prompt.serial + 1, fromGesture = fromGesture)
+    }
+
+    fun pause() {
+        running = false
+    }
+
+    fun showMore() {
+        screen = Screen.More
+        running = false
+    }
 }
 
 private enum class RobotDriveMode(val label: String, val description: String) {
@@ -125,16 +165,25 @@ private class AppServices(context: android.content.Context) {
     val speaker = AndroidVoiceSpeaker(context)
 }
 
-private const val DISCLAIMER =
-    "Research and Simulation Mode. TriGuide is not a certified mobility aid and does not replace a cane, a guide, or your own judgment."
-
 @Composable
 fun TriGuideRoot() {
     val context = LocalContext.current
     val services = remember { AppServices(context.applicationContext) }
-    var screen by remember { mutableStateOf(Screen.Home) }
-    BackHandler(enabled = screen != Screen.Home) {
-        screen = Screen.Home
+    val sessionSpeech = remember { SessionSpeechTracker() }
+    val nav = remember { LiveNavState() }
+    val scope = rememberCoroutineScope()
+    fun speakPaused() {
+        scope.launch {
+            speakWhenReady(
+                speaker = services.speaker,
+                settings = services.voiceSettings::current,
+                line = GuidanceSpeech.guidancePaused,
+                interrupt = true,
+            )
+        }
+    }
+    BackHandler(enabled = nav.screen != Screen.LiveVision) {
+        nav.start(fromGesture = false)
     }
     DisposableEffect(services) {
         onDispose {
@@ -145,36 +194,44 @@ fun TriGuideRoot() {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            Text(
-                text = DISCLAIMER,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .semantics { contentDescription = DISCLAIMER },
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 14.sp,
-            )
-            Box(modifier = Modifier.fillMaxSize()) {
-                when (screen) {
-                    Screen.Home -> HomeScreen(services, onNavigate = { screen = it })
-                    Screen.Camera -> CameraScreen(services, onBack = { screen = Screen.Home })
-                    Screen.Simulator -> SimulatorScreen(services, onBack = { screen = Screen.Home })
-                    Screen.Scenarios -> ScenariosScreen(onBack = { screen = Screen.Home })
-                    Screen.Diagnostics -> DiagnosticsScreen(services, onBack = { screen = Screen.Home })
-                    Screen.Settings -> SettingsScreen(services, onBack = { screen = Screen.Home })
-                }
+            when (nav.screen) {
+                Screen.LiveVision -> CameraScreen(
+                    services = services,
+                    running = nav.running,
+                    epoch = nav.epoch,
+                    prompt = nav.prompt,
+                    sessionSpeech = sessionSpeech,
+                    onMore = {
+                        val wasRunning = nav.running
+                        nav.showMore()
+                        if (wasRunning) speakPaused()
+                    },
+                )
+                Screen.More -> MoreScreen(
+                    services = services,
+                    onLiveGuidance = { nav.start(fromGesture = false) },
+                    onNavigate = { nav.screen = it },
+                )
+                Screen.Simulator -> SimulatorScreen(services, onBack = { nav.start(fromGesture = false) })
+                Screen.Scenarios -> ScenariosScreen(onBack = { nav.start(fromGesture = false) })
+                Screen.Diagnostics -> DiagnosticsScreen(services, onBack = { nav.start(fromGesture = false) })
+                Screen.Settings -> SettingsScreen(services, onBack = { nav.start(fromGesture = false) })
             }
         }
     }
 }
 
 @Composable
-private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
+private fun MoreScreen(
+    services: AppServices,
+    onLiveGuidance: () -> Unit,
+    onNavigate: (Screen) -> Unit,
+) {
     val readiness by services.detection.readiness.collectAsStateWithLifecycle()
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
@@ -189,13 +246,16 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
     ) {
         item {
             Text(
-                text = "TriGuide",
+                text = "More",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.semantics {
+                    contentDescription = "More. Simulator, settings, and diagnostics."
+                },
             )
             Text(
-                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. A box is a position in the image. It is not a measured clearance. No physical robot is connected.",
+                text = "Live guidance is the main screen. It opens the rear camera and speaks cues. This screen is for the simulator, settings, and diagnostics. A box is a position in the image. It is not a measured clearance. No physical robot is connected.",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 8.dp),
@@ -212,12 +272,13 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
         item {
             Text(
-                text = "Next: open Live Vision, allow the camera, and point the phone at a real object.",
+                text = GuidanceSpeech.GESTURE_ON_SCREEN,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 16.sp,
+                modifier = Modifier.semantics { contentDescription = GuidanceSpeech.GESTURE_DESCRIPTION },
             )
         }
-        item { NavButton("Live Vision", "Open the live camera preview", primary = true) { onNavigate(Screen.Camera) } }
+        item { NavButton("Live guidance", "Return to live guidance and start the camera", primary = true) { onLiveGuidance() } }
         item { NavButton("Robot Simulation", "Open the three-wheel simulator", primary = false) { onNavigate(Screen.Simulator) } }
         item { NavButton("Test Scenarios", "Open the list of checks that are not running yet", primary = false) { onNavigate(Screen.Scenarios) } }
         item { NavButton("Diagnostics", "Open camera, detection, decision, and voice status", primary = false) { onNavigate(Screen.Diagnostics) } }
@@ -226,17 +287,53 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
 }
 
 @Composable
-private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
+private fun CameraScreen(
+    services: AppServices,
+    running: Boolean,
+    epoch: Int,
+    prompt: CameraPrompt,
+    sessionSpeech: SessionSpeechTracker,
+    onMore: () -> Unit,
+) {
     val context = LocalContext.current
-    var granted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
-        )
-    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    var granted by remember { mutableStateOf(hasCameraPermission(context)) }
     var requestAttempted by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
         requestAttempted = true
         granted = allowed
+        if (allowed) return@rememberLauncherForActivityResult
+        val rationale = (context as? android.app.Activity)
+            ?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == true
+        val action = CameraPermissionPrompt.action(requestAttempted = true, shouldShowRationale = rationale)
+        scope.launch {
+            if (action == CameraPermissionAction.OpenAppSettings) {
+                speakWhenReady(
+                    speaker = services.speaker,
+                    settings = services.voiceSettings::current,
+                    line = GuidanceSpeech.openingSettings,
+                    interrupt = true,
+                )
+                openAppSettings(context)
+            } else {
+                speakWhenReady(
+                    speaker = services.speaker,
+                    settings = services.voiceSettings::current,
+                    line = GuidanceSpeech.permissionDenied,
+                    interrupt = true,
+                )
+            }
+        }
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                granted = hasCameraPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val activity = context as? android.app.Activity
     val permissionAction = CameraPermissionPrompt.action(
@@ -270,9 +367,81 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
     val cameraBlocked = remember { mutableStateOf(false) }
     val cameraFailed = cameraState.startsWith("Failed") || cameraState.startsWith("No camera")
     SideEffect {
-        cameraBlocked.value = !granted || cameraFailed
+        cameraBlocked.value = !granted || !running || cameraFailed
     }
-    AssistCameraDrive(services, cameraBlocked)
+    if (running && granted) {
+        SideEffect {
+            if (!sessionSpeech.disclaimerDelivered && sessionSpeech.suppressNavigationUntilMs == 0L) {
+                sessionSpeech.suppressNavigationUntilMs = Long.MAX_VALUE
+            }
+        }
+        AssistCameraDrive(services, cameraBlocked, sessionSpeech)
+    }
+    LaunchedEffect(prompt.serial, running) {
+        if (!running || hasCameraPermission(context)) return@LaunchedEffect
+        val rationale = activity?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == true
+        val action = CameraPermissionPrompt.action(requestAttempted, rationale)
+        if (action == CameraPermissionAction.OpenAppSettings) {
+            speakWhenReady(
+                speaker = services.speaker,
+                settings = services.voiceSettings::current,
+                line = GuidanceSpeech.openingSettings,
+                interrupt = true,
+            )
+            openAppSettings(context)
+            return@LaunchedEffect
+        }
+        val ask = scope.launch {
+            val line = if (requestAttempted) {
+                GuidanceSpeech.permissionDenied
+            } else {
+                GuidanceSpeech.permissionRequired
+            }
+            speakWhenReady(
+                speaker = services.speaker,
+                settings = services.voiceSettings::current,
+                line = line,
+                interrupt = true,
+            )
+        }
+        launcher.launch(Manifest.permission.CAMERA)
+        if (granted || requestAttempted) ask.cancel()
+    }
+    LaunchedEffect(epoch, granted, running) {
+        if (!running || !granted) return@LaunchedEffect
+        if (!prompt.fromGesture) confirmPulse(context)
+        sessionSpeech.suppressNavigationUntilMs = Long.MAX_VALUE
+        try {
+            var attempts = 0
+            while (isActive && attempts < 40) {
+                attempts++
+                if (!services.voiceSettings.current().speechEnabled) {
+                    sessionSpeech.suppressNavigationUntilMs = 0L
+                    return@LaunchedEffect
+                }
+                if (services.speaker.ready.value) {
+                    val lines = sessionSpeech.guidanceStartLines()
+                    val includesDisclaimer = lines.any { it.id == GuidanceSpeech.disclaimer.id }
+                    val accepted = speakLinesInOrder(
+                        speaker = services.speaker,
+                        settings = services.voiceSettings::current,
+                        lines = lines,
+                    )
+                    if (accepted) {
+                        if (includesDisclaimer) sessionSpeech.disclaimerDelivered = true
+                        sessionSpeech.suppressAfter(lines, android.os.SystemClock.elapsedRealtime())
+                        return@LaunchedEffect
+                    }
+                }
+                delay(250)
+            }
+            sessionSpeech.suppressNavigationUntilMs = android.os.SystemClock.elapsedRealtime() + 2_000L
+        } finally {
+            if (sessionSpeech.suppressNavigationUntilMs == Long.MAX_VALUE) {
+                sessionSpeech.suppressNavigationUntilMs = 0L
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -281,7 +450,30 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ScreenHeader(title = "Live Vision", onBack = onBack)
+        Text(
+            text = "Live Vision",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .pointerInput(onMore) {
+                    detectTapGestures(onLongPress = { onMore() })
+                }
+                .semantics {
+                    contentDescription = "Live Vision. ${GuidanceSpeech.GESTURE_DESCRIPTION}"
+                },
+        )
+        Text(
+            text = GuidanceSpeech.disclaimer.english,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 14.sp,
+            modifier = Modifier.semantics { contentDescription = GuidanceSpeech.disclaimer.english },
+        )
+        Text(
+            text = GuidanceSpeech.GESTURE_ON_SCREEN,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 14.sp,
+            modifier = Modifier.semantics { contentDescription = GuidanceSpeech.GESTURE_DESCRIPTION },
+        )
         Text(
             DetectorStatusText.line(readiness, detail),
             color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
@@ -290,15 +482,17 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 contentDescription = DetectorStatusText.line(readiness, detail)
             },
         )
-        DecisionHeadline(decision = decision, applied = applied)
-        VoiceCueLine(lastVoice)
-        Text(
-            observation.summary,
-            color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            modifier = Modifier.semantics { contentDescription = observation.summary },
-        )
         when {
+            !running -> {
+                Text(
+                    text = "Guidance paused. Leave this screen with Back to start the camera and voice cues again.",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 18.sp,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Guidance paused. Use the phone Back control to return to live guidance."
+                    },
+                )
+            }
             !granted -> {
                 val openSettings = permissionAction == CameraPermissionAction.OpenAppSettings
                 Text(
@@ -343,7 +537,11 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                     }
                 }
-                LaunchedEffect(previewView) {
+                DisposableEffect(previewView) {
+                    onDispose { services.camera.stop() }
+                }
+                LaunchedEffect(previewView, epoch) {
+                    services.camera.stop()
                     cameraState = "Starting camera"
                     services.camera.start(
                         context = context,
@@ -379,10 +577,12 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(8.dp))
+                DecisionHeadline(decision = decision, applied = applied)
+                VoiceCueLine(lastVoice)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(320.dp),
+                        .height(280.dp),
                 ) {
                     AndroidView(
                         factory = { previewView },
@@ -426,8 +626,17 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        GuidanceDetail(decision = decision, applied = applied, showPath = true)
+        Button(
+            onClick = onMore,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .semantics {
+                    contentDescription = "More. Simulator, settings, and diagnostics."
+                },
+        ) {
+            Text("More", fontSize = 18.sp)
+        }
     }
 
     DisposableEffect(Unit) {
@@ -439,8 +648,12 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AssistCameraDrive(services: AppServices, cameraBlocked: MutableState<Boolean>) {
-    LaunchedEffect(services) {
+private fun AssistCameraDrive(
+    services: AppServices,
+    cameraBlocked: MutableState<Boolean>,
+    sessionSpeech: SessionSpeechTracker,
+) {
+    LaunchedEffect(services, sessionSpeech) {
         var last = android.os.SystemClock.elapsedRealtime()
         val startedAt = last
         var logged = ""
@@ -457,13 +670,17 @@ private fun AssistCameraDrive(services: AppServices, cameraBlocked: MutableState
                 val decision = services.guidance.onCamera(scene)
                 services.robot.setCommand(decision.toSteeringCommand())
                 services.robot.tick(dt)
-                val fromDecision = VoiceCues.fromDecision(decision)
-                val cue = when {
-                    cameraBlocked.value -> VoiceCues.cameraUnavailable()
-                    fromDecision?.kind == VoiceAlertKind.CAMERA_UNAVAILABLE &&
-                        now - startedAt < VoiceConfig.CAMERA_START_GRACE_MS -> null
-                    else -> fromDecision
+                val candidate = if (cameraBlocked.value) {
+                    VoiceCues.cameraUnavailable()
+                } else {
+                    VoiceCues.fromDecision(decision)
                 }
+                val cue = navigationCueForSpeech(
+                    cue = candidate,
+                    nowElapsedMs = now,
+                    guidanceStartedAtMs = startedAt,
+                    suppressNavigationUntilMs = sessionSpeech.suppressNavigationUntilMs,
+                )
                 announce(services, cue, now)
                 val key = "${decision.action.name}:${decision.reason}"
                 if (key != logged) {
@@ -475,8 +692,7 @@ private fun AssistCameraDrive(services: AppServices, cameraBlocked: MutableState
         } finally {
             services.guidance.resetCamera()
             services.robot.setCommand(SteeringCommand(0.0, 0.0))
-            services.guidance.markIdle("Camera preview is closed. The virtual robot is holding.")
-            announce(services, VoiceCues.paused(), android.os.SystemClock.elapsedRealtime())
+            services.guidance.markIdle("Guidance is paused. The virtual robot is holding.")
         }
     }
 }
@@ -789,10 +1005,11 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Navigation", "Camera mode uses box position in the image. It does not measure distance.")
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
-        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack.")
+        StatusLine("Fingerprint", GuidanceSpeech.GESTURE_DESCRIPTION)
+        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack. The app opens on Live Vision and starts guidance by itself.")
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text(
-            DISCLAIMER,
+            GuidanceSpeech.disclaimer.english,
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
         )
@@ -845,6 +1062,10 @@ private fun NavButton(label: String, description: String, primary: Boolean, onCl
     }
 }
 
+private fun hasCameraPermission(context: android.content.Context): Boolean {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+}
+
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.fromParts("package", context.packageName, null)
@@ -860,9 +1081,9 @@ private fun BackButton(onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .semantics { contentDescription = "Back to home" },
+            .semantics { contentDescription = "Back to live guidance. Starts the camera and voice cues." },
     ) {
-        Text("Back to home", fontSize = 18.sp)
+        Text("Back to live guidance", fontSize = 18.sp)
     }
 }
 

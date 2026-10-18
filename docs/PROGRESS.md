@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-10-18 — Blind-first open, fingerprint shortcut is blocked by the OS
+
+**Status:** 0.5.1 install and cold start PASS_WITH_WARNINGS on the personal Redmi. Fingerprint triple-tap is **not possible** for this app. Screen triple-tap and volume-key shortcuts are not the control.
+
+### What the phone actually has
+
+`dumpsys fingerprint` on `55aqpfqkvw9xbafe` (Redmi Note 12 Pro 5G, `22101316G`, HyperOS `OS2.0.16.0.UMOMIXM`) reports `isUdfps: false` and `isPowerbuttonFps: true`. The reader is the side power button (Goodix, `uinput-goodix`), not an under-display sensor. `fingerprint_double_tap` is `none`. Detail is in `docs/DECISIONS.md`.
+
+### What 0.5.1 does
+
+- Opening the app enters Live Vision, starts the rear camera, and speaks the research disclaimer once, then “Camera started. Guidance on.”, then one sentence that the fingerprint button is not available to apps.
+- If camera permission is missing, the app speaks and shows the system dialog. If Android will not show it again, the app speaks and opens TriGuide’s settings screen.
+- More still reaches the simulator, settings, and diagnostics. It is not the first screen.
+- No volume-key gesture and no screen-wide triple-tap are shipped as the shortcut.
+
+### Phone check (no emulator)
+
+- `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device`. No emulator was attached.
+- `adb -s 55aqpfqkvw9xbafe install -r outputs/apk/TriGuideAI-0.5.1-debug.apk` → Success. `versionName=0.5.1` `versionCode=7`. APK size 81,495,956 bytes.
+- Cold start of `MainActivity` was the resumed activity (pid 29066). No FATAL line.
+- Logcat `TriGuideVoice` `speak result=0` for the disclaimer, “Camera started. Guidance on.”, and the fingerprint limitation. Result 0 means the engine accepted the utterance. Sound from the speaker was not confirmed by ear.
+- A later UI dump, after bringing the task forward, showed Live Vision (not a home menu): `Camera: Streaming. Preview 30 FPS. Inference 10 FPS, last 142 ms, average 95 ms`, detector READY, decision Hold, and the fingerprint limitation line. More was on the screen.
+
+### Tests
+
+- `:app:testDebugUnitTest` 75/75 PASS, then one TalkBack sentence was edited and `:app:assembleDebug` succeeded. `:sim-core:test` was not re-run.
+
+### Still open
+
+- A person at the phone confirming they heard the three sentences.
+- True-positive / false-alarm counts. Not measured.
+- Floor segmentation. Not started.
+
 ## 2026-10-18 — Redmi 0.4.1 home, after a real 0.4.0 camera pass
 
 **Status:** 0.4.1 install and Home launch PASS_WITH_WARNINGS on the personal Redmi. Live Vision on 0.4.1 was not opened. The earlier 0.4.0 camera and speech-engine lines are recorded below and are not repeated as a 0.4.1 proof.

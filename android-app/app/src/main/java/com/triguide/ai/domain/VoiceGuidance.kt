@@ -14,6 +14,9 @@ enum class VoiceAlertKind {
     NAVIGATION_UNCERTAIN,
     CAMERA_UNAVAILABLE,
     SIMULATION_PAUSED,
+
+    /** Start, pause, permission, and the once-per-session disclaimer. Spoken outside the frame gate. */
+    SESSION_NOTICE,
 }
 
 enum class SpeechPriority(val rank: Int) {
@@ -98,10 +101,13 @@ object VoiceConfig {
         VoiceAlertKind.NAVIGATION_UNCERTAIN -> SpeechPriority.HIGH
         VoiceAlertKind.TURN_SUGGESTION -> SpeechPriority.NORMAL
         VoiceAlertKind.SIMULATION_PAUSED -> SpeechPriority.LOW
+        VoiceAlertKind.SESSION_NOTICE -> SpeechPriority.HIGH
     }
 
     fun deliveryOf(kind: VoiceAlertKind): VoiceDelivery = when (kind) {
-        VoiceAlertKind.SIMULATION_PAUSED -> VoiceDelivery.ONCE
+        VoiceAlertKind.SIMULATION_PAUSED,
+        VoiceAlertKind.SESSION_NOTICE,
+        -> VoiceDelivery.ONCE
         else -> VoiceDelivery.CONTINUOUS
     }
 
@@ -112,6 +118,7 @@ object VoiceConfig {
         VoiceAlertKind.NAVIGATION_UNCERTAIN -> COOLDOWN_HIGH_MS
         VoiceAlertKind.TURN_SUGGESTION -> COOLDOWN_NORMAL_MS
         VoiceAlertKind.SIMULATION_PAUSED -> COOLDOWN_PAUSED_MS
+        VoiceAlertKind.SESSION_NOTICE -> COOLDOWN_PAUSED_MS
     }
 
     /** Quiet mode keeps the two alerts that mean stop or look at the camera. */
