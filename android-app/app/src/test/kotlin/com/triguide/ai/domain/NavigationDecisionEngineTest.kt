@@ -131,6 +131,28 @@ class NavigationDecisionEngineTest {
     }
 
     @Test
+    fun aCueBelowTheScoreFloorDoesNotSteer() {
+        val below = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", DetectorConfig.SCORE_THRESHOLD - 0.01f, 0.15f, 0.25f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.HOLD, below.action)
+        assertEquals(0.0, below.steeringRadians, 0.0)
+
+        val atFloor = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", DetectorConfig.SCORE_THRESHOLD, 0.15f, 0.25f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.RIGHT, atFloor.action)
+    }
+
+    @Test
     fun aZeroAreaCueIsNotAPassage() {
         val decision = engine.decide(
             camera(cues = listOf(DirectionalCue("speck", 0.99f, 0.10f, 0f))),

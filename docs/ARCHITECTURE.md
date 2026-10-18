@@ -14,7 +14,7 @@ Package `com.triguide.ai`.
 | Type | Phase 1–2 behavior |
 | --- | --- |
 | `CameraSource` | `CameraXSource` binds preview and analysis. Analysis is RGBA, 4:3, about 640×480, `STRATEGY_KEEP_ONLY_LATEST`, same `FILL_CENTER` viewport as the preview |
-| `ObjectDetectionEngine` | `MediaPipeObjectDetectorEngine` — EfficientDet-Lite0 int8, CPU, `LIVE_STREAM`. States: `LOADING`, `READY`, `MODEL_MISSING`, `LOAD_FAILED`. Boxes come only from the result listener |
+| `ObjectDetectionEngine` | `MediaPipeObjectDetectorEngine` — EfficientDet-Lite0 int8, CPU, `LIVE_STREAM`. The analysis crop is applied, then the frame is rotated upright. States: `LOADING`, `READY`, `MODEL_MISSING`, `LOAD_FAILED`. Boxes come only from the result listener. Scores under 0.35 are not drawn |
 | `EnvironmentObservation` | Real labels only after a successful frame. Otherwise `realDetector = false` and the list is empty |
 | `SceneObservation` | Camera samples carry preview-space box centers and area fractions. `metricDepthAvailable` stays false. Synthetic samples carry authored robot-frame obstacles |
 | `NavigationDecisionEngine` | Maps one sample to `GuidanceAction`: Straight, Slight left, Left, Slight right, Right, Hold, Unknown. Each decision has a reason and a confidence. Straight is not emitted for camera samples |
@@ -22,7 +22,7 @@ Package `com.triguide.ai`.
 | `GuidanceSession` | Separate smoothers for the camera and the synthetic map. Publishes the decision that is currently applied |
 | `SteeringCommand` | Speed (m/s) and front-wheel angle (radians). Positive angle is left |
 | `SyntheticObstacleWorld` | Authored obstacles: left barrel (1.0 m, 0.20 m), right crate (2.6 m, −0.40 m) |
-| `Floor segmentation` | `NOT_STARTED`. Disabled. No segmenter is loaded |
+| `Floor segmentation` | `NOT_STARTED`. Disabled. DeepLab-v3 was inspected and has no floor class, so it is not loaded. No mask is drawn |
 | `RobotState` | Pose of the rear-axle midpoint plus the applied command |
 | `VirtualRobotController` | `SimulatedTricycleController` steps `TricycleKinematics` |
 | `FutureHardwareController` | `MockHardwareController` — `isMock = true`, `dispatch` returns `accepted = false` |
@@ -44,7 +44,7 @@ Opening the app enters Live Vision, binds the rear camera (`STRATEGY_KEEP_ONLY_L
 
 The fingerprint reader on the project Redmi is the power button. This app does not receive those presses. Live Vision counts three quick taps (750 ms between taps) without consuming the pointer. That gesture restarts the camera and speaks “Camera started. Guidance on.” A single tap on More still opens the other screens.
 
-Test Scenarios run `GuidanceScenarios` through `NavigationDecisionEngine` on three authored maps. Diagnostics builds a plain-text `DiagnosticsReport` and shares it. Floor segmentation stays `NOT_STARTED`. No segmenter is loaded.
+Test Scenarios run `GuidanceScenarios` through `NavigationDecisionEngine` on three authored maps. Diagnostics builds a plain-text `DiagnosticsReport` and shares it. Floor segmentation stays `NOT_STARTED`. No segmenter is loaded. Describe this frame speaks the latest real boxes once and does not steer. Camera-informed simulation binds the rear camera on that screen.
 
 Live Vision applies camera observations to the virtual robot while the preview is open. It shows the decision, the reason, the front wheel, the camera source, and that Hold and Unknown stop the virtual robot. The simulator can run manual buttons, the same camera path (it holds when the preview is closed), or the synthetic map. The simulator labels itself as simulated, shows confidence, and shows the non-verified path label. Those two screens also ask the voice gate once per control tick. Settings stores speech, rate, quiet mode, and language.
 

@@ -12,9 +12,9 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Foundation choice | Option B | `docs/DECISIONS.md` |
 | Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
 | Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
-| Redmi install | PASS_WITH_WARNINGS | `55aqpfqkvw9xbafe` is `device`. 0.6.0 is installed. Cold start, screen triple-tap, More, and Test Scenarios were checked. See `docs/TEST_RESULTS.md` |
-| Real obstacle detection | PASS_WITH_WARNINGS | MediaPipe EfficientDet-Lite0 loads and runs on the emulator. Accuracy and Redmi are open. See `docs/TEST_RESULTS.md` |
-| Floor segmentation | NOT_STARTED | Still disabled in 0.6.0. No floor model is loaded and no floor mask is drawn |
+| Redmi install | PASS_WITH_WARNINGS | `55aqpfqkvw9xbafe` is `device`. 0.7.0 is installed. Live Vision drew real boxes. See `docs/TEST_RESULTS.md` |
+| Real obstacle detection | PASS_WITH_WARNINGS | EfficientDet-Lite0 on the Redmi. Boxes use the viewport crop. Score floor 0.35. A counted accuracy pass is still open |
+| Floor segmentation | NOT_STARTED | Disabled in 0.7.0. DeepLab-v3 has no floor class and is not bundled. No floor mask is drawn |
 | Camera boxes to virtual steering | PASS_WITH_WARNINGS | Unit tests 65/65 app + 9/9 kinematics. Emulator synthetic wheel moved. Emulator camera held because it saw zero objects. Redmi open |
 | Voice guidance | PASS_WITH_WARNINGS | Gate tests plus emulator TTS on `Pixel_8a`. Five short cues, cooldown, quiet mode, English and Arabic when an offline voice exists. Redmi open |
 

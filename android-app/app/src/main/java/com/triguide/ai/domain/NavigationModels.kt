@@ -67,12 +67,12 @@ data class SceneObservation(
 object FloorSegmentationStatus {
     const val STATE = "NOT_STARTED"
     const val DETAIL =
-        "Disabled. No floor model is loaded. Open floor is not inferred, and no floor mask is drawn."
+        "Disabled. No floor model is loaded. MediaPipe DeepLab-v3 has no floor class, so no floor mask is drawn. Open floor is not inferred."
 }
 
 object NavigationConfig {
     const val STALE_FRAME_MS = 1_000L
-    const val MIN_CUE_CONFIDENCE = 0.50f
+    const val MIN_CUE_CONFIDENCE = DetectorConfig.SCORE_THRESHOLD
     const val CENTER_START = 1f / 3f
     const val CENTER_END = 2f / 3f
 

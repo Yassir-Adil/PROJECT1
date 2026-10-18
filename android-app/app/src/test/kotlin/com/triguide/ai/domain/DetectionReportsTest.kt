@@ -164,6 +164,46 @@ class DetectionReportsTest {
     }
 
     @Test
+    fun guidanceKeepsBoxesAtOrAboveTheScoreFloor() {
+        val kept = DetectionReports.forGuidance(
+            objects = listOf(
+                DetectedObject("person", DetectorConfig.SCORE_THRESHOLD, 1f, 2f, 30f, 40f),
+                DetectedObject("cup", DetectorConfig.SCORE_THRESHOLD - 0.01f, 1f, 2f, 10f, 12f),
+                DetectedObject("chair", Float.NaN, 1f, 2f, 10f, 12f),
+                DetectedObject("book", 0.9f, 5f, 5f, 5f, 9f),
+            ),
+            threshold = DetectorConfig.SCORE_THRESHOLD,
+        )
+        assertEquals(listOf("person"), kept.map { it.label })
+    }
+
+    @Test
+    fun fullBufferCropStaysTheFullFrame() {
+        val crop = FrameCrops.clamp(640, 480, 0, 0, 640, 480)
+        requireNotNull(crop)
+        assertTrue(crop.covers(640, 480))
+        assertEquals(640, crop.width)
+        assertEquals(480, crop.height)
+    }
+
+    @Test
+    fun cropIsClampedToTheBuffer() {
+        val crop = FrameCrops.clamp(100, 80, -10, 5, 40, 90)
+        requireNotNull(crop)
+        assertEquals(0, crop.left)
+        assertEquals(5, crop.top)
+        assertEquals(40, crop.width)
+        assertEquals(75, crop.height)
+        assertFalse(crop.covers(100, 80))
+    }
+
+    @Test
+    fun emptyCropIsRejected() {
+        assertNull(FrameCrops.clamp(100, 80, 10, 10, 10, 40))
+        assertNull(FrameCrops.clamp(0, 80, 0, 0, 10, 10))
+    }
+
+    @Test
     fun emptyRealResultStaysEmptyAndMarkedReal() {
         val observation = DetectionReports.observation(
             readiness = DetectorReadiness.READY,

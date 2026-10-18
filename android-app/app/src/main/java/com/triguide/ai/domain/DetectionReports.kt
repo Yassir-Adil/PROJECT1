@@ -49,9 +49,57 @@ object DetectorConfig {
     const val MODEL_DISPLAY_NAME = "MediaPipe EfficientDet-Lite0 int8"
     const val MODEL_SOURCE_URL =
         "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/latest/efficientdet_lite0.tflite"
-    const val SCORE_THRESHOLD = 0.5f
-    const val MAX_RESULTS = 5
+
+    /**
+     * Lowest score the model may return. Weaker hits are logged and not drawn.
+     * The int8 model often scores a real chair or person under the old 0.50 floor.
+     */
+    const val MODEL_SCORE_THRESHOLD = 0.25f
+
+    /** Drawn on the preview and eligible to steer the virtual robot. */
+    const val SCORE_THRESHOLD = 0.35f
+    const val MAX_RESULTS = 8
     const val TASKS_VERSION = "1.1.1"
+}
+
+/**
+ * CameraX may report the preview crop inside a larger analysis buffer.
+ * Boxes are computed on the cropped, upright frame so they share the preview.
+ */
+object FrameCrops {
+    data class Crop(
+        val left: Int,
+        val top: Int,
+        val width: Int,
+        val height: Int,
+    ) {
+        fun covers(bufferWidth: Int, bufferHeight: Int): Boolean {
+            return left == 0 && top == 0 && width == bufferWidth && height == bufferHeight
+        }
+    }
+
+    fun clamp(
+        bufferWidth: Int,
+        bufferHeight: Int,
+        cropLeft: Int,
+        cropTop: Int,
+        cropRight: Int,
+        cropBottom: Int,
+    ): Crop? {
+        if (bufferWidth <= 0 || bufferHeight <= 0) {
+            return null
+        }
+        val left = cropLeft.coerceIn(0, bufferWidth)
+        val top = cropTop.coerceIn(0, bufferHeight)
+        val right = cropRight.coerceIn(0, bufferWidth)
+        val bottom = cropBottom.coerceIn(0, bufferHeight)
+        val width = right - left
+        val height = bottom - top
+        if (width <= 0 || height <= 0) {
+            return null
+        }
+        return Crop(left, top, width, height)
+    }
 }
 
 object FrameTimestamps {
@@ -62,6 +110,23 @@ object FrameTimestamps {
 }
 
 object DetectionReports {
+    /** Real boxes that may be drawn and may steer. Non-finite or tiny boxes are dropped. */
+    fun forGuidance(objects: List<DetectedObject>, threshold: Float): List<DetectedObject> {
+        if (!threshold.isFinite()) {
+            return emptyList()
+        }
+        return objects.filter { detected ->
+            detected.confidence.isFinite() &&
+                detected.confidence >= threshold &&
+                detected.left.isFinite() &&
+                detected.top.isFinite() &&
+                detected.right.isFinite() &&
+                detected.bottom.isFinite() &&
+                detected.right > detected.left &&
+                detected.bottom > detected.top
+        }
+    }
+
     fun horizontalZone(centerX: Float, imageWidth: Int): HorizontalZone {
         require(imageWidth > 0) { "image width must be positive" }
         val normalized = centerX / imageWidth.toFloat()

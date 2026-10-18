@@ -17,6 +17,7 @@ import com.triguide.ai.domain.DetectedObject
 import com.triguide.ai.domain.DetectionFrame
 import com.triguide.ai.domain.DetectionReports
 import com.triguide.ai.domain.DetectorConfig
+import com.triguide.ai.domain.FrameCrops
 import com.triguide.ai.domain.DetectorReadiness
 import com.triguide.ai.domain.EnvironmentObservation
 import com.triguide.ai.domain.FrameTimestamps
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -50,6 +52,8 @@ class MediaPipeObjectDetectorEngine(
     private var detector: ObjectDetector? = null
     private var closed = false
     private var lastTimestampMs = 0L
+    private var lastDetectLogMs = 0L
+    private var lastDetectLogKey = ""
 
     private val readinessState = MutableStateFlow(DetectorReadiness.LOADING)
     override val readiness: StateFlow<DetectorReadiness> = readinessState.asStateFlow()
@@ -93,13 +97,38 @@ class MediaPipeObjectDetectorEngine(
             return
         }
         var timestamp = -1L
+        var owned: Bitmap? = null
         try {
             val rotation = image.imageInfo.rotationDegrees
+            val bufferWidth = image.width
+            val bufferHeight = image.height
+            val cropRect = image.cropRect
             val raw = rgbaBitmap(image)
-            val upright = rotateUpright(raw, rotation)
-            if (upright !== raw) {
+            val crop = FrameCrops.clamp(
+                bufferWidth = raw.width,
+                bufferHeight = raw.height,
+                cropLeft = cropRect.left,
+                cropTop = cropRect.top,
+                cropRight = cropRect.right,
+                cropBottom = cropRect.bottom,
+            )
+            if (crop == null) {
+                raw.recycle()
+                throw IllegalArgumentException("Camera crop is empty.")
+            }
+            val cropped = if (crop.covers(raw.width, raw.height)) {
+                raw
+            } else {
+                Bitmap.createBitmap(raw, crop.left, crop.top, crop.width, crop.height)
+            }
+            if (cropped !== raw) {
                 raw.recycle()
             }
+            val upright = rotateUpright(cropped, rotation)
+            if (upright !== cropped) {
+                cropped.recycle()
+            }
+            owned = upright
             timestamp = synchronized(lock) {
                 val next = FrameTimestamps.next(lastTimestampMs, SystemClock.uptimeMillis())
                 lastTimestampMs = next
@@ -110,12 +139,19 @@ class MediaPipeObjectDetectorEngine(
                 height = upright.height,
                 startedElapsedMs = SystemClock.elapsedRealtime(),
                 mirrorHorizontally = frontCamera,
+                bitmap = upright,
+                rotationDegrees = rotation,
+                bufferWidth = bufferWidth,
+                bufferHeight = bufferHeight,
+                crop = crop,
             )
+            owned = null
             prunePending()
             active.detectAsync(BitmapImageBuilder(upright).build(), timestamp)
         } catch (error: Exception) {
+            recycleQuietly(owned)
             if (timestamp >= 0L) {
-                pending.remove(timestamp)
+                recycleQuietly(pending.remove(timestamp)?.bitmap)
             }
             acceptingFrame.set(true)
             errorState.value = "A frame was not submitted: ${error.message ?: error.javaClass.simpleName}"
@@ -161,7 +197,7 @@ class MediaPipeObjectDetectorEngine(
                 .setBaseOptions(baseOptions)
                 .setRunningMode(RunningMode.LIVE_STREAM)
                 .setMaxResults(DetectorConfig.MAX_RESULTS)
-                .setScoreThreshold(DetectorConfig.SCORE_THRESHOLD)
+                .setScoreThreshold(DetectorConfig.MODEL_SCORE_THRESHOLD)
                 .setResultListener(this::onResult)
                 .setErrorListener(this::onError)
                 .build()
@@ -190,17 +226,18 @@ class MediaPipeObjectDetectorEngine(
 
     private fun onResult(result: ObjectDetectorResult, input: MPImage) {
         acceptingFrame.set(true)
+        val meta = pending.remove(result.timestampMs())
         if (closed) {
+            recycleQuietly(meta?.bitmap)
             return
         }
-        val meta = pending.remove(result.timestampMs())
         val width = meta?.width ?: input.width
         val height = meta?.height ?: input.height
         val latencyMs = meta?.let { (SystemClock.elapsedRealtime() - it.startedElapsedMs).toDouble() }
         if (latencyMs != null && latencyMs.isFinite() && latencyMs >= 0.0) {
             performance.onInferenceCompleted(latencyMs)
         }
-        val objects = result.detections().mapNotNull { detection ->
+        val returned = result.detections().mapNotNull { detection ->
             val category = detection.categories().firstOrNull() ?: return@mapNotNull null
             val box = detection.boundingBox()
             val label = category.categoryName()?.takeIf { it.isNotBlank() }
@@ -214,8 +251,10 @@ class MediaPipeObjectDetectorEngine(
                 bottom = box.bottom,
             )
         }
+        val drawn = DetectionReports.forGuidance(returned, DetectorConfig.SCORE_THRESHOLD)
+        val below = returned.filter { candidate -> drawn.none { it === candidate } }
         frameState.value = DetectionFrame(
-            objects = objects,
+            objects = drawn,
             imageWidth = width,
             imageHeight = height,
             mirrorHorizontally = meta?.mirrorHorizontally == true,
@@ -224,13 +263,21 @@ class MediaPipeObjectDetectorEngine(
             completedAtElapsedMs = SystemClock.elapsedRealtime(),
         )
         errorState.value = null
-        if (loggedFirstInference.compareAndSet(false, true)) {
-            Log.i(TAG, "first inference latencyMs=$latencyMs objects=${objects.size}")
-        }
+        logDetections(
+            meta = meta,
+            width = width,
+            height = height,
+            latencyMs = latencyMs,
+            drawn = drawn,
+            below = below,
+        )
+        recycleQuietly(meta?.bitmap)
     }
 
     private fun onError(error: RuntimeException) {
         acceptingFrame.set(true)
+        pending.values.forEach { recycleQuietly(it.bitmap) }
+        pending.clear()
         errorState.value = error.message ?: "Object detector inference failed."
         frameState.value = null
         Log.e(TAG, "inference error", error)
@@ -249,7 +296,63 @@ class MediaPipeObjectDetectorEngine(
     private fun prunePending() {
         while (pending.size > 8) {
             val oldest = pending.keys.minOrNull() ?: return
-            pending.remove(oldest)
+            recycleQuietly(pending.remove(oldest)?.bitmap)
+        }
+    }
+
+    private fun logDetections(
+        meta: PendingFrame?,
+        width: Int,
+        height: Int,
+        latencyMs: Double?,
+        drawn: List<DetectedObject>,
+        below: List<DetectedObject>,
+    ) {
+        val key = "${drawn.joinToString(",") { it.label }}|${below.joinToString(",") { it.label }}"
+        val now = SystemClock.elapsedRealtime()
+        val empty = drawn.isEmpty() && below.isEmpty()
+        val interval = if (empty) EMPTY_LOG_INTERVAL_MS else HIT_LOG_INTERVAL_MS
+        val first = loggedFirstInference.compareAndSet(false, true)
+        val due = first || key != lastDetectLogKey || now - lastDetectLogMs >= interval
+        if (!due) {
+            return
+        }
+        lastDetectLogKey = key
+        lastDetectLogMs = now
+        val latency = if (latencyMs != null && latencyMs.isFinite()) {
+            String.format(Locale.US, "%.0f", latencyMs)
+        } else {
+            "none"
+        }
+        val crop = meta?.crop
+        val cropText = if (crop == null) {
+            "none"
+        } else {
+            "${crop.left},${crop.top},${crop.width}x${crop.height}"
+        }
+        Log.i(
+            TAG,
+            "rot=${meta?.rotationDegrees ?: -1} buffer=${meta?.bufferWidth ?: -1}x${meta?.bufferHeight ?: -1} " +
+                "crop=$cropText upright=${width}x${height} latencyMs=$latency " +
+                "drawn=${drawn.size}:${formatObjects(drawn)} below=${below.size}:${formatObjects(below)}",
+        )
+    }
+
+    private fun formatObjects(objects: List<DetectedObject>): String {
+        if (objects.isEmpty()) {
+            return "none"
+        }
+        return objects.joinToString(separator = "; ") { detected ->
+            val score = String.format(Locale.US, "%.2f", detected.confidence)
+            val box = listOf(detected.left, detected.top, detected.right, detected.bottom)
+                .joinToString(separator = ",") { value -> String.format(Locale.US, "%.0f", value) }
+            "${detected.label}=$score@$box"
+        }
+    }
+
+    private fun recycleQuietly(bitmap: Bitmap?) {
+        if (bitmap != null && !bitmap.isRecycled) {
+            bitmap.recycle()
         }
     }
 
@@ -258,10 +361,17 @@ class MediaPipeObjectDetectorEngine(
         val height: Int,
         val startedElapsedMs: Long,
         val mirrorHorizontally: Boolean,
+        val bitmap: Bitmap,
+        val rotationDegrees: Int,
+        val bufferWidth: Int,
+        val bufferHeight: Int,
+        val crop: FrameCrops.Crop,
     )
 
     companion object {
         private const val TAG = "TriGuideDetect"
+        private const val EMPTY_LOG_INTERVAL_MS = 2_000L
+        private const val HIT_LOG_INTERVAL_MS = 700L
 
         private fun rgbaBitmap(image: ImageProxy): Bitmap {
             val plane = image.planes.firstOrNull()

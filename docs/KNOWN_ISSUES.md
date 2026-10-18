@@ -16,7 +16,7 @@
 | BUILD-001 | Low | `stripDebugDebugSymbols` left native libs unstripped (`libandroidx.graphics.path.so`, `libimage_processing_util_jni.so`, and now `libmediapipe_tasks_jni.so`); debug APK still built | Open |
 | RES-001 | Info | GuideLens `assembleDebug` not run (`compileSdk` 36 platform missing; GPL, not shipping) | Accepted for Option B |
 | TEST-001 | Low | Phase 3 left simulator buttons and TalkBack untested. The 0.3.0 session read Home, manual simulation, synthetic simulation, and Live Vision through `uiautomator`. TalkBack is still open (see TEST-002) | Open |
-| DET-001 | Medium | 0.4.0 on the Redmi reported Preview 14 FPS and Inference 9 FPS (last 53 ms, average 59 ms) and logged a chair in the center. 0.4.1 Home shows READY. Live Vision on 0.4.1 was not opened, and PC taps are blocked (ENV-011) | Open |
+| DET-001 | Medium | 0.7.0 on the Redmi drew real boxes (person, bottle, laptop) after the viewport crop. The model also mislabels (frisbee, tv). A counted true-positive / false-alarm pass is still open | Open |
 | DET-002 | Medium | Emulator camera returned zero objects again in 0.3.0, so bounding-box alignment and a camera-triggered turn were not seen | Open |
 | DET-003 | Medium | No labeled true-positive / false-alarm count | Open |
 | DET-004 | Info | Screen zone (left/center/right) is the box center in the frame. It is not a distance | Accepted |
@@ -27,4 +27,4 @@
 | VOICE-002 | Info | Quiet mode and the speech on/off switch were not tapped on the Redmi. Gate unit tests cover both | Open |
 | ENV-011 | Medium | HyperOS blocked `adb shell input` (`SecurityException` / `INJECT_EVENTS`) during the 0.4.1 check. One `adb install` of 0.4.1 returned `INSTALL_FAILED_USER_RESTRICTED`; the retry succeeded. On 0.6.0, `input tap`, `input swipe`, and `input keyevent` were accepted. The block can return. Steps: `docs/DEVICE_COMPATIBILITY.md` | Open |
 | FP-001 | High | Fingerprint triple-tap cannot be implemented. On this Redmi the reader is the power button (`isPowerbuttonFps: true`, `isUdfps: false`). Android does not deliver those presses to a normal app. `BiometricPrompt` authenticates a finger; it does not count taps. Xiaomi’s `fingerprint_double_tap` setting is a system action, currently `none`, and is not an app API | Accepted — 0.6.0 does not read the power button. Screen triple-tap restarts guidance. The limitation is spoken once on a cold start |
-| NAV-002 | Info | Floor segmentation is NOT_STARTED and disabled. No floor model is loaded. No floor mask is drawn | Accepted for 0.6.0 |
+| NAV-002 | Info | Floor segmentation is NOT_STARTED and disabled. DeepLab-v3 has no floor class and was not bundled. No floor mask is drawn. A missing mask is not open floor | Accepted for 0.7.0 |

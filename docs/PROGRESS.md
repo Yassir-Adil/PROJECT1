@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-18 — Real boxes on the Redmi, floor still not started (0.7.0)
+
+**Status:** 0.7.0 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. The detector drew real boxes. Floor segmentation stays `NOT_STARTED`. No floor mask is drawn.
+
+### Detection
+
+- The analysis frame is cropped to the camera viewport before it is rotated upright. On this phone the log was `rot=90 buffer=640x480 crop=134,0,372x480 upright=480x372`.
+- The model may return scores from 0.25. A box is drawn, and may steer, only at 0.35 or above. Weaker hits are logged and not drawn.
+- With the rear camera on a person and a table, logcat `TriGuideDetect` reported real scores, including `person=0.72`, `bottle=0.52`, and `laptop=0.45`. A `couch` at 0.34 was logged as below the floor and was not drawn. The same open also logged false labels from the model (`tv`, and on the earlier frame `frisbee`). Those boxes came from the model. They were not invented in the app.
+- A screencap during that open showed yellow boxes on the people and on a bottle. One box was labeled frisbee over the table. Decision was Hold because a reported object was in the center. Front wheel 0.0 degrees. Preview 30 FPS, inference 8 FPS, last 75 ms, average 92 ms, on that UI dump.
+- An earlier stretch of the same launch, before the camera was aimed at the people, logged `drawn=0` at the 0.25 model floor. An empty frame is still Hold, not a clear path.
+
+### Floor
+
+- MediaPipe DeepLab-v3 float32 (2,780,176 bytes, `storage.googleapis.com` `deeplab_v3.tflite`) was downloaded and inspected. Its label list is the Pascal set (`background`, `person`, `chair`, `sofa`, and the rest). The file contains no `floor` label. There is no int8 build at the usual MediaPipe URL (HTTP 404). It was not bundled. No mask is drawn. Nothing is labeled safe from a floor.
+
+### Also in this build
+
+- Live Vision shows the detector sentence and asks to point the rear camera at a chair or a person.
+- **Describe this frame** speaks the latest reported boxes once. It is not on the control tick. On the phone, one tap logged `TriGuideScene` and `speak result=0` for “Reported in the latest frame: person 0.68 center, bottle 0.41 right, bottle 0.36 right. This describes detector boxes only. It is not a clearance and not a floor reading.” Sound from the speaker was not confirmed by ear.
+- Robot Simulation’s camera-informed mode now opens the rear camera on that screen. That mode was not opened on the phone in this session.
+
+### Phone and tests
+
+- `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device`. No emulator was attached.
+- Final `adb install -r outputs/apk/TriGuideAI-0.7.0-debug.apk` → Success. `versionName=0.7.0` `versionCode=9`. APK size 81,408,299 bytes. No FATAL line. `INTERNET` is not in the badge.
+- `:app:testDebugUnitTest` 95/95 PASS, 0 failures, after the final source change. `:sim-core:test` was UP-TO-DATE and was not re-run. Kinematics sources did not change.
+
+### Still open
+
+- A counted true-positive / false-alarm pass. This smoke is not that count.
+- Floor segmentation, until a lite model with a real floor class is available under a compatible license.
+- Camera-informed simulation was not opened on the phone.
+- TalkBack was not walked. Speaker audio was not confirmed by ear.
+
 ## 2026-10-18 — Screen triple-tap restores guidance (0.6.0)
 
 **Status:** 0.6.0 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. Screen triple-tap restarted guidance. Fingerprint control is still impossible and was not pursued.

@@ -84,6 +84,8 @@ import com.triguide.ai.domain.MockHardwareController
 import com.triguide.ai.domain.navigationCueForSpeech
 import com.triguide.ai.domain.NavigationDecisions
 import com.triguide.ai.domain.PerformanceMonitor
+import com.triguide.ai.domain.SceneDescription
+import com.triguide.ai.domain.SceneLine
 import com.triguide.ai.domain.SceneObservations
 import com.triguide.ai.domain.SpeechDirective
 import com.triguide.ai.domain.SteeringCommand
@@ -152,7 +154,7 @@ private enum class RobotDriveMode(val label: String, val description: String) {
     ),
     CameraInformed(
         label = "Camera-informed",
-        description = "Simulated robot. Uses detection boxes from Live Vision when that camera is already running. This screen does not open the camera. A box is not a measured clearance.",
+        description = "Simulated robot. This mode opens the rear camera and steers from reported boxes. A box is not a measured clearance. This is not a physical robot.",
     ),
     SyntheticWorld(
         label = "Synthetic world",
@@ -654,6 +656,38 @@ private fun CameraScreen(
                         )
                     }
                 }
+                Text(
+                    text = observation.summary,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    modifier = Modifier.semantics { contentDescription = observation.summary },
+                )
+                Text(
+                    text = "Point the rear camera at a chair or a person. A box is drawn only when the model reports that object.",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Point the rear camera at a chair or a person. A box is drawn only when the model reports that object."
+                    },
+                )
+                Button(
+                    onClick = {
+                        val line = if (observation.realDetector) {
+                            SceneDescription.fromReported(observation.detections)
+                        } else {
+                            SceneDescription.waiting()
+                        }
+                        describeFrame(services, line.english, line)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .semantics {
+                            contentDescription = "Describe this frame from the latest detector boxes. This is not a clearance."
+                        },
+                ) {
+                    Text("Describe this frame", fontSize = 18.sp)
+                }
             }
         }
         Button(
@@ -832,6 +866,9 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
             }
         }
         GuidanceReadout(decision = readout, applied = applied, showPath = false)
+        if (mode == RobotDriveMode.CameraInformed) {
+            CameraInformedPreview(services)
+        }
         VoiceCueLine(lastVoice)
         Canvas(
             modifier = Modifier
@@ -1234,6 +1271,88 @@ private fun ScenarioCard(title: String, body: String) {
         Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp)
         Text(body, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp)
     }
+}
+
+@Composable
+private fun CameraInformedPreview(services: AppServices) {
+    val context = LocalContext.current
+    val granted = hasCameraPermission(context)
+    val readiness by services.detection.readiness.collectAsStateWithLifecycle()
+    val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
+    val frame by services.detection.latestFrame.collectAsStateWithLifecycle()
+    val observation = DetectionReports.observation(
+        readiness = readiness,
+        detail = detail,
+        frame = frame,
+        modelName = DetectorConfig.MODEL_DISPLAY_NAME,
+        scoreThreshold = DetectorConfig.SCORE_THRESHOLD,
+    )
+    Text(
+        text = observation.summary,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontSize = 16.sp,
+        modifier = Modifier.semantics { contentDescription = observation.summary },
+    )
+    if (!granted) {
+        Text(
+            text = "Camera permission is off, so this mode has no frame. The virtual robot holds. Open floor is not assumed.",
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 16.sp,
+        )
+        return
+    }
+    val previewView = remember {
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
+    DisposableEffect(previewView) {
+        onDispose {
+            services.camera.stop()
+            services.detection.clearFrame()
+        }
+    }
+    LaunchedEffect(previewView) {
+        services.camera.start(
+            context = context,
+            lifecycleOwner = context as LifecycleOwner,
+            previewView = previewView,
+            onFrameTimestampNs = services.performance::onFrame,
+            onAnalysisFrame = services.detection::analyze,
+            onResult = { },
+        )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+    ) {
+        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+        DetectionOverlay(
+            frame = frame,
+            showBoxes = readiness == DetectorReadiness.READY && frame?.fromRealDetector == true,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private fun describeFrame(services: AppServices, logText: String, line: SceneLine) {
+    Log.i("TriGuideScene", logText)
+    val settings = services.voiceSettings.current().sanitized()
+    if (!settings.speechEnabled) {
+        return
+    }
+    val language = services.speaker.resolve(settings.language)
+    services.speaker.speak(
+        SpeechDirective.Speak(
+            text = SceneDescription.text(line, language),
+            interrupt = true,
+            speechRate = settings.speechRate,
+            kind = VoiceAlertKind.SESSION_NOTICE,
+            language = language,
+        ),
+    ) {}
 }
 
 private fun announce(services: AppServices, cue: VoiceCue?, nowElapsedMs: Long) {

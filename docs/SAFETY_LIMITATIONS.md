@@ -6,7 +6,8 @@ TriGuide AI in this build is a **research and simulation** app.
 - Object detection can draw boxes from an on-device model. That is not a certified obstacle scan. Misses and false boxes are expected. Do not walk from these boxes.
 - In 0.4.0 the virtual robot can steer from the horizontal position of those boxes, and from an authored simulator map. A camera decision does not measure distance. An empty frame is not open space. A center box does not prove a side is free. The drawn path is a sketch of the current command, labeled as not verified.
 - Spoken cues repeat that research decision in a short phrase. They are not a safety proof, not a clearance, and not a reason to walk. Quiet mode and speech off do not make the detector more accurate.
-- Floor segmentation is disabled. No floor model is loaded, no floor mask is drawn, and a missing floor mask is not treated as open floor.
+- Floor segmentation is disabled. No floor model is loaded, no floor mask is drawn, and a missing floor mask is not treated as open floor. DeepLab-v3 was not used, because its labels do not include floor.
+- Describe this frame repeats the latest detector boxes. It is not a clearance and not a floor reading.
 - The synthetic map uses coordinates written in the app. Those meters are not a camera measurement.
 - `FutureHardwareController` is a mock and refuses commands. The on-screen robot does not move a physical machine.
 - This build’s merged manifest requests camera access and does not request internet access. Frames are processed on device. A dependency that wanted network permission was stripped.

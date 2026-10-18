@@ -8,6 +8,32 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — Redmi 0.7.0 detection smoke
+
+**Status: PASS_WITH_WARNINGS**
+
+Physical device only. `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device` (`22101316G`, `ruby`). No emulator was attached or installed to.
+
+### Build
+
+- `:app:testDebugUnitTest` 95/95 PASS, 0 failures, 0 skipped. Includes the score floor, the viewport crop clamp, and the on-demand scene sentence.
+- `:sim-core:test` was UP-TO-DATE. It was not re-run. Kinematics sources did not change.
+- `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` (build-tools 36.0.0): `versionName='0.7.0'`, `versionCode='9'`, `minSdk` 26, `targetSdk` 35, `compileSdk` 35. Badge permissions: `CAMERA`, `VIBRATE`, and the AndroidX non-exported receiver permission. `INTERNET` was not listed.
+- Copied to `outputs/apk/TriGuideAI-0.7.0-debug.apk` (81,408,299 bytes).
+
+### Phone
+
+- `adb -s 55aqpfqkvw9xbafe install -r outputs/apk/TriGuideAI-0.7.0-debug.apk` → `Success`. `dumpsys package` showed `versionName=0.7.0` `versionCode=9`.
+- `MainActivity` was the resumed activity. No FATAL line.
+- `TriGuideDetect`: `detector ready model=MediaPipe EfficientDet-Lite0 int8 delegate=CPU`.
+- Geometry on the captured lines: `rot=90 buffer=640x480 crop=134,0,372x480 upright=480x372`. Latency on the final process was about 88–158 ms on the lines that were kept.
+- Aimed at people and a table, drawn examples included `person=0.72@36,1,459,369`, `bottle=0.52@381,98,404,152`, and `laptop=0.45@0,272,128,371`. A `couch=0.34` was in `below` and was not drawn. The model also emitted false labels (`tv`, and on an earlier frame of this version `frisbee`). The app did not add boxes of its own.
+- Before the camera was on that scene, lines were `drawn=0:none below=0:none`. `TriGuideNav` then logged Hold: an empty detection is not open space.
+- UI dump on the first 0.7.0 process: `READY. MediaPipe EfficientDet-Lite0 int8`, `Camera: Streaming. Preview 30 FPS. Inference 8 FPS, last 75 ms, average 92 ms.`, `Decision: Hold`, reason that a bottle was in the center, `Front wheel: 0.0 degrees`, and the sentence that nothing is assumed from an empty frame. The same dump included “found no objects at or above 0.35 confidence” only while the frame was empty; a later screencap showed yellow boxes, labels, and scores on people and a bottle, plus a frisbee label on the table. `uiautomator` later returned `could not get idle state` while the preview kept updating, so More and Settings were not dumped.
+- One tap logged `TriGuideScene` and `TriGuideVoice` `speak result=0` for the on-demand sentence naming `person 0.68 center` and two bottles. Result 0 means the engine accepted the utterance. Sound from the speaker was not confirmed by ear. Cold start also logged `speak result=0` for the existing research disclaimer and “Camera started. Guidance on.”
+- Floor segmentation was not exercised. No floor model is in the APK. No floor mask was drawn.
+- Camera-informed simulation, Test Scenarios, Diagnostics, Settings, and TalkBack were not opened on this build.
+
 ## 2026-10-18 — Redmi 0.6.0 screen triple-tap and core smoke
 
 **Status: PASS_WITH_WARNINGS**

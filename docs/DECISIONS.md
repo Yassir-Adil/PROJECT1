@@ -138,6 +138,23 @@
 - Version 0.6.0 (`versionCode` 8). The gap between taps is 750 ms, inside the requested 600–800 ms window. Three taps restart the camera and speak “Camera started. Guidance on.” in the current voice language.
 - Test Scenarios run the navigation engine on three authored maps. Diagnostics can share a plain-text status dump. Neither one is an indoor evaluation.
 
+## 2026-10-18 — Boxes follow the preview crop; floor stays off
+
+**Decision:** Crop the analysis buffer to the CameraX crop, then rotate it upright, before EfficientDet runs. Draw and steer from scores at or above 0.35. Let the model return scores from 0.25 so weaker hits can be logged and then dropped. Do not bundle DeepLab-v3. Floor stays `NOT_STARTED`.
+
+**Why**
+
+- On the Redmi the analysis buffer is 640×480 and the viewport crop is not the full buffer (`134,0,372x480` in the 0.7.0 log). Detecting on the uncropped buffer and then center-cropping the overlay does not match that crop. Cropping first puts boxes in the same image the preview shows.
+- A 0.50 floor hid real scores just under it. In this smoke a bottle at 0.48 and a laptop at 0.45 were drawn. Scores under 0.35, such as a couch at 0.34, were logged and not drawn. The model still mislabels (frisbee, tv). Those are model outputs, not boxes the app invents. Empty frames stay Hold.
+- DeepLab-v3 float32 from `https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite` is 2,780,176 bytes, Apache-2.0, and its embedded labels are Pascal classes. There is no floor class. The int8 URL returns HTTP 404. Shipping that model and painting background as floor would be a false floor. It was not copied into assets.
+- Describe this frame reads the latest real boxes and speaks once, outside the 50 ms loop. It does not say the path is clear and it does not read a floor.
+- Camera-informed simulation opens the rear camera on that screen, because leaving Live Vision used to stop the only camera and the mode then had no frame.
+
+**Consequences**
+
+- Version 0.7.0 (`versionCode` 9). Guidance uses the same 0.35 floor as the overlay.
+- No floor mask. A missing mask is not open floor and is not safe.
+
 ## 2026-10-18 — Fingerprint taps are not available to this app
 
 **Decision:** Do not ship a fingerprint triple-tap, a screen-wide triple-tap, or a volume-key shortcut. Opening TriGuide enters Live Vision and starts the camera and voice. Say once, in speech and on screen, that the fingerprint control cannot be used.
