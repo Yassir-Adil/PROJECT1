@@ -84,6 +84,7 @@ import com.triguide.ai.domain.MockHardwareController
 import com.triguide.ai.domain.navigationCueForSpeech
 import com.triguide.ai.domain.NavigationDecisions
 import com.triguide.ai.domain.PerformanceMonitor
+import com.triguide.ai.domain.SceneBriefScheduler
 import com.triguide.ai.domain.SceneDescription
 import com.triguide.ai.domain.SceneLine
 import com.triguide.ai.domain.SceneObservations
@@ -97,6 +98,8 @@ import com.triguide.ai.domain.VoiceCue
 import com.triguide.ai.domain.VoiceCues
 import com.triguide.ai.domain.VoiceGateInput
 import com.triguide.ai.domain.VoiceGuidanceGate
+import com.triguide.ai.memory.LocalGuidanceMemory
+import com.triguide.ai.memory.PersonConsentStore
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
 import com.triguide.ai.vision.MediaPipeObjectDetectorEngine
@@ -172,6 +175,14 @@ private class AppServices(context: android.content.Context) {
     val voiceSettings = VoiceSettingsStore(context)
     val voiceGate = VoiceGuidanceGate()
     val speaker = AndroidVoiceSpeaker(context)
+    private val memoryDirectory = java.io.File(context.filesDir, "guidance-memory")
+    val memory = LocalGuidanceMemory(memoryDirectory)
+    val people = PersonConsentStore(memoryDirectory)
+    val sceneBriefs = SceneBriefScheduler()
+
+    init {
+        memory.startSession(android.os.SystemClock.elapsedRealtime())
+    }
 }
 
 @Composable
@@ -672,11 +683,17 @@ private fun CameraScreen(
                 )
                 Button(
                     onClick = {
-                        val line = if (observation.realDetector) {
-                            SceneDescription.fromReported(observation.detections)
+                        val scene = SceneObservations.fromCamera(
+                            readiness = readiness,
+                            frame = frame,
+                            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+                        )
+                        val line = if (scene.realDetector && scene.mode == com.triguide.ai.domain.PerceptionMode.CAMERA_2D) {
+                            SceneDescription.fromCues(scene.cues, services.people.recognize()?.name)
                         } else {
                             SceneDescription.waiting()
                         }
+                        services.memory.noteSummary(line.english, android.os.SystemClock.elapsedRealtime())
                         describeFrame(services, line.english, line)
                     },
                     modifier = Modifier
@@ -745,7 +762,18 @@ private fun AssistCameraDrive(
                     guidanceStartedAtMs = startedAt,
                     suppressNavigationUntilMs = sessionSpeech.suppressNavigationUntilMs,
                 )
-                announce(services, cue, now)
+                val spoke = announce(services, cue, now)
+                if (scene.realDetector) {
+                    services.memory.note(scene.cues, now)
+                    val brief = services.sceneBriefs.nextCue(
+                        cues = scene.cues,
+                        nowElapsedMs = now,
+                        navigationSpokeThisTick = spoke,
+                    )
+                    if (brief != null && now >= sessionSpeech.suppressNavigationUntilMs) {
+                        announce(services, brief, now)
+                    }
+                }
                 val key = "${decision.action.name}:${decision.reason}"
                 if (key != logged) {
                     logged = key
@@ -791,7 +819,11 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
                         val decision = services.guidance.onCamera(scene)
                         services.robot.setCommand(decision.toSteeringCommand())
                         services.robot.tick(dt)
-                        VoiceCues.fromDecision(decision)
+                        VoiceCues.fromDecision(decision).also {
+                            if (scene.realDetector) {
+                                services.memory.note(scene.cues, now)
+                            }
+                        }
                     }
                     RobotDriveMode.SyntheticWorld -> {
                         val scene = SyntheticObstacleWorld.observe(services.robot.state.value.pose)
@@ -1042,6 +1074,7 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
             lastCue = lastVoice.ifBlank { "none" },
             performance = performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
             hardware = services.hardware.connectionLabel,
+            memory = "${services.memory.summaryLine()} ${services.people.statusLine()}",
         )
         Button(
             onClick = {
@@ -1076,6 +1109,7 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Voice guidance", voiceSettings.summary())
         StatusLine("Voice engine", voiceStatus)
         StatusLine("Last voice cue", lastVoice)
+        StatusLine("Memory", "${services.memory.summaryLine()} ${services.people.statusLine()}")
         SectionLabel("Performance")
         StatusLine(
             "Performance",
@@ -1117,6 +1151,7 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
             onLanguage = services.voiceSettings::setLanguage,
             onPlaySample = { playSample(services) },
         )
+        PersonConsentSection(services.people)
         StatusLine("Object detection", "${DetectorConfig.MODEL_DISPLAY_NAME} on device. Confidence floor ${DetectorConfig.SCORE_THRESHOLD}.")
         StatusLine("Navigation", "Camera mode uses box position in the image. It does not measure distance.")
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
@@ -1194,6 +1229,7 @@ private fun diagnosticsText(
     lastCue: String,
     performance: String,
     hardware: String,
+    memory: String,
 ): String {
     return DiagnosticsReport.text(
         DiagnosticsSnapshot(
@@ -1211,6 +1247,7 @@ private fun diagnosticsText(
             performance = performance,
             hardware = hardware,
             shortcut = GuidanceSpeech.GESTURE_ON_SCREEN,
+            memory = memory,
         ),
     )
 }
@@ -1355,7 +1392,7 @@ private fun describeFrame(services: AppServices, logText: String, line: SceneLin
     ) {}
 }
 
-private fun announce(services: AppServices, cue: VoiceCue?, nowElapsedMs: Long) {
+private fun announce(services: AppServices, cue: VoiceCue?, nowElapsedMs: Long): Boolean {
     val settings = services.voiceSettings.current()
     val directive = services.voiceGate.consider(
         VoiceGateInput(
@@ -1371,8 +1408,11 @@ private fun announce(services: AppServices, cue: VoiceCue?, nowElapsedMs: Long) 
         }
         if (!accepted) {
             services.voiceGate.abandonLastUtterance(nowElapsedMs)
+            return false
         }
+        return true
     }
+    return false
 }
 
 private fun playSample(services: AppServices) {

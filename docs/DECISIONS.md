@@ -173,3 +173,37 @@
 - If the camera permission dialog cannot be shown again, the app speaks and opens TriGuide’s system settings. More still opens the simulator, settings, and diagnostics.
 - Screen triple-tap and the volume-key double-press from the earlier 0.5.0 experiment are not in this APK. 0.5.0 was installed earlier the same morning and is superseded.
 
+## 2026-10-18 — Side cues from box position; names only after confirm
+
+**Decision:** Narrow the camera blocking band to horizontal centers from 0.42 to 0.58. A box clearly left or right of that band suggests a slight turn. A box near the band suggests a fuller turn. Hold and Unknown stay for a middle box, both sides, an empty frame, and a bad sample. Box area is not treated as distance. Speech names the label and the side. Person names stay off until Settings **Remember people** is on, and a name is stored only after **Confirm save**. No face crop or embedding is written. No cloud TTS.
+
+**Why**
+
+- On 0.7.0 a person whose box center sat in the middle third became Hold, so left/right guidance rarely spoke. The middle third is wider than “in front of the user.”
+- A large box is not closer. Using area to force a full turn invented a strength the image does not measure.
+- The user asked for memory that saves only people they consent to, like a helper, not a scan of strangers. This build has no face model, so `recognize()` matches nobody and Describe does not invent a name.
+- Google Cloud TTS, Azure Neural, and ElevenLabs would need a network permission, a key, and a subscription. They are not added. The device Android engine is used. Speech rate defaults to 0.90 once for installs that still had the old 1.0 default. Pitch is 0.96 for hold and camera cues and 1.0 otherwise.
+- `guidance-memory/` is app-private and excluded from backup. Object notes are throttled and cannot change the steering decision. A write failure is ignored so the control loop keeps running.
+
+**Consequences**
+
+- Version 0.8.0 (`versionCode` 10). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed.
+- Saved rows are `name`, time, and `faceStored=0`. Delete is on the Settings screen.
+- Optional paid voices are listed in `docs/AGENT_VISION_VOICE.md` and the progress log. They are not integrated.
+
+## 2026-10-18 — Outer thirds steer; a committed turn is spoken
+
+**Decision:** If the strongest box sits in the left third (center under 0.33) or the right third (center over 0.67), steer away from it unless another strong box is in the center band or on the opposite side. A turn phrase names that one side and adds “Not a measured gap.” It does not say left and center together. The gate keeps a committed turn that arrives while Hold is speaking and speaks it once the gap allows. Settings saves a typed name, including Arabic, through `requestSave`. The pending sentence says no photo is stored at all.
+
+**Why**
+
+- On 0.8.0 the phone spoke “Sink in the center. Hold.” and later committed Slight left without a turn sentence. A heard line mixed “left” with “center.”
+- Any box in the old center band forced Hold, so a person clearly to one side lost to a weak middle box.
+- The Prepare save button sent the typed name through an English Latin parser, so أحمد never matched.
+- “No photo is saved until you confirm” implied a photo would be stored on confirm. This build still has no face model.
+
+**Consequences**
+
+- Version 0.8.1 (`versionCode` 11). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed. Paid TTS is not added.
+- `storeFace` still returns false. Confirm writes a name and `faceStored=0`.
+

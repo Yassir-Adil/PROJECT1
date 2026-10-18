@@ -7,7 +7,9 @@ import kotlin.math.abs
  * Turns one observation into a virtual steering choice.
  *
  * Camera samples use the horizontal center of each box. They do not produce meters.
- * An empty frame, a center box, or two competing sides yields Hold or Unknown.
+ * A box in the middle band, an empty frame, or two competing sides yields Hold or Unknown.
+ * A box clearly to one side suggests a slight turn. A box near the middle band suggests a fuller turn.
+ * How much of the picture a box fills is not treated as a distance.
  * Straight is reserved for the synthetic map, where obstacle positions are authored.
  */
 class NavigationDecisionEngine : NavigationDecisionPolicy {
@@ -70,16 +72,34 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 confidence = 0.55f,
             )
         }
+        val dominant = usable.maxBy { weight(it) }
+        if (dominant.centerXNormalized < NavigationConfig.LEFT_THIRD_END) {
+            if (!escapeBlocked(ImageSide.LEFT, dominant, usable)) {
+                val side = usable.filter { it.centerXNormalized < NavigationConfig.CENTER_START }
+                return steerAwayFrom(ImageSide.LEFT, side.ifEmpty { listOf(dominant) }, observation)
+            }
+            return holdForBlockedSide(dominant, usable, observation)
+        }
+        if (dominant.centerXNormalized > NavigationConfig.RIGHT_THIRD_START) {
+            if (!escapeBlocked(ImageSide.RIGHT, dominant, usable)) {
+                val side = usable.filter { it.centerXNormalized > NavigationConfig.CENTER_END }
+                return steerAwayFrom(ImageSide.RIGHT, side.ifEmpty { listOf(dominant) }, observation)
+            }
+            return holdForBlockedSide(dominant, usable, observation)
+        }
         val left = usable.filter { it.centerXNormalized < NavigationConfig.CENTER_START }
         val right = usable.filter { it.centerXNormalized > NavigationConfig.CENTER_END }
         val center = usable.filter { it.centerXNormalized in NavigationConfig.CENTER_START..NavigationConfig.CENTER_END }
         if (center.isNotEmpty()) {
-            val name = displayLabel(center.maxBy { it.confidence })
+            val chosen = center.maxBy { weight(it) }
+            val name = displayLabel(chosen)
             return hold(
                 reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
                 observation = observation,
                 label = label,
-                confidence = cameraConfidence(center.maxBy { it.confidence }),
+                confidence = cameraConfidence(chosen),
+                subjectLabel = name,
+                subjectSide = "center",
             )
         }
         if (left.isNotEmpty() && right.isNotEmpty()) {
@@ -96,6 +116,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 observation = observation,
                 label = label,
                 confidence = cameraConfidence(usable.maxBy { it.confidence }),
+                subjectLabel = "",
+                subjectSide = "both",
             )
         }
         if (left.isNotEmpty()) {
@@ -190,21 +212,24 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             ImageSide.LEFT -> strongest.centerXNormalized >= NavigationConfig.LEFT_INNER_CENTER
             ImageSide.RIGHT -> strongest.centerXNormalized <= NavigationConfig.RIGHT_INNER_CENTER
         }
-        val strong = strongest.areaFraction >= NavigationConfig.STRONG_AREA_FRACTION || nearCenter
-        val action = turnAction(side, strong)
+        val action = turnAction(side, strong = nearCenter)
         val name = displayLabel(strongest)
         val areaPercent = (strongest.areaFraction.coerceIn(0f, 1f) * 100f).toInt()
         val detectorConfidence = String.format(Locale.US, "%.2f", strongest.confidence)
         val awayWord = if (side == ImageSide.LEFT) "right" else "left"
+        val steerWord = if (nearCenter) awayWord else "slightly $awayWord"
         return NavigationDecisions.fromAction(
             action = action,
             reason = "$name is on the ${sideWord(side)} of the image " +
                 "(detector confidence $detectorConfidence, $areaPercent percent of the frame). " +
-                "Steering $awayWord. Depth is not measured. The $awayWord side is not a confirmed gap.",
+                "Steering $steerWord. Depth is not measured. The $awayWord side is not a confirmed gap. " +
+                "The box size is not a distance.",
             confidence = cameraConfidence(strongest),
             basedOnRealVision = observation.realDetector,
             metricDepthUsed = false,
             perceptionLabel = NavigationConfig.CAMERA_LABEL,
+            subjectLabel = name,
+            subjectSide = sideWord(side),
         )
     }
 
@@ -224,6 +249,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         observation: SceneObservation,
         label: String,
         confidence: Float,
+        subjectLabel: String = "",
+        subjectSide: String = "",
     ): NavigationDecision {
         return NavigationDecisions.fromAction(
             action = GuidanceAction.HOLD,
@@ -232,6 +259,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             basedOnRealVision = observation.realDetector && observation.mode == PerceptionMode.CAMERA_2D,
             metricDepthUsed = observation.mode == PerceptionMode.SYNTHETIC_WORLD && observation.metricDepthAvailable,
             perceptionLabel = label,
+            subjectLabel = subjectLabel,
+            subjectSide = subjectSide,
         )
     }
 
@@ -250,14 +279,73 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         )
     }
 
+    /**
+     * The outer-third turn waits when another box is strong enough to sit in the
+     * center band or on the opposite side. A weak box does not cancel the turn.
+     */
+    private fun escapeBlocked(
+        occupied: ImageSide,
+        dominant: DirectionalCue,
+        usable: List<DirectionalCue>,
+    ): Boolean {
+        return usable.any { other ->
+            if (other === dominant) return@any false
+            val inTheWay = when (occupied) {
+                ImageSide.LEFT -> other.centerXNormalized >= NavigationConfig.CENTER_START
+                ImageSide.RIGHT -> other.centerXNormalized <= NavigationConfig.CENTER_END
+            }
+            inTheWay && strongBlocker(other, dominant)
+        }
+    }
+
+    private fun holdForBlockedSide(
+        dominant: DirectionalCue,
+        usable: List<DirectionalCue>,
+        observation: SceneObservation,
+    ): NavigationDecision {
+        val label = NavigationConfig.CAMERA_LABEL
+        val center = usable.filter { cue ->
+            cue.centerXNormalized in NavigationConfig.CENTER_START..NavigationConfig.CENTER_END &&
+                strongBlocker(cue, dominant)
+        }
+        if (center.isNotEmpty()) {
+            val chosen = center.maxBy { weight(it) }
+            val name = displayLabel(chosen)
+            return hold(
+                reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
+                observation = observation,
+                label = label,
+                confidence = cameraConfidence(chosen),
+                subjectLabel = name,
+                subjectSide = "center",
+            )
+        }
+        return hold(
+            reason = "Boxes are on both sides of the image. No confirmed passage. Depth is not measured.",
+            observation = observation,
+            label = label,
+            confidence = cameraConfidence(usable.maxBy { weight(it) }),
+            subjectLabel = "",
+            subjectSide = "both",
+        )
+    }
+
+    private fun strongBlocker(other: DirectionalCue, dominant: DirectionalCue): Boolean {
+        val dominantWeight = weight(dominant)
+        if (dominantWeight <= 0f) return true
+        return weight(other) * NavigationConfig.DOMINANCE_RATIO >= dominantWeight
+    }
+
     private fun cameraConfidence(cue: DirectionalCue): Float {
         return cue.confidence.coerceIn(0f, 1f).coerceAtMost(NavigationConfig.MAX_CAMERA_CONFIDENCE)
     }
 
+    private fun weight(cue: DirectionalCue): Float {
+        return cue.confidence * cue.areaFraction.coerceAtLeast(NavigationConfig.RISK_AREA_FLOOR)
+    }
+
     private fun risk(cues: List<DirectionalCue>): Float {
-        return cues.sumOf { cue ->
-            (cue.confidence * cue.areaFraction.coerceAtLeast(NavigationConfig.RISK_AREA_FLOOR)).toDouble()
-        }.toFloat()
+        return cues.sumOf { cue -> weight(cue).toDouble() }.toFloat()
     }
 
     private fun displayLabel(cue: DirectionalCue): String {

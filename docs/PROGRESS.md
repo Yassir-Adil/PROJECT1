@@ -1,5 +1,97 @@
 # Progress Log
 
+## 2026-10-18 — Side turns speak, and the side word matches the zone (0.8.1)
+
+**Status:** 0.8.1 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. A box on the left committed Slight right and the voice log spoke that turn. Floor stays `NOT_STARTED`. No face photo is stored. No paid voice was added.
+
+### Zoning and phrases
+
+- A dominant box whose center is in the left third (under 0.33) or the right third (over 0.67) suggests a side turn. A weak box in the middle does not cancel that turn. A strong box in the center band (0.42 to 0.58), or a strong box on the opposite side, still holds.
+- A turn line names one side. Example: “Toilet on the left. Turn slightly right. Not a measured gap.” It does not say left and center in the same line. A center hold says “in the center” and does not say left or right. The extra limit is one sentence on that cue. The same turn key still waits out its cooldown, so it is not spoken on every frame.
+- A committed turn is kept if Hold is still talking, then spoken once the gap allows, including during the opening sentences. The 0.8.0 log dropped “Turn slightly left” after Slight left committed. This build enqueues it.
+
+### Review items
+
+- Settings **Prepare save** calls `requestSave` with the typed name. أحمد is accepted. The English “remember this person as …” parser is not used for that button.
+- The pending line says no photo is stored and the save is a name only. It does not say a photo waits until confirm. `storeFace` still returns false.
+- Drive-mode TalkBack sentences and moving object-note writes off the guidance tick were not changed in this build.
+
+### Phone (no emulator)
+
+- `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device`. No emulator was attached.
+- `adb install -r outputs/apk/TriGuideAI-0.8.1-debug.apk` → Success. `versionName=0.8.1` `versionCode=11`. APK size 81,441,801 bytes.
+- `aapt dump permissions` lists `CAMERA` and `VIBRATE`. `INTERNET` is not listed.
+- Cold start of `MainActivity` had no FATAL line.
+- `TriGuideNav` committed `SLIGHT_RIGHT` for a box the model called a toilet on the left, then a sink on the left. Those labels came from the model.
+- `TriGuideVoice` `speak result=0` `queue=1` `kind=TURN_SUGGESTION` `text=Toilet on the left. Turn slightly right. Not a measured gap.` Result 0 means the engine accepted the utterance. Sound from the speaker was not confirmed by ear in this session.
+
+### Tests
+
+- `:app:testDebugUnitTest` 108/108 PASS, 0 failures. Includes the left-third turn against a weak center box, a strong center hold that does not say “left”, the queued turn after Hold, and an Arabic name saved only after confirm.
+- `:sim-core:test` was UP-TO-DATE and was not re-run. Kinematics sources did not change.
+
+### المطلوب منك الآن
+
+ضع كرسياً في **النصف الأيسر** من المعاينة فقط، بعيداً عن الوسط، لمدة 10 ثوانٍ. ثم انقله إلى **النصف الأيمن** فقط لمدة 10 ثوانٍ. يفترض أن تسمع جملة واحدة عن الجهة، مثل “Chair on the left. Turn slightly right.” ثم “Chair on the right. Turn slightly left.” إذا بقي الكرسي في الوسط فالتوقف صحيح. لا حاجة لفتح الإعدادات في هذه التجربة.
+
+## 2026-10-18 — Side cues and consent-only names (0.8.0)
+
+**Status:** 0.8.0 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. Path guidance stays primary. A centered sink was spoken as Hold. A sink on the right committed Slight left in the navigation log. That turn sentence was not in the voice log. Floor stays `NOT_STARTED`. No face photo is stored.
+
+### Guidance and speech
+
+- The blocking band is the middle of the picture, horizontal centers 0.42 to 0.58. A box clearly to one side suggests a slight turn. A box near that band suggests a fuller turn. A middle box, both sides, an empty frame, or a bad sample still holds or stays unknown. Box area is not a distance. The 3-frame confirm and 5-frame reversal are unchanged.
+- Camera turns name the detector label and the side. English example: “Person on the left. Turn slightly right.” Arabic example: “شخص على اليسار. انعطف يميناً قليلاً.” Hold in the middle says “Person in the center. Hold.” An empty frame says it is not a clear path.
+- Describe this frame is still a button, not the control loop. It counts people and names left, center, and right, then says the line is boxes only. A saved name is added only when `recognize()` returns one. In this build it returns nobody, so Describe does not invent a name.
+- A short scene brief can speak when several boxes are present and a navigation cue did not just speak. It does not choose a direction.
+- Speech rate for a fresh or migrated install is 0.90. Hold and camera cues use pitch 0.96. Other cues use 1.0. The phone log showed `rate=0.9`.
+
+### People
+
+- Remember people is off until the user turns it on in Settings. A name is written only after Prepare save and Confirm save. The camera does not enroll strangers. No crop, embedding, or photo is written (`faceStored` stays 0). Delete is on the same screen. `guidance-memory/` is app-private and excluded from Android backup. Notes do not steer.
+- There is no microphone listener for “remember this person as …”. The Settings buttons are the stub. Face recognition is deferred.
+
+### Phone (no emulator)
+
+- `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device`. No emulator was attached.
+- `adb install -r outputs/apk/TriGuideAI-0.8.0-debug.apk` → Success. `versionName=0.8.0` `versionCode=10`. APK size 81,441,801 bytes.
+- `aapt dump permissions` lists `CAMERA` and `VIBRATE`. `INTERNET` is not listed.
+- `MainActivity` was the resumed activity. The filtered logcat had no FATAL line.
+- Google TTS (`com.google.android.tts`) reported offline English and Arabic. Logged offline Arabic voices included `ar-xa-x-arz-local` and `ar-xa-x-ard-local` (quality 400, network false). The session spoke English because the resolved language was English.
+- `speak result=0` for the research disclaimer, “Camera started. Guidance on.”, the fingerprint limitation, “Sink in the center. Hold.” (pitch 0.96), and “No reported object. Hold. An empty picture is not a clear path.” Result 0 means the engine accepted the utterance. Sound from the speaker was not confirmed by ear.
+- `TriGuideNav` then committed `SLIGHT_LEFT`: “sink is on the right of the image (detector confidence 0.50, 7 percent of the frame). Steering slightly left.” The two frames before that were the smoother vote. The voice log through 09:57:04 did not contain “Turn slightly left” or “Sink on the right.” The scene was still switching between center hold and an empty frame.
+- A screencap was pulled to `outputs/reports/redmi-080-live.png` (1,329,479 bytes). This note does not describe that image beyond the log lines above.
+
+### Tests
+
+- `:app:testDebugUnitTest` 104/104 PASS, 0 failures, after the brief-scheduler fix. Includes side turns, named phrases, scene counts, and consent (a name is stored only after the switch is on and Confirm; `storeFace` returns false; `recognize` is null).
+- `:sim-core:test` was UP-TO-DATE and was not re-run. Kinematics sources did not change.
+
+### Deferred
+
+- A face model, a face crop, and an embedding. Not started. Consent stores a name only.
+- Cloud or paid TTS. Not integrated. Listed under optional tools below.
+- A counted true-positive / false-alarm pass. Not measured.
+- Floor segmentation. Not started.
+- TalkBack was not walked. The user has not yet confirmed they heard a left/right sentence.
+
+### Optional tools (need your approval — not subscribed)
+
+- Google Cloud Text-to-Speech, Neural2 or WaveNet Arabic
+- Azure AI Speech, neural Arabic
+- ElevenLabs
+
+The phone already has offline Google Arabic voices. No voice-pack install is required for this smoke.
+
+### المطلوب منك الآن
+
+1. افتح التطبيق إذا الشاشة قفلت. النسخة المثبتة `0.8.0`.
+2. وجّه الكاميرا الخلفية بحيث يكون شخص أو كرسي على **يسار** الصورة، وثبّت الهاتف حوالي 10 ثوانٍ. اسمع هل قال: “Person on the left. Turn slightly right.”
+3. ثم وجّهه بحيث يكون نفس الشيء على **اليمين** حوالي 10 ثوانٍ. اسمع هل قال: “on the right. Turn slightly left.”
+4. إذا تبي الكلام بالعربي: More → Settings → Arabic. أصوات العربية غير المتصلة موجودة على الهاتف. لا تحتاج تثبيت حزمة صوت.
+5. لا تحفظ وجهاً الآن. تذكر الأشخاص يبقى مغلقاً إلى أن تفتحه أنت من الإعدادات وتضغط Confirm save لاسم واحد. الكاميرا لا تسجّل الغرباء.
+6. قل لنا هل سمعت الجملتين، أو ماذا سمعت بدلاً عنهما.
+
 ## 2026-10-18 — Real boxes on the Redmi, floor still not started (0.7.0)
 
 **Status:** 0.7.0 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. The detector drew real boxes. Floor segmentation stays `NOT_STARTED`. No floor mask is drawn.

@@ -147,14 +147,22 @@ class VoiceGuidanceGateTest {
     @Test
     fun decisionsMapToStableCues() {
         val left = engine.decide(camera(cues = listOf(DirectionalCue("chair", 0.9f, 0.15f, 0.20f))))
-        assertEquals(VoiceAlertKind.TURN_SUGGESTION, VoiceCues.fromDecision(left)?.kind)
-        assertEquals("turn-right", VoiceCues.fromDecision(left)?.dedupeKey)
+        val leftCue = VoiceCues.fromDecision(left)
+        assertEquals(VoiceAlertKind.TURN_SUGGESTION, leftCue?.kind)
+        assertEquals("turn-slight-right", leftCue?.dedupeKey)
+        assertEquals("Chair on the left. Turn slightly right. Not a measured gap.", leftCue?.english)
+        assertTrue(leftCue!!.arabic.contains("كرسي"))
+        assertFalse(leftCue.english.contains("center"))
+        assertTrue(leftCue.arabic.contains("اليسار"))
+        assertFalse(leftCue.english.contains("meter"))
 
         val center = engine.decide(camera(cues = listOf(DirectionalCue("person", 0.9f, 0.50f, 0.20f))))
         assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, VoiceCues.fromDecision(center)?.kind)
+        assertEquals("Person in the center. Hold.", VoiceCues.fromDecision(center)?.english)
 
         val empty = engine.decide(camera())
         assertEquals(VoiceAlertKind.NAVIGATION_UNCERTAIN, VoiceCues.fromDecision(empty)?.kind)
+        assertTrue(VoiceCues.fromDecision(empty)!!.english.contains("empty picture"))
 
         val stale = engine.decide(camera(frameAgeMs = NavigationConfig.STALE_FRAME_MS))
         assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, VoiceCues.fromDecision(stale)?.kind)
@@ -183,6 +191,35 @@ class VoiceGuidanceGateTest {
             ),
         )
         assertEquals("turn-straight", VoiceCues.fromDecision(clear)?.dedupeKey)
+    }
+
+    @Test
+    fun aTurnQueuedBehindHoldIsSpokenOnceTheGapAllowsIt() {
+        val hold = VoiceCues.fromDecision(
+            engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.50f, 0.20f)))),
+        )
+        assertEquals("Sink in the center. Hold.", hold?.english)
+        assertTrue(gate.consider(input(hold, now = 0L)) is SpeechDirective.Speak)
+
+        val turn = VoiceCues.fromDecision(
+            engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.80f, 0.20f)))),
+        )
+        assertEquals("Sink on the right. Turn slightly left. Not a measured gap.", turn?.english)
+        assertFalse(turn!!.english.contains("center"))
+        assertTrue(gate.consider(input(turn, now = 200L)) is SpeechDirective.Silent)
+        gate.onUtteranceFinished(400L)
+        assertTrue(gate.consider(input(hold, now = 500L)) is SpeechDirective.Silent)
+
+        val spoken = gate.consider(
+            input(hold, now = VoiceConfig.MIN_GAP_MS, language = ResolvedVoiceLanguage.ARABIC),
+        )
+        assertTrue(spoken is SpeechDirective.Speak)
+        val text = (spoken as SpeechDirective.Speak).text
+        assertTrue(text.contains("اليمين"))
+        assertTrue(text.contains("انعطف يساراً قليلاً"))
+        assertTrue(text.contains("ليس فراغاً مقاساً"))
+        assertFalse(text.contains("الوسط"))
+        assertEquals(ResolvedVoiceLanguage.ARABIC, spoken.language)
     }
 
     @Test

@@ -73,17 +73,28 @@ object FloorSegmentationStatus {
 object NavigationConfig {
     const val STALE_FRAME_MS = 1_000L
     const val MIN_CUE_CONFIDENCE = DetectorConfig.SCORE_THRESHOLD
-    const val CENTER_START = 1f / 3f
-    const val CENTER_END = 2f / 3f
 
-    /** A left-third box whose center is at or past this value sits near the center band. */
-    const val LEFT_INNER_CENTER = CENTER_START - 0.08f
+    /**
+     * True center band. A box whose center lies here holds.
+     * It is not a distance, and it is narrower than the middle third.
+     */
+    const val CENTER_START = 0.42f
+    const val CENTER_END = 0.58f
 
-    /** A right-third box whose center is at or before this value sits near the center band. */
-    const val RIGHT_INNER_CENTER = CENTER_END + 0.08f
+    /**
+     * Outer thirds. A dominant box here prefers a side turn.
+     * A strong box in the center band, or on the opposite side, can still hold.
+     */
+    const val LEFT_THIRD_END = 0.33f
+    const val RIGHT_THIRD_START = 0.67f
 
-    /** Share of the frame. A weight for image occupancy, not a range in meters. */
-    const val STRONG_AREA_FRACTION = 0.12f
+    /** A left box whose center is at or past this value sits near the center band, so the turn is full. */
+    const val LEFT_INNER_CENTER = LEFT_THIRD_END
+
+    /** A right box whose center is at or before this value sits near the center band, so the turn is full. */
+    const val RIGHT_INNER_CENTER = RIGHT_THIRD_START
+
+    /** Floor used only to weight which side occupies more of the picture. Not a range. */
     const val RISK_AREA_FLOOR = 0.01f
     const val DOMINANCE_RATIO = 1.8f
     const val MAX_CAMERA_CONFIDENCE = 0.75f
@@ -155,6 +166,8 @@ object NavigationDecisions {
         basedOnRealVision: Boolean,
         metricDepthUsed: Boolean,
         perceptionLabel: String,
+        subjectLabel: String = "",
+        subjectSide: String = "",
     ): NavigationDecision {
         val bounded = confidence.coerceIn(0f, 1f)
         return NavigationDecision(
@@ -167,6 +180,8 @@ object NavigationDecisions {
             basedOnRealVision = basedOnRealVision,
             metricDepthUsed = metricDepthUsed,
             perceptionLabel = perceptionLabel,
+            subjectLabel = subjectLabel,
+            subjectSide = subjectSide,
         )
     }
 
@@ -177,6 +192,8 @@ object NavigationDecisions {
         basedOnRealVision: Boolean,
         metricDepthUsed: Boolean,
         perceptionLabel: String,
+        subjectLabel: String = "",
+        subjectSide: String = "",
     ): NavigationDecision {
         val (speed, steer) = NavigationConfig.speedAndSteer(action)
         return of(
@@ -188,6 +205,8 @@ object NavigationDecisions {
             basedOnRealVision = basedOnRealVision,
             metricDepthUsed = metricDepthUsed,
             perceptionLabel = perceptionLabel,
+            subjectLabel = subjectLabel,
+            subjectSide = subjectSide,
         )
     }
 

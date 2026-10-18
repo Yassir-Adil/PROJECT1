@@ -42,10 +42,22 @@ class VoiceSettingsStore(context: Context) {
         val language = storedLanguage
             ?.let { name -> runCatching { VoiceLanguagePreference.valueOf(name) }.getOrNull() }
             ?: VoiceLanguagePreference.DEVICE
+        val tuning = prefs.getInt(KEY_TUNING, 0)
+        val rate = if (tuning < RATE_TUNING) {
+            VoiceConfig.RATE_DEFAULT
+        } else {
+            prefs.getFloat(KEY_RATE, VoiceConfig.RATE_DEFAULT)
+        }
+        if (tuning < RATE_TUNING) {
+            prefs.edit()
+                .putInt(KEY_TUNING, RATE_TUNING)
+                .putFloat(KEY_RATE, VoiceConfig.RATE_DEFAULT)
+                .apply()
+        }
         return VoiceSettings(
             speechEnabled = prefs.getBoolean(KEY_ENABLED, true),
             quietMode = prefs.getBoolean(KEY_QUIET, false),
-            speechRate = prefs.getFloat(KEY_RATE, VoiceConfig.RATE_DEFAULT),
+            speechRate = rate,
             language = language,
         ).sanitized()
     }
@@ -56,5 +68,7 @@ class VoiceSettingsStore(context: Context) {
         const val KEY_QUIET = "quiet_mode"
         const val KEY_RATE = "speech_rate"
         const val KEY_LANGUAGE = "language"
+        const val KEY_TUNING = "rate_tuning"
+        const val RATE_TUNING = 2
     }
 }

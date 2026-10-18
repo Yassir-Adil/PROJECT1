@@ -19,6 +19,7 @@ data class DiagnosticsSnapshot(
     val performance: String,
     val hardware: String,
     val shortcut: String,
+    val memory: String = "Object notes stay on this phone. Person names: NOT_ENABLED.",
 )
 
 object DiagnosticsReport {
@@ -39,6 +40,7 @@ object DiagnosticsReport {
             appendLine("Performance: ${snapshot.performance}")
             appendLine("Hardware: ${snapshot.hardware}")
             appendLine("Shortcut: ${snapshot.shortcut}")
+            appendLine("Memory: ${snapshot.memory}")
             append("This report is a status dump. It is not a safety proof.")
         }
     }

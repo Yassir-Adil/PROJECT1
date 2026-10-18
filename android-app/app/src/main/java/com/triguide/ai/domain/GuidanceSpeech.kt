@@ -91,8 +91,8 @@ class SessionSpeechTracker {
 }
 
 /**
- * Drops turn phrases while the session introduction is still speaking.
- * An obstacle still passes. "Camera unavailable" stays quiet during startup and during that introduction.
+ * A committed turn is returned so the gate can enqueue it. It is not dropped because the introduction is still open.
+ * An obstacle still passes. Other non-critical cues wait. "Camera unavailable" stays quiet during startup and that introduction.
  */
 fun navigationCueForSpeech(
     cue: VoiceCue?,
@@ -106,6 +106,11 @@ fun navigationCueForSpeech(
         val starting = nowElapsedMs - guidanceStartedAtMs < VoiceConfig.CAMERA_START_GRACE_MS
         if (starting || introHolding) return null
     }
-    if (introHolding && cue.priority != SpeechPriority.CRITICAL) return null
+    if (introHolding &&
+        cue.kind != VoiceAlertKind.TURN_SUGGESTION &&
+        cue.priority != SpeechPriority.CRITICAL
+    ) {
+        return null
+    }
     return cue
 }

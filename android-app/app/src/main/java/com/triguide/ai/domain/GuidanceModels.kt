@@ -41,6 +41,10 @@ data class NavigationDecision(
     /** True only when authored synthetic positions were used. Camera decisions leave this false. */
     val metricDepthUsed: Boolean,
     val perceptionLabel: String,
+    /** Detector label used in the spoken cue. Empty when the cue has no single object. */
+    val subjectLabel: String = "",
+    /** Image side of [subjectLabel]: left, right, center, or both. Empty when none. */
+    val subjectSide: String = "",
 ) {
     fun toSteeringCommand(): SteeringCommand = SteeringCommand(linearSpeedMps, steeringRadians)
 

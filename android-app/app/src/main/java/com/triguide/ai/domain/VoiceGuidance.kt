@@ -17,6 +17,9 @@ enum class VoiceAlertKind {
 
     /** Start, pause, permission, and the once-per-session disclaimer. Spoken outside the frame gate. */
     SESSION_NOTICE,
+
+    /** A short report of several boxes. Observation only. It does not suggest a direction. */
+    SCENE_BRIEF,
 }
 
 enum class SpeechPriority(val rank: Int) {
@@ -69,16 +72,21 @@ data class VoiceSettings(
 object VoiceConfig {
     const val RATE_MIN = 0.6f
     const val RATE_MAX = 1.6f
-    const val RATE_DEFAULT = 1.0f
+    const val RATE_DEFAULT = 0.90f
+    const val PITCH_DEFAULT = 1.0f
+    const val PITCH_HOLD = 0.96f
+    const val PITCH_MIN = 0.85f
+    const val PITCH_MAX = 1.15f
 
     /** Same critical cue may repeat, but not on every frame. */
     const val COOLDOWN_CRITICAL_MS = 6_000L
     const val COOLDOWN_HIGH_MS = 10_000L
-    const val COOLDOWN_NORMAL_MS = 12_000L
+    const val COOLDOWN_NORMAL_MS = 8_000L
     const val COOLDOWN_PAUSED_MS = 4_000L
+    const val COOLDOWN_BRIEF_MS = 8_000L
 
     /** Assumed length of one utterance if the engine never reports completion. */
-    const val UTTERANCE_WINDOW_MS = 2_500L
+    const val UTTERANCE_WINDOW_MS = 4_000L
 
     /** Gap between non-critical cues so a flicker does not become a second sentence. */
     const val MIN_GAP_MS = 1_500L
@@ -94,13 +102,27 @@ object VoiceConfig {
         return rate.coerceIn(RATE_MIN, RATE_MAX)
     }
 
+    fun clampPitch(pitch: Float): Float {
+        if (!pitch.isFinite()) return PITCH_DEFAULT
+        return pitch.coerceIn(PITCH_MIN, PITCH_MAX)
+    }
+
+    fun pitchFor(kind: VoiceAlertKind): Float = when (kind) {
+        VoiceAlertKind.OBSTACLE_DETECTED,
+        VoiceAlertKind.CAMERA_UNAVAILABLE,
+        -> PITCH_HOLD
+        else -> PITCH_DEFAULT
+    }
+
     fun priorityOf(kind: VoiceAlertKind): SpeechPriority = when (kind) {
         VoiceAlertKind.OBSTACLE_DETECTED,
         VoiceAlertKind.CAMERA_UNAVAILABLE,
         -> SpeechPriority.CRITICAL
         VoiceAlertKind.NAVIGATION_UNCERTAIN -> SpeechPriority.HIGH
         VoiceAlertKind.TURN_SUGGESTION -> SpeechPriority.NORMAL
-        VoiceAlertKind.SIMULATION_PAUSED -> SpeechPriority.LOW
+        VoiceAlertKind.SIMULATION_PAUSED,
+        VoiceAlertKind.SCENE_BRIEF,
+        -> SpeechPriority.LOW
         VoiceAlertKind.SESSION_NOTICE -> SpeechPriority.HIGH
     }
 
@@ -119,6 +141,7 @@ object VoiceConfig {
         VoiceAlertKind.TURN_SUGGESTION -> COOLDOWN_NORMAL_MS
         VoiceAlertKind.SIMULATION_PAUSED -> COOLDOWN_PAUSED_MS
         VoiceAlertKind.SESSION_NOTICE -> COOLDOWN_PAUSED_MS
+        VoiceAlertKind.SCENE_BRIEF -> COOLDOWN_BRIEF_MS
     }
 
     /** Quiet mode keeps the two alerts that mean stop or look at the camera. */
@@ -150,19 +173,9 @@ object VoiceCues {
         arabic = "عقبة مكتشفة. توقف.",
     )
 
-    fun turn(action: GuidanceAction): VoiceCue {
-        val phrase = when (action) {
-            GuidanceAction.LEFT -> Phrase("Turn left.", "انعطف يساراً.", "turn-left")
-            GuidanceAction.SLIGHT_LEFT -> Phrase("Slight left.", "يسار خفيف.", "turn-slight-left")
-            GuidanceAction.RIGHT -> Phrase("Turn right.", "انعطف يميناً.", "turn-right")
-            GuidanceAction.SLIGHT_RIGHT -> Phrase("Slight right.", "يمين خفيف.", "turn-slight-right")
-            GuidanceAction.STRAIGHT -> Phrase("Straight ahead.", "للأمام.", "turn-straight")
-            GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> Phrase(
-                "Navigation uncertain.",
-                "الملاحة غير مؤكدة.",
-                "uncertain",
-            )
-        }
+    fun turn(action: GuidanceAction, label: String = "", side: String = ""): VoiceCue {
+        val named = label.isNotBlank() && side.isNotBlank()
+        val phrase = if (named) namedTurn(action, label, side) else genericTurn(action)
         val kind = if (action == GuidanceAction.HOLD || action == GuidanceAction.UNKNOWN) {
             VoiceAlertKind.NAVIGATION_UNCERTAIN
         } else {
@@ -170,6 +183,13 @@ object VoiceCues {
         }
         return VoiceCue(kind, phrase.key, phrase.english, phrase.arabic)
     }
+
+    fun sceneBrief(english: String, arabic: String): VoiceCue = VoiceCue(
+        kind = VoiceAlertKind.SCENE_BRIEF,
+        dedupeKey = "scene-brief",
+        english = english,
+        arabic = arabic,
+    )
 
     fun uncertain(): VoiceCue = VoiceCue(
         kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
@@ -194,26 +214,116 @@ object VoiceCues {
 
     fun sample(language: ResolvedVoiceLanguage): String = when (language) {
         ResolvedVoiceLanguage.ENGLISH ->
-            "Research and simulation. Obstacle detected. This voice is not a safety proof."
+            "Research and simulation. Person on the left. Turn slightly right. This voice is not a safety proof."
         ResolvedVoiceLanguage.ARABIC ->
-            "بحث ومحاكاة. عقبة مكتشفة. هذا الصوت ليس دليل أمان."
+            "بحث ومحاكاة. شخص على اليسار. انعطف يميناً قليلاً. هذا الصوت ليس دليل أمان."
     }
 
     /**
      * Maps a published decision to one stable cue.
      * The key ignores detector scores and timestamps so a new frame is not a new sentence.
+     * A camera turn names the box and its side. It does not claim the other side is open.
      */
     fun fromDecision(decision: NavigationDecision): VoiceCue? {
         if (decision.perceptionLabel == NavigationConfig.MANUAL_LABEL) return null
         return when (decision.action) {
-            GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> when {
-                isSmootherWarmup(decision.reason) -> null
-                isCameraUnavailable(decision.reason) -> cameraUnavailable()
-                isObstacle(decision.reason) -> obstacle()
-                else -> uncertain()
+            GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> holdCue(decision)
+            else -> {
+                val camera = decision.perceptionLabel == NavigationConfig.CAMERA_LABEL
+                if (camera && decision.subjectLabel.isNotBlank() && decision.subjectSide.isNotBlank()) {
+                    turn(decision.action, decision.subjectLabel, decision.subjectSide)
+                } else {
+                    turn(decision.action)
+                }
             }
-            else -> turn(decision.action)
         }
+    }
+
+    private fun holdCue(decision: NavigationDecision): VoiceCue? {
+        if (isSmootherWarmup(decision.reason)) return null
+        if (isCameraUnavailable(decision.reason)) return cameraUnavailable()
+        val camera = decision.perceptionLabel == NavigationConfig.CAMERA_LABEL
+        if (camera && decision.subjectSide == "center" && decision.subjectLabel.isNotBlank()) {
+            val englishName = SpokenLabels.english(decision.subjectLabel)
+            val arabicName = SpokenLabels.arabic(decision.subjectLabel)
+            return VoiceCue(
+                kind = VoiceAlertKind.OBSTACLE_DETECTED,
+                dedupeKey = "obstacle",
+                english = "$englishName in the center. Hold.",
+                arabic = "$arabicName في الوسط. توقف.",
+            )
+        }
+        if (camera && decision.subjectSide == "both") {
+            return VoiceCue(
+                kind = VoiceAlertKind.OBSTACLE_DETECTED,
+                dedupeKey = "obstacle",
+                english = "Objects on both sides. Hold.",
+                arabic = "أجسام على الجهتين. توقف.",
+            )
+        }
+        if (isObstacle(decision.reason)) return obstacle()
+        if (camera && decision.reason.contains("No confirmed passage")) {
+            return VoiceCue(
+                kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
+                dedupeKey = "uncertain",
+                english = "No reported object. Hold. An empty picture is not a clear path.",
+                arabic = "لا جسم مبلغ عنه. توقف. الصورة الفارغة ليست طريقاً واضحاً.",
+            )
+        }
+        if (decision.action == GuidanceAction.UNKNOWN && decision.reason.contains("contradictory")) {
+            return VoiceCue(
+                kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
+                dedupeKey = "uncertain",
+                english = "The picture is unclear. No direction.",
+                arabic = "الصورة غير واضحة. لا اتجاه.",
+            )
+        }
+        return uncertain()
+    }
+
+    private fun genericTurn(action: GuidanceAction): Phrase {
+        return when (action) {
+            GuidanceAction.LEFT -> Phrase("Turn left.", "انعطف يساراً.", "turn-left")
+            GuidanceAction.SLIGHT_LEFT -> Phrase("Turn slightly left.", "انعطف يساراً قليلاً.", "turn-slight-left")
+            GuidanceAction.RIGHT -> Phrase("Turn right.", "انعطف يميناً.", "turn-right")
+            GuidanceAction.SLIGHT_RIGHT -> Phrase("Turn slightly right.", "انعطف يميناً قليلاً.", "turn-slight-right")
+            GuidanceAction.STRAIGHT -> Phrase("Straight ahead.", "للأمام.", "turn-straight")
+            GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> Phrase(
+                "Navigation uncertain.",
+                "الملاحة غير مؤكدة.",
+                "uncertain",
+            )
+        }
+    }
+
+    private fun namedTurn(action: GuidanceAction, label: String, side: String): Phrase {
+        val englishName = SpokenLabels.english(label)
+        val arabicName = SpokenLabels.arabic(label)
+        val generic = genericTurn(action)
+        val phrase = when (action) {
+            GuidanceAction.SLIGHT_RIGHT -> sidePhrase(
+                english = "$englishName on the left. Turn slightly right. Not a measured gap.",
+                arabic = "$arabicName على اليسار. انعطف يميناً قليلاً. ليس فراغاً مقاساً.",
+                key = generic.key,
+            )
+            GuidanceAction.RIGHT -> sidePhrase(
+                english = "$englishName on the left. Turn right. Not a measured gap.",
+                arabic = "$arabicName على اليسار. انعطف يميناً. ليس فراغاً مقاساً.",
+                key = generic.key,
+            )
+            GuidanceAction.SLIGHT_LEFT -> sidePhrase(
+                english = "$englishName on the right. Turn slightly left. Not a measured gap.",
+                arabic = "$arabicName على اليمين. انعطف يساراً قليلاً. ليس فراغاً مقاساً.",
+                key = generic.key,
+            )
+            GuidanceAction.LEFT -> sidePhrase(
+                english = "$englishName on the right. Turn left. Not a measured gap.",
+                arabic = "$arabicName على اليمين. انعطف يساراً. ليس فراغاً مقاساً.",
+                key = generic.key,
+            )
+            else -> generic
+        }
+        return if (side == "left" || side == "right") phrase else generic
     }
 
     /** The first frames of a new direction are a vote, not a new situation to announce. */
@@ -233,6 +343,10 @@ object VoiceCues {
             reason.contains("forward axis")
     }
 
+    private fun sidePhrase(english: String, arabic: String, key: String): Phrase {
+        return Phrase(english, arabic, key)
+    }
+
     private data class Phrase(val english: String, val arabic: String, val key: String)
 }
 
@@ -250,6 +364,7 @@ sealed class SpeechDirective {
         val speechRate: Float,
         val kind: VoiceAlertKind,
         val language: ResolvedVoiceLanguage,
+        val pitch: Float = VoiceConfig.PITCH_DEFAULT,
     ) : SpeechDirective()
 
     data object Silent : SpeechDirective()
@@ -274,56 +389,33 @@ class VoiceGuidanceGate {
     private var snapshotPriority: SpeechPriority? = null
     private var snapshotText: String = "none"
 
+    /** A committed turn that could not be spoken yet. Spoken once the cooldown and gap allow it. */
+    private var queuedTurn: VoiceCue? = null
+
     private val lastSpokenState = MutableStateFlow("none")
     val lastSpokenText: StateFlow<String> = lastSpokenState.asStateFlow()
 
     fun consider(input: VoiceGateInput): SpeechDirective = synchronized(lock) {
         val settings = input.settings.sanitized()
-        val cue = input.cue ?: return@synchronized SpeechDirective.Silent
-        if (!settings.speechEnabled) return@synchronized SpeechDirective.Silent
+        val cue = input.cue
+        if (!settings.speechEnabled) {
+            queuedTurn = null
+            return@synchronized SpeechDirective.Silent
+        }
         if (input.nowElapsedMs < unavailableUntilMs) return@synchronized SpeechDirective.Silent
-        if (settings.quietMode && !VoiceConfig.quietModeAllows(cue.kind)) {
-            return@synchronized SpeechDirective.Silent
-        }
-        if (cue.dedupeKey == lastSpokenKey &&
-            input.nowElapsedMs - lastSpokenAtMs < VoiceConfig.cooldownMs(cue.kind)
-        ) {
-            return@synchronized SpeechDirective.Silent
-        }
-
-        val speaking = activePriority != null && input.nowElapsedMs < speakingUntilMs
-        val interrupt = speaking && shouldInterrupt(cue)
-        if (speaking && !interrupt && cue.delivery == VoiceDelivery.CONTINUOUS) {
-            return@synchronized SpeechDirective.Silent
-        }
-        if (!interrupt && cue.priority != SpeechPriority.CRITICAL && lastSpokenKey != null) {
-            val sinceLast = input.nowElapsedMs - lastSpokenAtMs
-            if (sinceLast < VoiceConfig.MIN_GAP_MS && cue.dedupeKey != lastSpokenKey &&
-                cue.delivery == VoiceDelivery.CONTINUOUS
-            ) {
-                return@synchronized SpeechDirective.Silent
+        if (settings.quietMode) queuedTurn = null
+        if (cue != null && cue.kind == VoiceAlertKind.TURN_SUGGESTION) {
+            if (settings.quietMode && !VoiceConfig.quietModeAllows(cue.kind)) {
+                queuedTurn = null
+            } else if (!coolingDown(cue, input.nowElapsedMs)) {
+                queuedTurn = cue
             }
         }
-
-        snapshotKey = lastSpokenKey
-        snapshotAtMs = lastSpokenAtMs
-        snapshotUntilMs = speakingUntilMs
-        snapshotPriority = activePriority
-        snapshotText = lastSpokenState.value
-
-        lastSpokenKey = cue.dedupeKey
-        lastSpokenAtMs = input.nowElapsedMs
-        activePriority = cue.priority
-        speakingUntilMs = input.nowElapsedMs + VoiceConfig.UTTERANCE_WINDOW_MS
-        val text = cue.text(input.resolvedLanguage)
-        lastSpokenState.value = text
-        SpeechDirective.Speak(
-            text = text,
-            interrupt = interrupt,
-            speechRate = settings.speechRate,
-            kind = cue.kind,
-            language = input.resolvedLanguage,
-        )
+        val chosen = choose(cue, settings, input.nowElapsedMs) ?: return@synchronized SpeechDirective.Silent
+        if (chosen.kind == VoiceAlertKind.TURN_SUGGESTION) {
+            queuedTurn = null
+        }
+        emit(chosen, settings, input.nowElapsedMs, input.resolvedLanguage)
     }
 
     fun onUtteranceFinished(nowElapsedMs: Long) = synchronized(lock) {
@@ -357,7 +449,75 @@ class VoiceGuidanceGate {
         snapshotUntilMs = 0L
         snapshotPriority = null
         snapshotText = "none"
+        queuedTurn = null
         lastSpokenState.value = "none"
+    }
+
+    /**
+     * Speaks the current cue when the gate allows it.
+     * A turn that arrived during Hold is kept and spoken once, after the gap, even if the next cue is Hold again.
+     */
+    private fun choose(cue: VoiceCue?, settings: VoiceSettings, now: Long): VoiceCue? {
+        if (cue != null && settings.quietMode && !VoiceConfig.quietModeAllows(cue.kind)) {
+            return null
+        }
+        if (cue != null && canEmit(cue, now)) return cue
+        val turn = queuedTurn ?: return null
+        if (settings.quietMode) return null
+        val speaking = activePriority != null && now < speakingUntilMs
+        if (cue != null && cue.priority == SpeechPriority.CRITICAL && speaking && !canEmit(cue, now)) {
+            return null
+        }
+        return if (canEmit(turn, now)) turn else null
+    }
+
+    private fun canEmit(cue: VoiceCue, now: Long): Boolean {
+        if (coolingDown(cue, now)) return false
+        val speaking = activePriority != null && now < speakingUntilMs
+        val interrupt = speaking && shouldInterrupt(cue)
+        if (speaking && !interrupt && cue.delivery == VoiceDelivery.CONTINUOUS) return false
+        if (!interrupt && cue.priority != SpeechPriority.CRITICAL && lastSpokenKey != null) {
+            val sinceLast = now - lastSpokenAtMs
+            if (sinceLast < VoiceConfig.MIN_GAP_MS && cue.dedupeKey != lastSpokenKey &&
+                cue.delivery == VoiceDelivery.CONTINUOUS
+            ) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun coolingDown(cue: VoiceCue, now: Long): Boolean {
+        return cue.dedupeKey == lastSpokenKey && now - lastSpokenAtMs < VoiceConfig.cooldownMs(cue.kind)
+    }
+
+    private fun emit(
+        cue: VoiceCue,
+        settings: VoiceSettings,
+        now: Long,
+        language: ResolvedVoiceLanguage,
+    ): SpeechDirective {
+        val speaking = activePriority != null && now < speakingUntilMs
+        val interrupt = speaking && shouldInterrupt(cue)
+        snapshotKey = lastSpokenKey
+        snapshotAtMs = lastSpokenAtMs
+        snapshotUntilMs = speakingUntilMs
+        snapshotPriority = activePriority
+        snapshotText = lastSpokenState.value
+        lastSpokenKey = cue.dedupeKey
+        lastSpokenAtMs = now
+        activePriority = cue.priority
+        speakingUntilMs = now + VoiceConfig.UTTERANCE_WINDOW_MS
+        val text = cue.text(language)
+        lastSpokenState.value = text
+        return SpeechDirective.Speak(
+            text = text,
+            interrupt = interrupt,
+            speechRate = settings.speechRate,
+            kind = cue.kind,
+            language = language,
+            pitch = VoiceConfig.pitchFor(cue.kind),
+        )
     }
 
     private fun shouldInterrupt(cue: VoiceCue): Boolean {

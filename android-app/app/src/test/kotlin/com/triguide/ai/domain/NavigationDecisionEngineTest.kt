@@ -13,27 +13,54 @@ class NavigationDecisionEngineTest {
     private val engine = NavigationDecisionEngine()
 
     @Test
-    fun obstacleOnTheLeftSteersRight() {
+    fun obstacleOnTheLeftSteersSlightlyRight() {
         val decision = engine.decide(camera(cues = listOf(strongCue("chair", center = 0.15f))))
-        assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
         assertTrue(decision.steeringRadians < 0.0)
-        assertEquals(NavigationConfig.STEER_FULL_RADIANS, -decision.steeringRadians, 1e-9)
-        assertEquals(NavigationConfig.SPEED_TURN_MPS, decision.linearSpeedMps, 1e-9)
+        assertEquals(NavigationConfig.STEER_SLIGHT_RADIANS, -decision.steeringRadians, 1e-9)
+        assertEquals(NavigationConfig.SPEED_SLIGHT_MPS, decision.linearSpeedMps, 1e-9)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("left", decision.subjectSide)
         assertTrue(decision.basedOnRealVision)
         assertFalse(decision.metricDepthUsed)
         assertTrue(decision.reason.contains("left of the image"))
-        assertTrue(decision.reason.contains("Steering right"))
+        assertTrue(decision.reason.contains("Steering slightly right"))
         assertTrue(decision.reason.contains("Depth is not measured"))
+        assertTrue(decision.reason.contains("not a distance"))
         assertNoMetricClaim(decision)
     }
 
     @Test
-    fun obstacleOnTheRightSteersLeft() {
+    fun obstacleOnTheRightSteersSlightlyLeft() {
         val decision = engine.decide(camera(cues = listOf(strongCue("person", center = 0.86f))))
-        assertEquals(GuidanceAction.LEFT, decision.action)
+        assertEquals(GuidanceAction.SLIGHT_LEFT, decision.action)
         assertTrue(decision.steeringRadians > 0.0)
         assertTrue(decision.reason.contains("right of the image"))
-        assertTrue(decision.reason.contains("Steering left"))
+        assertTrue(decision.reason.contains("Steering slightly left"))
+        assertEquals("person", decision.subjectLabel)
+        assertEquals("right", decision.subjectSide)
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun aLargeBoxFarFromTheMiddleIsStillASlightTurn() {
+        val decision = engine.decide(
+            camera(cues = listOf(DirectionalCue("person", 0.90f, 0.12f, 0.45f))),
+        )
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
+        assertTrue(decision.reason.contains("not a distance"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun aBoxInsideTheOldMiddleThirdButLeftOfTheBlockingBandSteersRight() {
+        val decision = engine.decide(
+            camera(cues = listOf(DirectionalCue("person", 0.80f, 0.38f, 0.08f))),
+        )
+        assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertEquals("left", decision.subjectSide)
+        assertTrue(decision.reason.contains("Steering right"))
+        assertFalse(decision.reason.contains("slightly"))
         assertNoMetricClaim(decision)
     }
 
@@ -50,9 +77,10 @@ class NavigationDecisionEngineTest {
     @Test
     fun boxNearTheCenterBandIsAFullTurn() {
         val decision = engine.decide(
-            camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.28f, 0.04f))),
+            camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.36f, 0.04f))),
         )
         assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertFalse(decision.reason.contains("slightly"))
     }
 
     @Test
@@ -61,6 +89,8 @@ class NavigationDecisionEngineTest {
         assertEquals(GuidanceAction.HOLD, decision.action)
         assertEquals(0.0, decision.linearSpeedMps, 0.0)
         assertEquals(0.0, decision.steeringRadians, 0.0)
+        assertEquals("person", decision.subjectLabel)
+        assertEquals("center", decision.subjectSide)
         assertTrue(decision.reason.contains("center of the image"))
         assertTrue(decision.reason.contains("No confirmed passage"))
         assertNoMetricClaim(decision)
@@ -93,6 +123,48 @@ class NavigationDecisionEngineTest {
     }
 
     @Test
+    fun leftThirdPersonTurnsRightEvenWhenAWeakBoxIsInTheCenter() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("person", 0.90f, 0.20f, 0.30f),
+                    DirectionalCue("bottle", 0.40f, 0.50f, 0.02f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
+        assertEquals("person", decision.subjectLabel)
+        assertEquals("left", decision.subjectSide)
+        val spoken = VoiceCues.fromDecision(decision)
+        assertEquals("Person on the left. Turn slightly right. Not a measured gap.", spoken?.english)
+        assertFalse(spoken!!.english.contains("center"))
+        assertTrue(spoken.arabic.contains("اليسار"))
+        assertFalse(spoken.arabic.contains("الوسط"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun aStrongCenterBoxHoldsAndDoesNotCallThePersonLeft() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("person", 0.80f, 0.20f, 0.20f),
+                    DirectionalCue("chair", 0.75f, 0.50f, 0.15f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("center", decision.subjectSide)
+        val spoken = VoiceCues.fromDecision(decision)
+        assertEquals("Chair in the center. Hold.", spoken?.english)
+        assertFalse(spoken!!.english.contains("left"))
+        assertTrue(spoken.arabic.contains("الوسط"))
+        assertFalse(spoken.arabic.contains("اليسار"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
     fun aMuchStrongerSideStillSteersAway() {
         val decision = engine.decide(
             camera(
@@ -102,7 +174,9 @@ class NavigationDecisionEngineTest {
                 ),
             ),
         )
-        assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
+        assertEquals("couch", decision.subjectLabel)
+        assertEquals("left", decision.subjectSide)
     }
 
     @Test
@@ -145,7 +219,7 @@ class NavigationDecisionEngineTest {
         val atFloor = engine.decide(
             camera(
                 cues = listOf(
-                    DirectionalCue("chair", DetectorConfig.SCORE_THRESHOLD, 0.15f, 0.25f),
+                    DirectionalCue("chair", DetectorConfig.SCORE_THRESHOLD, 0.36f, 0.25f),
                 ),
             ),
         )
@@ -178,11 +252,11 @@ class NavigationDecisionEngineTest {
 
     @Test
     fun staleFrameHolds() {
-        val fresh = engine.decide(camera(cues = listOf(strongCue("chair", 0.15f)), age = 999L))
+        val fresh = engine.decide(camera(cues = listOf(strongCue("chair", 0.36f)), age = 999L))
         assertEquals(GuidanceAction.RIGHT, fresh.action)
 
         val stale = engine.decide(
-            camera(cues = listOf(strongCue("chair", 0.15f)), age = NavigationConfig.STALE_FRAME_MS),
+            camera(cues = listOf(strongCue("chair", 0.36f)), age = NavigationConfig.STALE_FRAME_MS),
         )
         assertEquals(GuidanceAction.HOLD, stale.action)
         assertEquals(0.0, stale.linearSpeedMps, 0.0)
@@ -251,8 +325,8 @@ class NavigationDecisionEngineTest {
     @Test
     fun stableDirectionCommitsAndAReversalWaits() {
         val smoother = TemporalDecisionSmoother()
-        val leftSide = camera(cues = listOf(strongCue("chair", 0.15f)))
-        val rightSide = camera(cues = listOf(strongCue("chair", 0.86f)))
+        val leftSide = camera(cues = listOf(strongCue("chair", 0.36f)))
+        val rightSide = camera(cues = listOf(strongCue("chair", 0.64f)))
         repeat(NavigationConfig.CONFIRM_FRAMES - 1) {
             assertEquals(GuidanceAction.HOLD, smoother.update(leftSide).action)
         }
@@ -267,7 +341,7 @@ class NavigationDecisionEngineTest {
     @Test
     fun magnitudeChangeAlsoWaits() {
         val smoother = TemporalDecisionSmoother()
-        val strong = camera(cues = listOf(strongCue("chair", 0.15f)))
+        val strong = camera(cues = listOf(strongCue("chair", 0.36f)))
         val slight = camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.10f, 0.04f)))
         repeat(NavigationConfig.CONFIRM_FRAMES) { smoother.update(strong) }
         assertEquals(GuidanceAction.RIGHT, smoother.update(slight).action)
@@ -278,7 +352,7 @@ class NavigationDecisionEngineTest {
     @Test
     fun staleFrameClearsACommittedTurn() {
         val smoother = TemporalDecisionSmoother()
-        val fresh = camera(cues = listOf(strongCue("chair", 0.15f)))
+        val fresh = camera(cues = listOf(strongCue("chair", 0.36f)))
         repeat(NavigationConfig.CONFIRM_FRAMES) { smoother.update(fresh) }
         val stale = smoother.update(fresh.copy(frameAgeMs = NavigationConfig.STALE_FRAME_MS))
         assertEquals(GuidanceAction.HOLD, stale.action)
@@ -357,7 +431,7 @@ class NavigationDecisionEngineTest {
     fun robotWheelFollowsAConfirmedCameraDecision() {
         val smoother = TemporalDecisionSmoother(engine)
         val robot = SimulatedTricycleController()
-        val scene = camera(cues = listOf(strongCue("chair", 0.15f)))
+        val scene = camera(cues = listOf(strongCue("chair", 0.36f)))
         var decision = smoother.update(scene)
         repeat(NavigationConfig.CONFIRM_FRAMES - 1) {
             decision = smoother.update(scene)

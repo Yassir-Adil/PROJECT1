@@ -8,6 +8,28 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — Redmi 0.8.1 side-turn speech
+
+**Status: PASS_WITH_WARNINGS**
+
+Physical device only. `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device` (`22101316G`, `ruby`). No emulator was attached or installed to.
+
+### Build
+
+- `:app:testDebugUnitTest` 108/108 PASS, 0 failures, 0 skipped. New cases: a person in the left third still turns when a weak bottle is in the center; a strong chair in the center holds and the phrase does not say “left”; a turn queued behind Hold is spoken after the gap, in Arabic; Settings `requestSave("أحمد")` stores a name only after confirm and the pending line does not say a photo waits.
+- `:sim-core:test` was UP-TO-DATE. It was not re-run. Kinematics sources did not change.
+- `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` (build-tools 36.0.0): `versionName='0.8.1'`, `versionCode='11'`, `minSdk` 26, `targetSdk` 35, `compileSdk` 35. Badge permissions: `CAMERA`, `VIBRATE`, and the AndroidX non-exported receiver permission. `INTERNET` was not listed.
+- Copied to `outputs/apk/TriGuideAI-0.8.1-debug.apk` (81,441,801 bytes).
+
+### Phone
+
+- `adb -s 55aqpfqkvw9xbafe install -r outputs/apk/TriGuideAI-0.8.1-debug.apk` → `Success`. `dumpsys package` showed `versionName=0.8.1` `versionCode=11`.
+- `am force-stop` then `am start -n com.triguide.ai/.MainActivity`. No FATAL line in the filtered log.
+- Opening lines, all `speak result=0`: the research disclaimer, “Camera started. Guidance on.”, and the fingerprint limitation.
+- `TriGuideNav` then committed `SLIGHT_RIGHT`: “toilet is on the left of the image (detector confidence 0.45, 5 percent of the frame). Steering slightly right.” A later line used the model label `sink` on the left, same action. The app did not invent those labels.
+- At 10:08:07.931 `TriGuideVoice` `speak result=0` `queue=1` `kind=TURN_SUGGESTION` `lang=ENGLISH` `rate=0.9` `pitch=1.0` `text=Toilet on the left. Turn slightly right. Not a measured gap.` The phrase does not contain “center”. Result 0 means the engine accepted it. Sound from the speaker was not confirmed by ear.
+- The same turn was not repeated on the following frames in that window. Floor segmentation was not exercised.
+
 ## 2026-10-18 — Redmi 0.7.0 detection smoke
 
 **Status: PASS_WITH_WARNINGS**

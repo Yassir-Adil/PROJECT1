@@ -131,8 +131,8 @@ object DetectionReports {
         require(imageWidth > 0) { "image width must be positive" }
         val normalized = centerX / imageWidth.toFloat()
         return when {
-            normalized < 1f / 3f -> HorizontalZone.LEFT
-            normalized > 2f / 3f -> HorizontalZone.RIGHT
+            normalized < NavigationConfig.CENTER_START -> HorizontalZone.LEFT
+            normalized > NavigationConfig.CENTER_END -> HorizontalZone.RIGHT
             else -> HorizontalZone.CENTER
         }
     }

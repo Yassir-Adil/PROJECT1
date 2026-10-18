@@ -84,6 +84,7 @@ class AndroidVoiceSpeaker(
             return false
         }
         engine.setSpeechRate(directive.speechRate)
+        engine.setPitch(com.triguide.ai.domain.VoiceConfig.clampPitch(directive.pitch))
         onFinished = whenFinished
         val utteranceId = "triguide-${directive.kind.name}-${android.os.SystemClock.elapsedRealtime()}"
         activeUtterance.set(utteranceId)
@@ -92,7 +93,9 @@ class AndroidVoiceSpeaker(
         Log.i(
             TAG,
             "speak result=$result queue=$queueMode kind=${directive.kind} " +
-                "lang=${directive.language} rate=${directive.speechRate} text=${directive.text}",
+                "lang=${directive.language} rate=${directive.speechRate} " +
+                "pitch=${com.triguide.ai.domain.VoiceConfig.clampPitch(directive.pitch)} " +
+                "text=${directive.text}",
         )
         if (result != TextToSpeech.SUCCESS) {
             activeUtterance.compareAndSet(utteranceId, null)
@@ -131,15 +134,29 @@ class AndroidVoiceSpeaker(
             arabicOffline -> "Offline Arabic voice is installed. English voice is not installed."
             else -> "No offline voice is installed. Spoken cues stay on screen."
         }
-        val engineNames = runCatching { engine.engines.joinToString { engineInfo -> engineInfo.label } }
-            .getOrDefault("unavailable")
+        val engineNames = runCatching {
+            engine.engines.joinToString { engineInfo ->
+                "${engineInfo.label} (${engineInfo.name})"
+            }
+        }.getOrDefault("unavailable")
+        val defaultEngine = runCatching {
+            android.provider.Settings.Secure.getString(
+                appContext.contentResolver,
+                android.provider.Settings.Secure.TTS_DEFAULT_SYNTH,
+            )
+        }.getOrNull()
         Log.i(
             TAG,
             "ready en=$englishOffline ar=$arabicOffline offline=${offline.size} " +
-                "installed=${installed.size} engines=$engineNames status=${statusState.value}",
+                "installed=${installed.size} defaultEngine=$defaultEngine engines=$engineNames " +
+                "status=${statusState.value}",
         )
-        offline.take(MAX_VOICES_LOGGED).forEach { voice ->
-            Log.i(TAG, "voice name=${voice.name} locale=${voice.locale}")
+        installed.take(MAX_VOICES_LOGGED).forEach { voice ->
+            Log.i(
+                TAG,
+                "voice name=${voice.name} locale=${voice.locale} quality=${voice.quality} " +
+                    "latency=${voice.latency} network=${voice.isNetworkConnectionRequired}",
+            )
         }
     }
 
@@ -150,6 +167,6 @@ class AndroidVoiceSpeaker(
 
     private companion object {
         const val TAG = "TriGuideVoice"
-        const val MAX_VOICES_LOGGED = 12
+        const val MAX_VOICES_LOGGED = 24
     }
 }

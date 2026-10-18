@@ -87,7 +87,7 @@ fun VoiceSettingsSection(
             fontSize = 18.sp,
         )
         Text(
-            "Arabic is spoken when this device has an offline Arabic voice. Otherwise the cue stays in English.",
+            "Arabic is spoken when this device has an offline Arabic voice. Otherwise the cue stays in English. A side cue names the box, for example: Person on the left. Turn slightly right.",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )

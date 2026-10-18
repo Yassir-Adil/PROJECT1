@@ -86,9 +86,11 @@ class DetectionReportsTest {
     }
 
     @Test
-    fun horizontalZoneUsesThirdsOfTheFrame() {
+    fun horizontalZoneUsesTheSameBandAsSteering() {
         assertEquals(HorizontalZone.LEFT, DetectionReports.horizontalZone(10f, 300))
+        assertEquals(HorizontalZone.LEFT, DetectionReports.horizontalZone(120f, 300))
         assertEquals(HorizontalZone.CENTER, DetectionReports.horizontalZone(150f, 300))
+        assertEquals(HorizontalZone.RIGHT, DetectionReports.horizontalZone(180f, 300))
         assertEquals(HorizontalZone.RIGHT, DetectionReports.horizontalZone(290f, 300))
     }
 

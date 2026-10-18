@@ -40,13 +40,22 @@ class GuidanceSpeechTest {
     }
 
     @Test
-    fun turnCuesWaitDuringTheIntroductionAndObstaclesDoNot() {
+    fun aCommittedTurnIsNotDroppedDuringTheIntroduction() {
         val turn = VoiceCues.turn(GuidanceAction.LEFT)
         val obstacle = VoiceCues.obstacle()
         val camera = VoiceCues.cameraUnavailable()
-        assertNull(
+        assertEquals(
+            turn,
             navigationCueForSpeech(
                 cue = turn,
+                nowElapsedMs = 1_000L,
+                guidanceStartedAtMs = 0L,
+                suppressNavigationUntilMs = 16_000L,
+            ),
+        )
+        assertNull(
+            navigationCueForSpeech(
+                cue = VoiceCues.uncertain(),
                 nowElapsedMs = 1_000L,
                 guidanceStartedAtMs = 0L,
                 suppressNavigationUntilMs = 16_000L,
