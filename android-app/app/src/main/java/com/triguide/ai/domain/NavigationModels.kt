@@ -67,7 +67,7 @@ data class SceneObservation(
 object FloorSegmentationStatus {
     const val STATE = "NOT_STARTED"
     const val DETAIL =
-        "Disabled. No floor model is loaded, and open floor is not inferred from a missing segment."
+        "Disabled. No floor model is loaded. Open floor is not inferred, and no floor mask is drawn."
 }
 
 object NavigationConfig {

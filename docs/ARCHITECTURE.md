@@ -38,12 +38,14 @@ Bicycle model of a tricycle: two fixed rear wheels (track width ignored) and one
 
 ## Screens
 
-Live Vision is the start screen. More, Robot Simulation, Test Scenarios (labels only, status `NOT_STARTED`), Diagnostics, and Settings are reached from More.
+Live Vision is the start screen. More, Robot Simulation, Test Scenarios (three synthetic runs), Diagnostics (including a text share), and Settings are reached from More.
 
 Opening the app enters Live Vision, binds the rear camera (`STRATEGY_KEEP_ONLY_LATEST`), and speaks the research disclaimer once per process, then “Camera started. Guidance on.” A missing camera permission is spoken and the system dialog is requested immediately. If Android will not show that dialog again, the app opens TriGuide’s settings page and says so.
 
-The fingerprint reader on the project Redmi is the power button. This app does not receive those presses. There is no fingerprint triple-tap and no screen-wide tap shortcut.
+The fingerprint reader on the project Redmi is the power button. This app does not receive those presses. Live Vision counts three quick taps (750 ms between taps) without consuming the pointer. That gesture restarts the camera and speaks “Camera started. Guidance on.” A single tap on More still opens the other screens.
 
-Live Vision applies camera observations to the virtual robot while the preview is open. The simulator can run manual buttons, the same camera path (it holds when the preview is closed), or the synthetic map. Both screens show the decision, the reason, the confidence, the front-wheel angle, the research-mode line, and the non-verified path label. Those two screens also ask the voice gate once per control tick. Settings stores speech, rate, quiet mode, and language.
+Test Scenarios run `GuidanceScenarios` through `NavigationDecisionEngine` on three authored maps. Diagnostics builds a plain-text `DiagnosticsReport` and shares it. Floor segmentation stays `NOT_STARTED`. No segmenter is loaded.
+
+Live Vision applies camera observations to the virtual robot while the preview is open. It shows the decision, the reason, the front wheel, the camera source, and that Hold and Unknown stop the virtual robot. The simulator can run manual buttons, the same camera path (it holds when the preview is closed), or the synthetic map. The simulator labels itself as simulated, shows confidence, and shows the non-verified path label. Those two screens also ask the voice gate once per control tick. Settings stores speech, rate, quiet mode, and language.
 
 `minSdk` 26, `compileSdk` / `targetSdk` 35. JDK 17. Chosen because platforms 34 and 35 are installed on this PC and MediaPipe Tasks samples support API 24+, so 26 stays inside that range.

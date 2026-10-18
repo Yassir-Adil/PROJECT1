@@ -8,6 +8,59 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — Redmi 0.6.0 screen triple-tap and core smoke
+
+**Status: PASS_WITH_WARNINGS**
+
+Physical device only. `adb devices -l` listed only:
+
+```
+55aqpfqkvw9xbafe       device product:ruby_global model:22101316G device:ruby transport_id:1
+```
+
+No emulator was attached. `adb` binary: `C:\Users\yassi\AppData\Local\Android\Sdk\platform-tools\adb.exe`. Gradle used JDK 17 at `C:\Users\yassi\AppData\Local\Java\jdk-17.0.20.1+1`.
+
+### Build
+
+- `:app:testDebugUnitTest` 87/87 PASS, 0 failures. New coverage: `TripleTapDetectorTest` (8), `GuidanceScenariosTest` (1), `DiagnosticsReportTest` (1), plus non-finite and zero-area navigation cases.
+- `:sim-core:test` was UP-TO-DATE and was not re-executed. Kinematics files were not changed.
+- `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` (build-tools 36.0.0): `versionName='0.6.0'`, `versionCode='8'`, `minSdk` 26, `targetSdk` 35, `compileSdk` 35. Permissions in the badge: `CAMERA`, `VIBRATE`, and the AndroidX non-exported receiver permission. `INTERNET` was not listed.
+- Copied to `outputs/apk/TriGuideAI-0.6.0-debug.apk` (81,391,581 bytes).
+
+### Install and cold start
+
+- `adb -s 55aqpfqkvw9xbafe install -r outputs/apk/TriGuideAI-0.6.0-debug.apk` → `Success`. `dumpsys package` showed `versionName=0.6.0` `versionCode=8`.
+- `am force-stop` then `am start -n com.triguide.ai/.MainActivity`. Resumed activity was `com.triguide.ai/.MainActivity` (pid 4069). No `AndroidRuntime` FATAL line was in the filtered log.
+- `TriGuideVoice` `speak result=0` (engine accepted; the speaker was not confirmed by ear), English:
+  - Research and Simulation Mode disclaimer
+  - `Camera started. Guidance on.`
+  - `The fingerprint button cannot control this app. Triple-tap the screen to restart guidance.`
+- UI dump text included Live Vision, that triple-tap sentence, `READY. MediaPipe EfficientDet-Lite0 int8`, `Camera: Streaming. Preview 15 FPS. Inference 13 FPS, last 42 ms, average 44 ms.`, `Decision: Hold`, `Front wheel: 0.0 degrees`, `Source: Camera 2D`, and More. No detection box was claimed in that frame.
+
+### Triple-tap
+
+Screen 1080×2400. One shell ran `input tap 540 1600` three times (shell elapsed 188 ms). That point is on the preview area, above More.
+
+- `08:54:10.352` `TriGuideTap` `tap count=1`
+- `08:54:10.382` `TriGuideTap` `tap count=2`
+- `08:54:10.408` `TriGuideTap` `triple-tap accepted; restarting guidance`
+- `08:54:10.472` `TriGuideVoice` `speak result=0` `text=Camera started. Guidance on.`
+
+The disclaimer was not repeated. A vertical swipe did not log a tap. One tap on More logged `tap count=1`, spoke `Guidance paused.`, and opened the More screen.
+
+### Other screens
+
+- More showed floor `NOT_STARTED. Disabled. No floor model is loaded. Open floor is not inferred, and no floor mask is drawn.` Hardware line: `MOCK — no physical robot connected`.
+- Test Scenarios showed Straight (empty corridor), Right (left barrel), and Hold (post on the forward axis), each marked as not the camera.
+- Robot Simulation showed `Simulated tricycle only. Nothing on this screen is a physical robot.` and Manual drive selected, source Manual. Selecting Synthetic world made the next UI dump fail with `could not get idle state`. That mode was not read back.
+
+### Not checked on the phone
+
+- Whether the speaker was audible.
+- A real object producing a box on this build.
+- Settings, Arabic speech, quiet mode, the diagnostics share sheet, and TalkBack.
+- True-positive / false-alarm counts.
+
 ## 2026-10-18 — Redmi 0.5.1 open-into-guidance, fingerprint API check
 
 **Status: PASS_WITH_WARNINGS**

@@ -3,6 +3,7 @@ package com.triguide.ai.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.util.Log
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -64,6 +65,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.triguide.ai.BuildConfig
 import com.triguide.ai.camera.CameraXSource
+import com.triguide.ai.domain.DiagnosticsReport
+import com.triguide.ai.domain.DiagnosticsSnapshot
 import com.triguide.ai.domain.CameraPermissionAction
 import com.triguide.ai.domain.CameraPermissionPrompt
 import com.triguide.ai.domain.CameraStartResult
@@ -74,6 +77,7 @@ import com.triguide.ai.domain.DetectorStatusText
 import com.triguide.ai.domain.DetectorConfig
 import com.triguide.ai.domain.DetectorReadiness
 import com.triguide.ai.domain.FloorSegmentationStatus
+import com.triguide.ai.domain.GuidanceScenarios
 import com.triguide.ai.domain.GuidanceSession
 import com.triguide.ai.domain.IllustrativePath
 import com.triguide.ai.domain.MockHardwareController
@@ -84,6 +88,7 @@ import com.triguide.ai.domain.SceneObservations
 import com.triguide.ai.domain.SpeechDirective
 import com.triguide.ai.domain.SteeringCommand
 import com.triguide.ai.domain.SyntheticObstacleWorld
+import com.triguide.ai.domain.TripleTapDetector
 import com.triguide.ai.domain.VoiceAlertKind
 import com.triguide.ai.domain.VoiceConfig
 import com.triguide.ai.domain.VoiceCue
@@ -99,6 +104,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+private const val TAP_LOG = "TriGuideTap"
 
 private enum class Screen {
     LiveVision,
@@ -141,15 +148,15 @@ private class LiveNavState {
 private enum class RobotDriveMode(val label: String, val description: String) {
     Manual(
         label = "Manual drive",
-        description = "Buttons set the virtual speed and front wheel.",
+        description = "Simulated. Buttons set speed and the front wheel. Not the camera, and not a physical robot.",
     ),
     CameraInformed(
         label = "Camera-informed",
-        description = "Uses the horizontal position of detection boxes. This screen does not open the camera.",
+        description = "Simulated robot. Uses detection boxes from Live Vision when that camera is already running. This screen does not open the camera. A box is not a measured clearance.",
     ),
     SyntheticWorld(
         label = "Synthetic world",
-        description = "Uses an authored obstacle map. Those positions are not from the camera.",
+        description = "Simulated map with authored obstacles. Those positions are not from the camera and not from a physical robot.",
     ),
 }
 
@@ -210,6 +217,11 @@ fun TriGuideRoot() {
                         val wasRunning = nav.running
                         nav.showMore()
                         if (wasRunning) speakPaused()
+                    },
+                    onRestartGuidance = {
+                        Log.i(TAP_LOG, "triple-tap accepted; restarting guidance")
+                        confirmPulse(context)
+                        nav.start(fromGesture = true)
                     },
                 )
                 Screen.More -> MoreScreen(
@@ -280,7 +292,7 @@ private fun MoreScreen(
         }
         item { NavButton("Live guidance", "Return to live guidance and start the camera", primary = true) { onLiveGuidance() } }
         item { NavButton("Robot Simulation", "Open the three-wheel simulator", primary = false) { onNavigate(Screen.Simulator) } }
-        item { NavButton("Test Scenarios", "Open the list of checks that are not running yet", primary = false) { onNavigate(Screen.Scenarios) } }
+        item { NavButton("Test Scenarios", "Open simulator scenarios. They use an authored map, not the camera.", primary = false) { onNavigate(Screen.Scenarios) } }
         item { NavButton("Diagnostics", "Open camera, detection, decision, and voice status", primary = false) { onNavigate(Screen.Diagnostics) } }
         item { NavButton("Settings", "Open voice, quiet mode, and the safety notice", primary = false) { onNavigate(Screen.Settings) } }
     }
@@ -294,6 +306,7 @@ private fun CameraScreen(
     prompt: CameraPrompt,
     sessionSpeech: SessionSpeechTracker,
     onMore: () -> Unit,
+    onRestartGuidance: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -335,6 +348,7 @@ private fun CameraScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val tapDetector = remember { TripleTapDetector() }
     val activity = context as? android.app.Activity
     val permissionAction = CameraPermissionPrompt.action(
         requestAttempted = requestAttempted,
@@ -446,6 +460,14 @@ private fun CameraScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .observeScreenTaps {
+                val mark = tapDetector.onTap(android.os.SystemClock.elapsedRealtime())
+                if (mark.completed) {
+                    onRestartGuidance()
+                } else {
+                    Log.i(TAP_LOG, "tap count=${mark.countInGroup}")
+                }
+            }
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -578,6 +600,14 @@ private fun CameraScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 DecisionHeadline(decision = decision, applied = applied)
+                Text(
+                    text = "Source: ${decision.perceptionLabel}. Hold and Unknown stop the virtual robot. Depth is not measured.",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Source ${decision.perceptionLabel}. Hold and Unknown stop the virtual robot. Depth is not measured."
+                    },
+                )
                 VoiceCueLine(lastVoice)
                 Box(
                     modifier = Modifier
@@ -765,6 +795,14 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
     ) {
         ScreenHeader(title = "Robot Simulation", onBack = onBack)
         Text(
+            "Simulated tricycle only. Nothing on this screen is a physical robot.",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 16.sp,
+            modifier = Modifier.semantics {
+                contentDescription = "Simulated tricycle only. Nothing on this screen is a physical robot."
+            },
+        )
+        Text(
             "Virtual tricycle. Wheelbase ${TricycleKinematics.DEFAULT_WHEELBASE_METERS} m. ${mode.description}",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
@@ -879,6 +917,8 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
 
 @Composable
 private fun ScenariosScreen(onBack: () -> Unit) {
+    var runSerial by remember { mutableIntStateOf(0) }
+    val runs = remember(runSerial) { GuidanceScenarios.run() }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -888,13 +928,27 @@ private fun ScenariosScreen(onBack: () -> Unit) {
     ) {
         ScreenHeader(title = "Test Scenarios", onBack = onBack)
         Text(
-            "These cards are not an indoor evaluation. They do not inject detections. Use Live Vision for the camera, or Robot Simulation and then Synthetic world for the authored map.",
+            "These cards run the navigation engine on an authored map. They are not the camera, not a floor mask, and not an indoor evaluation.",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
-        ScenarioCard("Straight corridor", "NOT_STARTED. Not an evaluation set.")
-        ScenarioCard("Obstacle on the left", "NOT_STARTED. This card does not inject an obstacle.")
-        ScenarioCard("Blocked path", "NOT_STARTED. This card does not inject a detection.")
+        Button(
+            onClick = { runSerial += 1 },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .semantics { contentDescription = "Run the simulator scenarios again" },
+        ) {
+            Text("Run scenarios again", fontSize = 18.sp)
+        }
+        runs.forEach { run ->
+            val wheel = formatWheelDegrees(run.decision.steeringRadians)
+            ScenarioCard(
+                title = run.scenario.title,
+                body = "${run.scenario.setup} Decision: ${run.decision.action.userLabel}. " +
+                    "Reason: ${run.decision.reason} Front wheel: $wheel degrees. Source: ${run.decision.perceptionLabel}.",
+            )
+        }
     }
 }
 
@@ -939,6 +993,31 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ScreenHeader(title = "Diagnostics", onBack = onBack)
+        val report = diagnosticsText(
+            granted = granted,
+            detection = DetectorStatusText.line(readiness, detail),
+            decision = smoothed.action.userLabel,
+            reason = smoothed.reason,
+            confidence = NavigationDecisions.formatConfidence(smoothed.confidence),
+            wheelDegrees = formatWheelDegrees(robot.steeringRadians),
+            source = smoothed.perceptionLabel,
+            voice = "${voiceSettings.summary()}. $voiceStatus",
+            lastCue = lastVoice.ifBlank { "none" },
+            performance = performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
+            hardware = services.hardware.connectionLabel,
+        )
+        Button(
+            onClick = {
+                Log.i("TriGuideDiag", report)
+                sharePlainText(context, report)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .semantics { contentDescription = "Share a plain text diagnostics report. It is not a safety proof." },
+        ) {
+            Text("Share diagnostics", fontSize = 18.sp)
+        }
         SectionLabel("Camera")
         StatusLine("Version", BuildConfig.VERSION_NAME)
         StatusLine("Camera permission", if (granted) "granted" else "not granted")
@@ -1006,7 +1085,7 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
         StatusLine("Fingerprint", GuidanceSpeech.GESTURE_DESCRIPTION)
-        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack. The app opens on Live Vision and starts guidance by itself.")
+        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack. The app opens on Live Vision and starts guidance by itself. Triple-tap on Live Vision restarts guidance. A single tap still activates the control under your finger.")
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text(
             GuidanceSpeech.disclaimer.english,
@@ -1064,6 +1143,51 @@ private fun NavButton(label: String, description: String, primary: Boolean, onCl
 
 private fun hasCameraPermission(context: android.content.Context): Boolean {
     return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun diagnosticsText(
+    granted: Boolean,
+    detection: String,
+    decision: String,
+    reason: String,
+    confidence: String,
+    wheelDegrees: String,
+    source: String,
+    voice: String,
+    lastCue: String,
+    performance: String,
+    hardware: String,
+): String {
+    return DiagnosticsReport.text(
+        DiagnosticsSnapshot(
+            versionName = BuildConfig.VERSION_NAME,
+            cameraPermission = if (granted) "granted" else "not granted",
+            detection = detection,
+            decision = decision,
+            reason = reason,
+            confidence = confidence,
+            wheelDegrees = wheelDegrees,
+            source = source,
+            floor = "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}",
+            voice = voice,
+            lastCue = lastCue,
+            performance = performance,
+            hardware = hardware,
+            shortcut = GuidanceSpeech.GESTURE_ON_SCREEN,
+        ),
+    )
+}
+
+private fun sharePlainText(context: android.content.Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "TriGuide diagnostics")
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    val chooser = Intent.createChooser(send, "Share diagnostics").apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(chooser)
 }
 
 private fun openAppSettings(context: android.content.Context) {

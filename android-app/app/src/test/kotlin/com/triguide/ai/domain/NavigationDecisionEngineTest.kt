@@ -121,6 +121,26 @@ class NavigationDecisionEngineTest {
     }
 
     @Test
+    fun aNonFiniteCueDoesNotSteer() {
+        val decision = engine.decide(
+            camera(cues = listOf(DirectionalCue("chair", Float.NaN, 0.15f, 0.25f))),
+        )
+        assertEquals(GuidanceAction.UNKNOWN, decision.action)
+        assertEquals(0.0, decision.steeringRadians, 0.0)
+        assertEquals(0.0, decision.linearSpeedMps, 0.0)
+    }
+
+    @Test
+    fun aZeroAreaCueIsNotAPassage() {
+        val decision = engine.decide(
+            camera(cues = listOf(DirectionalCue("speck", 0.99f, 0.10f, 0f))),
+        )
+        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals(0.0, decision.steeringRadians, 0.0)
+        assertTrue(decision.reason.contains("No confirmed passage"))
+    }
+
+    @Test
     fun contradictoryObservationsDoNotPickASide() {
         val flagged = engine.decide(
             camera(cues = listOf(strongCue("chair", 0.15f)), contradictory = true),

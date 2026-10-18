@@ -122,6 +122,22 @@
 - Version 0.4.1 (`versionCode` 5). System Back returns Home. A camera denial that will not show the dialog again opens app settings. The detector line says READY only when the engine is ready.
 - No new model, no depth, no network permission.
 
+## 2026-10-18 — Screen triple-tap is the guidance shortcut
+
+**Decision:** Keep the fingerprint button out of the app. Restore a screen triple-tap on Live Vision as the way to restart guidance. Do not add a volume-key shortcut. Do not load a floor model in this build.
+
+**Why**
+
+- The Redmi reader is still the power button. That limitation is unchanged and is spoken once on a cold start.
+- A blind user needs a control that does not depend on finding More. Three quick taps anywhere on Live Vision are available without a new permission.
+- The detector counts taps the UI already classified as taps. It does not consume the pointer, so a scroll and a single button press still go to the existing controls.
+- MediaPipe Image Segmenter was not added. A floor mask that is not actually running would look like a free floor. The label stays `NOT_STARTED`.
+
+**Consequences**
+
+- Version 0.6.0 (`versionCode` 8). The gap between taps is 750 ms, inside the requested 600–800 ms window. Three taps restart the camera and speak “Camera started. Guidance on.” in the current voice language.
+- Test Scenarios run the navigation engine on three authored maps. Diagnostics can share a plain-text status dump. Neither one is an indoor evaluation.
+
 ## 2026-10-18 — Fingerprint taps are not available to this app
 
 **Decision:** Do not ship a fingerprint triple-tap, a screen-wide triple-tap, or a volume-key shortcut. Opening TriGuide enters Live Vision and starts the camera and voice. Say once, in speech and on screen, that the fingerprint control cannot be used.

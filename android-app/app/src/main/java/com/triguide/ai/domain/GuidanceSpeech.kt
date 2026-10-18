@@ -28,8 +28,8 @@ object GuidanceSpeech {
 
     val gestureHint = SpokenLine(
         id = "gesture-hint",
-        english = "Guidance starts when you open TriGuide. This phone's fingerprint control is the power button, and Android does not give those presses to apps.",
-        arabic = "يبدأ التوجيه عند فتح تراي جايد. زر البصمة في هذا الهاتف هو زر التشغيل، وأندرويد لا يمرر ضغطاته إلى التطبيقات.",
+        english = "The fingerprint button cannot control this app. Triple-tap the screen to restart guidance.",
+        arabic = "زر البصمة لا يتحكم في هذا التطبيق. انقر ثلاث نقرات سريعة على الشاشة لإعادة التوجيه.",
     )
 
     val guidancePaused = SpokenLine(
@@ -57,9 +57,9 @@ object GuidanceSpeech {
     )
 
     const val GESTURE_ON_SCREEN =
-        "Guidance starts when the app opens. Fingerprint presses are not available to apps."
+        "Triple-tap the screen to restart guidance. The fingerprint button cannot control this app."
     const val GESTURE_DESCRIPTION =
-        "Guidance starts when TriGuide opens. The fingerprint reader is the power button. Android does not send those presses to this app. More opens the simulator, settings, and diagnostics."
+        "Triple-tap anywhere on Live Vision to restart the camera and hear that guidance is on. The fingerprint reader is the power button. Android does not send those presses to this app. A single tap on More still opens the simulator, settings, and diagnostics."
 }
 
 class SessionSpeechTracker {

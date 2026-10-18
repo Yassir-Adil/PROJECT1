@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-10-18 — Screen triple-tap restores guidance (0.6.0)
+
+**Status:** 0.6.0 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. Screen triple-tap restarted guidance. Fingerprint control is still impossible and was not pursued.
+
+### Shortcut
+
+- Three taps on Live Vision, each within 750 ms of the previous one, restart the camera and speak “Camera started. Guidance on.”
+- Cold open still starts Live Vision, the camera, and speech. The third spoken sentence says the fingerprint button cannot control the app and that a screen triple-tap restarts guidance.
+- A drag is not a tap. One tap on More still opens More and speaks “Guidance paused.”
+
+### Phone (no emulator)
+
+- `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device`. No emulator was attached.
+- `adb install -r outputs/apk/TriGuideAI-0.6.0-debug.apk` → Success. `versionName=0.6.0` `versionCode=8`. APK size 81,391,581 bytes.
+- Cold start spoke, all `speak result=0`: the research disclaimer, “Camera started. Guidance on.”, and “The fingerprint button cannot control this app. Triple-tap the screen to restart guidance.”
+- `adb shell input tap 540 1600` three times in one shell (188 ms). Logcat `TriGuideTap`: `tap count=1` at 08:54:10.352, `tap count=2` at 08:54:10.382, `triple-tap accepted; restarting guidance` at 08:54:10.408. `TriGuideVoice` then `speak result=0` for “Camera started. Guidance on.” Sound from the speaker was not confirmed by ear.
+- A swipe did not log a tap. One tap on More logged `tap count=1` and opened More. Test Scenarios showed Straight, Right (left barrel), and Hold (post on axis), each labeled as a synthetic map. Robot Simulation showed “Simulated tricycle only.” A later synthetic-mode UI dump failed with `could not get idle state` while the screen kept updating.
+- Live Vision on this open showed detector READY, Preview 15 FPS, Inference 13 FPS, last 42 ms, average 44 ms, Decision Hold, front wheel 0.0 degrees, source Camera 2D. No box was in that frame. Floor segmentation remained `NOT_STARTED`.
+
+### Tests
+
+- `:app:testDebugUnitTest` 87/87 PASS, 0 failures. Includes the tap detector, the three scenarios, the diagnostics text, and two navigation edge cases (non-finite cue, zero-area cue).
+- `:sim-core:test` was UP-TO-DATE. It was not re-run. Kinematics sources did not change.
+
+### Still open
+
+- A person confirming they heard the sentences.
+- True-positive / false-alarm counts. Not measured.
+- Floor segmentation. Not started. No floor mask is drawn.
+- TalkBack was not walked. Settings and the share sheet were not opened on the phone.
+
 ## 2026-10-18 — Blind-first open, fingerprint shortcut is blocked by the OS
 
 **Status:** 0.5.1 install and cold start PASS_WITH_WARNINGS on the personal Redmi. Fingerprint triple-tap is **not possible** for this app. Screen triple-tap and volume-key shortcuts are not the control.

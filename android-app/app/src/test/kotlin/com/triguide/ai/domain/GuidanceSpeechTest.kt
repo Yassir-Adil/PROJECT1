@@ -16,8 +16,10 @@ class GuidanceSpeechTest {
             first.map { it.id },
         )
         assertTrue(first.first().english.startsWith("Research and Simulation Mode."))
-        assertTrue(GuidanceSpeech.gestureHint.english.contains("fingerprint"))
-        assertTrue(GuidanceSpeech.GESTURE_ON_SCREEN.contains("Fingerprint presses are not available"))
+        assertTrue(GuidanceSpeech.gestureHint.english.contains("fingerprint button cannot control"))
+        assertTrue(GuidanceSpeech.gestureHint.english.contains("Triple-tap"))
+        assertTrue(GuidanceSpeech.gestureHint.arabic.contains("ثلاث نقرات"))
+        assertTrue(GuidanceSpeech.GESTURE_ON_SCREEN.contains("Triple-tap the screen to restart guidance"))
 
         tracker.disclaimerDelivered = true
         assertEquals(listOf("guidance-on"), tracker.guidanceStartLines().map { it.id })
