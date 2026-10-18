@@ -87,3 +87,23 @@
 - The on-screen path is a short kinematic sketch of the current command. It is labeled “Illustrative path, not verified.”
 - The physical controller remains a mock and still refuses commands.
 
+## 2026-10-18 — Phase 6 voice is a short cue, not a frame narration
+
+**Decision:** Speak five short cues through Android `TextToSpeech`, gated by `VoiceGuidanceGate`. Do not speak the long on-screen reason on every camera frame. Do not add a floor segmenter.
+
+**Why**
+
+- The navigation loop already runs about every 50 ms. Reading the full reason each time would talk over itself and would change whenever a timestamp or a detector score changes.
+- Each cue has a stable key: obstacle, one turn phrase, uncertain, camera, or paused. The same key waits out a cooldown (6 s critical, 10 s uncertain, 12 s turn, 4 s paused). A different higher-priority cue can interrupt. Obstacle detected and camera unavailable are critical. Quiet mode allows only those two.
+- The first frames of a new direction are the smoother’s vote (“Holding until the direction stays”). That vote is not a new situation, so it is silent. The committed action is what gets spoken.
+- Arabic is a second phrase on the same cue, not a translation service. It is used only when the device has an offline Arabic voice. This APK still removes `INTERNET`. A voice that needs a download is ignored.
+- Preferences are four fields in `SharedPreferences` (`triguide_voice`). They are read on the control tick. DataStore was not added for this set.
+- The research-mode disclaimer stays on screen. Voice copy says the cue is not a safety proof. Version bumped to 0.4.0 (`versionCode` 4).
+
+**Consequences**
+
+- Speech rate is clamped to 0.6–1.6 and passed to `setSpeechRate`.
+- A missing or still-starting engine does not retry every frame. The gate waits 5 s and leaves the text on screen.
+- Simulation paused is spoken once when an assist mode stops, and it can be queued behind the current sentence. It does not cut off a turn.
+- Floor segmentation remains `NOT_STARTED` and disabled.
+

@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-18 — Redmi install and launch (phone only)
+
+**Status:** install and launch PASS_WITH_WARNINGS on the personal Redmi. Live camera, accuracy, and spoken-cue checks NOT_STARTED.
+
+### Policy
+
+The user requires every install and smoke test on their personal Redmi. The emulator is not used for those checks. Earlier emulator installs and smokes stay in `docs/TEST_RESULTS.md` as history and are non-authoritative for this user from this session forward.
+
+### Done this session
+
+- Restarted ADB. `adb devices -l` listed only `55aqpfqkvw9xbafe` as `device` (`22101316G`, Redmi Note 12 Pro 5G, Android 14 / SDK 34). No emulator was started or installed to.
+- Installed `outputs/apk/TriGuideAI-0.4.0-debug.apk` with `adb -s 55aqpfqkvw9xbafe install -r`. Result: Success. Package `com.triguide.ai` `versionName=0.4.0` `versionCode=4`.
+- Launched `com.triguide.ai/.MainActivity`. It was the resumed visible activity (pid 30249). Logcat showed no FATAL crash.
+- Home on the phone: detector READY, floor `NOT_STARTED`, voice line says offline English and Arabic voices are installed, camera permission denied. Start Camera was not tapped.
+
+### Still open (on the phone)
+
+- User taps Start Camera and allows the camera permission.
+- A real-room object should produce a box and a navigation line. Timing is still unmeasured.
+- Robot Simulation, Test Scenarios, Diagnostics, Settings (speech sample, quiet mode), and TalkBack were not opened.
+
+## 2026-10-18 — Phase 6 voice guidance
+
+**Status:** voice guidance PASS_WITH_WARNINGS on the emulator (non-authoritative under the phone-only policy above). Floor segmentation still NOT_STARTED. The later Redmi install of this same 0.4.0 APK is recorded in the section above. Accuracy evaluation NOT_STARTED.
+
+### Done this session
+
+- Added Android text-to-speech for five cues: obstacle detected, turn suggestion, navigation uncertain, camera unavailable, and simulation paused.
+- A gate decides whether a cue may be spoken. The same cue has a cooldown. A critical cue can interrupt a lower one. Quiet mode keeps only obstacle detected and camera unavailable. Speech can be turned off. Rate is limited to 0.6–1.6. The control loop still runs about every 50 ms and does not speak on every tick.
+- English and Arabic phrases. The speaker uses an offline voice for the chosen language. Arabic is used when that voice is installed. Otherwise the cue stays in English. This build still has no internet permission.
+- Settings has speech on/off, quiet mode, speech rate, language (device, English, Arabic), the engine status, and a sample button. The research-mode line stays on every screen. The voice line says the cue is not a safety proof.
+- The three-frame direction vote is not spoken. The committed turn is.
+- `versionName` 0.4.0 (`versionCode` 4). Debug APK copied to `outputs/apk/TriGuideAI-0.4.0-debug.apk` (81,438,490 bytes).
+- Unit tests: `:app:testDebugUnitTest` 65/65 PASS, `:sim-core:test` 9/9 PASS.
+- Emulator `Pixel_8a`: install and launch PASS. Google TTS reported offline English and Arabic voices. Samples were synthesized in both languages on the first 0.4.0 install. After the warmup sentence was removed, the reinstalled APK spoke three turn cues on the synthetic map across about five seconds, and did not speak “Navigation uncertain” during the vote. The emulator was then stopped.
+
+### Still open
+
+- Install and a real-room check on the Redmi. See the blocked USB note below. Later the same morning `adb devices` also listed `55aqpfqkvw9xbafe` as `device` (Xiaomi `22101316G`). `pm path com.triguide.ai` on that serial was “Unable to find package.” This session did not install on it and did not open the app there.
+- True-positive / false-alarm counts. Not measured.
+- Floor segmentation. Not started.
+- TalkBack was not run. Quiet mode and the speech switch were visible and were not tapped on the emulator. The gate unit tests cover those switches.
+
+## 2026-10-18 — Redmi install blocked before ADB
+
+**Status:** superseded the same morning. This poll was BLOCKED. The later authorized install is in the section at the top of this file.
+
+Windows sees a connected **Redmi Note 12 Pro 5G** as a file-transfer device (`USB\VID_2717&PID_FF40\55AQPFQKVW9XBAFE`). `adb devices -l` listed only emulator `emulator-5554`. The phone was not `unauthorized` or `offline`; the ADB interface was absent. `outputs/apk/TriGuideAI-0.4.0-debug.apk` (`com.triguide.ai` 0.4.0, `MainActivity`) was identified and not installed. Android version was not read from the phone. Detail: `docs/TEST_RESULTS.md`.
+
+### Still open
+
+- Unlock the phone, turn on USB debugging, and accept this PC on the “Allow USB debugging?” prompt. Then retry install.
+
 ## 2026-10-18 — Phase 5 virtual steering from detection
 
 **Status:** vision-to-virtual-robot link PASS_WITH_WARNINGS. Floor segmentation NOT_STARTED (disabled). Redmi NOT_STARTED. Accuracy evaluation NOT_STARTED.

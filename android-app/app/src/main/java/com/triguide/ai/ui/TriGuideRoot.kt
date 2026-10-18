@@ -29,10 +29,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -62,11 +64,20 @@ import com.triguide.ai.domain.MockHardwareController
 import com.triguide.ai.domain.NavigationDecisions
 import com.triguide.ai.domain.PerformanceMonitor
 import com.triguide.ai.domain.SceneObservations
+import com.triguide.ai.domain.SpeechDirective
 import com.triguide.ai.domain.SteeringCommand
 import com.triguide.ai.domain.SyntheticObstacleWorld
+import com.triguide.ai.domain.VoiceAlertKind
+import com.triguide.ai.domain.VoiceConfig
+import com.triguide.ai.domain.VoiceCue
+import com.triguide.ai.domain.VoiceCues
+import com.triguide.ai.domain.VoiceGateInput
+import com.triguide.ai.domain.VoiceGuidanceGate
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
 import com.triguide.ai.vision.MediaPipeObjectDetectorEngine
+import com.triguide.ai.voice.AndroidVoiceSpeaker
+import com.triguide.ai.voice.VoiceSettingsStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
@@ -102,6 +113,9 @@ private class AppServices(context: android.content.Context) {
     val robot = SimulatedTricycleController()
     val hardware = MockHardwareController()
     val camera = CameraXSource()
+    val voiceSettings = VoiceSettingsStore(context)
+    val voiceGate = VoiceGuidanceGate()
+    val speaker = AndroidVoiceSpeaker(context)
 }
 
 private const val DISCLAIMER =
@@ -113,7 +127,10 @@ fun TriGuideRoot() {
     val services = remember { AppServices(context.applicationContext) }
     var screen by remember { mutableStateOf(Screen.Home) }
     DisposableEffect(services) {
-        onDispose { services.detection.close() }
+        onDispose {
+            services.detection.close()
+            services.speaker.close()
+        }
     }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -139,7 +156,7 @@ fun TriGuideRoot() {
                     Screen.Simulator -> SimulatorScreen(services, onBack = { screen = Screen.Home })
                     Screen.Scenarios -> ScenariosScreen(onBack = { screen = Screen.Home })
                     Screen.Diagnostics -> DiagnosticsScreen(services, onBack = { screen = Screen.Home })
-                    Screen.Settings -> SettingsScreen(onBack = { screen = Screen.Home })
+                    Screen.Settings -> SettingsScreen(services, onBack = { screen = Screen.Home })
                 }
             }
         }
@@ -151,6 +168,8 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
     val readiness by services.detection.readiness.collectAsStateWithLifecycle()
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
+    val voiceSettings by services.voiceSettings.settings.collectAsStateWithLifecycle()
+    val voiceStatus by services.speaker.status.collectAsStateWithLifecycle()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -174,6 +193,7 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
         item { StatusLine("Object detection", "$readiness. $detail") }
         item { StatusLine("Navigation", "${decision.action.userLabel}. ${decision.perceptionLabel}") }
         item { StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}") }
+        item { StatusLine("Voice guidance", "${voiceSettings.summary()}. $voiceStatus") }
         item { StatusLine("Virtual robot", "Kinematic simulator ready") }
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
         item { NavButton("Start Camera", "Open the live camera preview") { onNavigate(Screen.Camera) } }
@@ -217,8 +237,14 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
     val showBoxes = readiness == DetectorReadiness.READY && frame?.fromRealDetector == true
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
     val robotState by services.robot.state.collectAsStateWithLifecycle()
+    val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
     val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
-    AssistCameraDrive(services)
+    val cameraBlocked = remember { mutableStateOf(false) }
+    val cameraFailed = cameraState.startsWith("Failed") || cameraState.startsWith("No camera")
+    SideEffect {
+        cameraBlocked.value = !granted || cameraFailed
+    }
+    AssistCameraDrive(services, cameraBlocked)
 
     Column(
         modifier = Modifier
@@ -229,6 +255,8 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
         Text("Live Vision", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Spacer(Modifier.height(8.dp))
         GuidanceReadout(decision = decision, applied = applied, showPath = true)
+        Spacer(Modifier.height(8.dp))
+        VoiceCueLine(lastVoice)
         Spacer(Modifier.height(8.dp))
         Text(
             observation.summary,
@@ -359,9 +387,10 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AssistCameraDrive(services: AppServices) {
+private fun AssistCameraDrive(services: AppServices, cameraBlocked: MutableState<Boolean>) {
     LaunchedEffect(services) {
         var last = android.os.SystemClock.elapsedRealtime()
+        val startedAt = last
         var logged = ""
         try {
             while (isActive) {
@@ -376,6 +405,14 @@ private fun AssistCameraDrive(services: AppServices) {
                 val decision = services.guidance.onCamera(scene)
                 services.robot.setCommand(decision.toSteeringCommand())
                 services.robot.tick(dt)
+                val fromDecision = VoiceCues.fromDecision(decision)
+                val cue = when {
+                    cameraBlocked.value -> VoiceCues.cameraUnavailable()
+                    fromDecision?.kind == VoiceAlertKind.CAMERA_UNAVAILABLE &&
+                        now - startedAt < VoiceConfig.CAMERA_START_GRACE_MS -> null
+                    else -> fromDecision
+                }
+                announce(services, cue, now)
                 val key = "${decision.action.name}:${decision.reason}"
                 if (key != logged) {
                     logged = key
@@ -387,6 +424,7 @@ private fun AssistCameraDrive(services: AppServices) {
             services.guidance.resetCamera()
             services.robot.setCommand(SteeringCommand(0.0, 0.0))
             services.guidance.markIdle("Camera preview is closed. The virtual robot is holding.")
+            announce(services, VoiceCues.paused(), android.os.SystemClock.elapsedRealtime())
         }
     }
 }
@@ -396,17 +434,22 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
     var mode by remember { mutableStateOf(RobotDriveMode.Manual) }
     val robotState by services.robot.state.collectAsStateWithLifecycle()
     val guided by services.guidance.decision.collectAsStateWithLifecycle()
+    val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
     val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
     val readout = if (mode == RobotDriveMode.Manual) NavigationDecisions.manual() else guided
     LaunchedEffect(mode) {
         var last = android.os.SystemClock.elapsedRealtime()
+        val assisted = mode != RobotDriveMode.Manual
         try {
             while (isActive) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 val dt = ((now - last) / 1000.0).coerceIn(0.0, 0.1)
                 last = now
-                when (mode) {
-                    RobotDriveMode.Manual -> services.robot.tick(dt)
+                val cue = when (mode) {
+                    RobotDriveMode.Manual -> {
+                        services.robot.tick(dt)
+                        null
+                    }
                     RobotDriveMode.CameraInformed -> {
                         val scene = SceneObservations.fromCamera(
                             readiness = services.detection.readiness.value,
@@ -416,13 +459,18 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
                         val decision = services.guidance.onCamera(scene)
                         services.robot.setCommand(decision.toSteeringCommand())
                         services.robot.tick(dt)
+                        VoiceCues.fromDecision(decision)
                     }
                     RobotDriveMode.SyntheticWorld -> {
                         val scene = SyntheticObstacleWorld.observe(services.robot.state.value.pose)
                         val decision = services.guidance.onSynthetic(scene)
                         services.robot.setCommand(decision.toSteeringCommand())
                         services.robot.tick(dt)
+                        VoiceCues.fromDecision(decision)
                     }
+                }
+                if (assisted) {
+                    announce(services, cue, now)
                 }
                 delay(50)
             }
@@ -433,9 +481,10 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
             if (mode == RobotDriveMode.SyntheticWorld) {
                 services.guidance.resetSynthetic()
             }
-            if (mode != RobotDriveMode.Manual) {
+            if (assisted) {
                 services.robot.setCommand(SteeringCommand(0.0, 0.0))
                 services.guidance.markIdle("Assist mode stopped. The virtual robot is holding.")
+                announce(services, VoiceCues.paused(), android.os.SystemClock.elapsedRealtime())
             }
         }
     }
@@ -477,6 +526,7 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
             }
         }
         GuidanceReadout(decision = readout, applied = applied, showPath = false)
+        VoiceCueLine(lastVoice)
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -605,6 +655,9 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         scoreThreshold = DetectorConfig.SCORE_THRESHOLD,
     )
     val smoothed by services.guidance.decision.collectAsStateWithLifecycle()
+    val voiceSettings by services.voiceSettings.settings.collectAsStateWithLifecycle()
+    val voiceStatus by services.speaker.status.collectAsStateWithLifecycle()
+    val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
     val raw = services.guidance.rawDecision(
         SceneObservations.fromCamera(
             readiness = readiness,
@@ -633,6 +686,9 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Metric depth used", smoothed.metricDepthUsed.toString())
         StatusLine("Vision sample", smoothed.basedOnRealVision.toString())
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
+        StatusLine("Voice guidance", voiceSettings.summary())
+        StatusLine("Voice engine", voiceStatus)
+        StatusLine("Last voice cue", lastVoice)
         StatusLine(
             "Performance",
             performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
@@ -648,7 +704,10 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
 }
 
 @Composable
-private fun SettingsScreen(onBack: () -> Unit) {
+private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
+    val settings by services.voiceSettings.settings.collectAsStateWithLifecycle()
+    val engineStatus by services.speaker.status.collectAsStateWithLifecycle()
+    val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -658,11 +717,21 @@ private fun SettingsScreen(onBack: () -> Unit) {
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         StatusLine("Research and Simulation Mode", "On. This cannot be turned off in this build.")
+        VoiceSettingsSection(
+            settings = settings,
+            engineStatus = engineStatus,
+            lastSpoken = lastVoice,
+            onSpeechEnabled = services.voiceSettings::setSpeechEnabled,
+            onQuietMode = services.voiceSettings::setQuietMode,
+            onSpeechRate = services.voiceSettings::setSpeechRate,
+            onLanguage = services.voiceSettings::setLanguage,
+            onPlaySample = { playSample(services) },
+        )
         StatusLine("Object detection", "${DetectorConfig.MODEL_DISPLAY_NAME} on device. Confidence floor ${DetectorConfig.SCORE_THRESHOLD}.")
         StatusLine("Navigation", "Camera mode uses box position in the image. It does not measure distance.")
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
-        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels.")
+        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack.")
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text(
             DISCLAIMER,
@@ -732,6 +801,41 @@ private fun ScenarioCard(title: String, body: String) {
         Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp)
         Text(body, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp)
     }
+}
+
+private fun announce(services: AppServices, cue: VoiceCue?, nowElapsedMs: Long) {
+    val settings = services.voiceSettings.current()
+    val directive = services.voiceGate.consider(
+        VoiceGateInput(
+            cue = cue,
+            settings = settings,
+            nowElapsedMs = nowElapsedMs,
+            resolvedLanguage = services.speaker.resolve(settings.language),
+        ),
+    )
+    if (directive is SpeechDirective.Speak) {
+        val accepted = services.speaker.speak(directive) {
+            services.voiceGate.onUtteranceFinished(android.os.SystemClock.elapsedRealtime())
+        }
+        if (!accepted) {
+            services.voiceGate.abandonLastUtterance(nowElapsedMs)
+        }
+    }
+}
+
+private fun playSample(services: AppServices) {
+    val settings = services.voiceSettings.current().sanitized()
+    if (!settings.speechEnabled) return
+    val language = services.speaker.resolve(settings.language)
+    services.speaker.speak(
+        SpeechDirective.Speak(
+            text = VoiceCues.sample(language),
+            interrupt = true,
+            speechRate = settings.speechRate,
+            kind = VoiceAlertKind.OBSTACLE_DETECTED,
+            language = language,
+        ),
+    ) {}
 }
 
 private fun format(value: Double): String = String.format(java.util.Locale.US, "%.2f", value)

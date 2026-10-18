@@ -12,10 +12,11 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Foundation choice | Option B | `docs/DECISIONS.md` |
 | Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
 | Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
-| Redmi install | NOT_STARTED | No phone on ADB |
+| Redmi install | NOT_STARTED | Earlier polls saw the phone as MTP only. A later `adb devices` listed Xiaomi `22101316G` and the package was not installed. See `docs/TEST_RESULTS.md` |
 | Real obstacle detection | PASS_WITH_WARNINGS | MediaPipe EfficientDet-Lite0 loads and runs on the emulator. Accuracy and Redmi are open. See `docs/TEST_RESULTS.md` |
-| Floor segmentation | NOT_STARTED | Disabled in 0.3.0. No floor model is loaded |
-| Camera boxes to virtual steering | PASS_WITH_WARNINGS | Unit tests 48/48 app + 9/9 kinematics. Emulator synthetic wheel moved. Emulator camera held because it saw zero objects. Redmi open |
+| Floor segmentation | NOT_STARTED | Disabled in 0.4.0. No floor model is loaded |
+| Camera boxes to virtual steering | PASS_WITH_WARNINGS | Unit tests 65/65 app + 9/9 kinematics. Emulator synthetic wheel moved. Emulator camera held because it saw zero objects. Redmi open |
+| Voice guidance | PASS_WITH_WARNINGS | Gate tests plus emulator TTS on `Pixel_8a`. Five short cues, cooldown, quiet mode, English and Arabic when an offline voice exists. Redmi open |
 
 ## Phase 0 — Bootstrap
 
@@ -51,7 +52,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 - [x] Missing-model and load-failure states with no invented boxes.
 - [x] Measured inference latency / FPS on the emulator (not on a phone).
 - [x] Map detections into guidance that drives the virtual robot. Screen zone is image position, not a distance. 0.3.0 steers the virtual robot from that position. Redmi and accuracy remain open.
-- [ ] Audio / haptic feedback.
+- [x] Audio cues for obstacle, turn, uncertain, camera unavailable, and simulation paused. Haptic feedback is still open.
 - [ ] Controlled indoor test with recorded true positives and false alarms.
 
 **Exit criteria:** Controlled indoor test with recorded true positives/false alarms. Not met. The detector runs; the evaluation does not.
@@ -74,7 +75,17 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 
 **Exit criteria:** End-to-end demo script on Redmi, documented limitations. The virtual path is in 0.3.0. The Redmi script has not been run.
 
-## Phase 6 — Hardening (later)
+## Phase 6 — Voice guidance
+
+- [x] Android text-to-speech for obstacle detected, turn suggestion, navigation uncertain, camera unavailable, and simulation paused.
+- [x] Priority, dedupe, cooldown, interrupt for a critical cue, speech rate, and quiet mode. The control tick does not speak every frame.
+- [x] English and Arabic phrases, using an offline device voice when that language is installed.
+- [x] Settings for speech on/off, rate, quiet mode, and language preference. Research-mode disclaimer stays. Voice is not a safety proof.
+- [ ] Same check on a Redmi, including whichever voices that phone actually has.
+
+**Exit criteria:** Cues are spoken from the navigation decision without a sentence per frame, with unit tests for the gate. Met on the emulator. The phone check is still open.
+
+## Later — Hardening
 
 - Battery, thermal, offline reliability.
 - Optional evaluation against open datasets / scripted routes.

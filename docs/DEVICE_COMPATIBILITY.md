@@ -18,4 +18,4 @@
 ## Checked on 2026-10-18
 
 - Emulator `Pixel_8a` (API 36 Play Store system image): APK installed and `MainActivity` became the visible resumed activity. Camera permission and buttons were not used.
-- Physical Redmi: not connected.
+- Physical Redmi (2026-10-18): Windows shows Redmi Note 12 Pro 5G as MTP (`VID_2717` `PID_FF40`). Early `adb devices` polls did not list it. A later poll listed `55aqpfqkvw9xbafe` (Xiaomi `22101316G`) as `device`. The 0.4.0 package was not installed on it.
