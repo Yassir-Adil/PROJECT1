@@ -4,11 +4,28 @@ Android AI navigation and **virtual** three-wheel robotic steering simulation fo
 
 ## Status
 
-**Debug APK 0.1.0 is built.** Live camera preview is wired. Object detection is not implemented. The robot screen is a manual virtual tricycle. See `docs/TEST_RESULTS.md` and `docs/PROGRESS.md`.
+The version string is `versionName` in `android-app/app/build.gradle.kts`. What was actually built and installed is in `docs/PROGRESS.md` and `docs/TEST_RESULTS.md`.
 
-APK: `outputs/apk/TriGuideAI-0.1.0-debug.apk`
+Debug APKs from the script below land in `outputs/apk/TriGuideAI-<versionName>-debug.apk`.
 
-The app was installed and launched on the local `Pixel_8a` emulator. It has not been installed on a Redmi yet.
+## Scripts / الأوامر
+
+From the repo root in PowerShell:
+
+```powershell
+.\scripts\setup\ensure-android-path.ps1
+.\scripts\build\assemble-debug.ps1
+.\scripts\test\redmi-install.ps1
+```
+
+| Command | English | عربي |
+| --- | --- | --- |
+| `.\scripts\setup\ensure-android-path.ps1` | Android SDK on PATH for this session | مسار أندرويد لهذه الجلسة |
+| `.\scripts\setup\ensure-android-path.ps1 -Persist` | Save that SDK path for new terminals | ثبّت المسار للمستخدم، ثم افتح طرفية جديدة |
+| `.\scripts\build\assemble-debug.ps1` | JDK 17 debug APK into `outputs/apk` | بناء نسخة التصحيح ونسخها إلى outputs/apk |
+| `.\scripts\test\redmi-install.ps1` | Install the newest APK on serial `55aqpfqkvw9xbafe` only | تثبيت آخر APK على الريدمي فقط |
+
+The install script stops if that phone is missing or not in the `device` state. It does not install on an emulator or any other serial.
 
 ## Quick links
 
@@ -24,10 +41,9 @@ The app was installed and launched on the local `Pixel_8a` emulator. It has not 
 
 ## Local setup (high level)
 
-1. Install **JDK 17** and **Android Studio** (or complete Android SDK command-line packages).
-2. Set `JAVA_HOME` (17) and `ANDROID_HOME` to `%LOCALAPPDATA%\Android\Sdk`.
-3. Enable USB debugging on your phone; confirm with `adb devices`.
-4. After the Android app exists: `./gradlew assembleDebug` and install the APK.
+1. Install **JDK 17** and the Android SDK (Android Studio or command-line packages) at `%LOCALAPPDATA%\Android\Sdk`.
+2. Run `.\scripts\setup\ensure-android-path.ps1` in the session you will build from. Add `-Persist` if new terminals should see `ANDROID_HOME` and `platform-tools`.
+3. Enable USB debugging on the Redmi (`55aqpfqkvw9xbafe`) and run `.\scripts\build\assemble-debug.ps1`, then `.\scripts\test\redmi-install.ps1`.
 
 ## License
 

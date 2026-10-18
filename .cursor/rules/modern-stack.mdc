@@ -1,0 +1,27 @@
+---
+description: Standing owner rules - latest stable modern stack, human-quality UI design, clean architecture
+alwaysApply: true
+---
+
+# Modern stack (standing rule)
+
+- Always build with the latest **stable** versions available (2025-2026): Kotlin, AGP, Gradle, Compose BOM, CameraX, LiteRT/TFLite, ONNX Runtime, MediaPipe, and all other libraries.
+- Prefer modern technologies: Jetpack Compose + Material 3 for UI, Kotlin coroutines/Flow, version catalogs (`libs.versions.toml`), current Android APIs and current algorithms/models.
+- When choosing a dependency or framework, pick the newest actively maintained option over older or deprecated ones. Check the official release notes / Maven Central before pinning a version.
+- Stable releases only; no alpha/beta/RC unless no stable alternative exists and the reason is written in `docs/DECISIONS.md`.
+- **Never downgrade** a dependency, SDK, or tool unless there is a concrete, reproduced compatibility problem. Record the problem, the error, and the pinned version in `docs/DECISIONS.md` and `docs/KNOWN_ISSUES.md`.
+- Licence rules still apply: a newer library is not acceptable if its licence conflicts with the project (e.g. GPL/AGPL).
+
+# Human-quality design and clean architecture (standing rule)
+
+## UI
+- The app must not look AI-generated. No "AI" badges, sparkle icons, "Powered by AI" labels, or robot/AI markers unless a screen genuinely needs to explain a model to the user.
+- Restrained palette: one primary accent plus neutrals (Material 3 color roles, light and dark). No rainbow gradients, glow effects, or many competing colors.
+- Clean, uncluttered layouts: clear hierarchy, consistent spacing (4/8 dp grid), one primary action per screen, a consistent type scale, and real copy instead of filler or emoji.
+- It should look like a skilled human product designer made it: modern, calm, consistent components and motion.
+- Accessibility still comes first for blind and low-vision users: TalkBack labels on every control, 48 dp+ touch targets, WCAG AA contrast, support for large font scale, and haptic and voice feedback. Minimal design must never reduce accessibility.
+
+## Code and algorithms
+- Well-structured, deliberate architecture; no ad-hoc or random code. Use clear layers and modules (UI -> state/ViewModel -> domain -> data/perception/vehicle), unidirectional data flow, and dependency injection or explicit constructors.
+- Each algorithm (perception, safety policy, planner, kinematics) lives in its own testable unit with a clear interface, documented assumptions, and unit tests. No magic numbers: use named constants or config.
+- No dead code, copy-paste duplication, or placeholder or fake logic presented as real. Record architecture changes in `docs/ARCHITECTURE.md` and `docs/DECISIONS.md`.

@@ -34,3 +34,15 @@ Build an **Android AI navigation + robotic steering simulation** that helps **vi
 3. Implement the current phase only.
 4. Build and test; update docs with real results.
 5. Stop and report blockers that need the user (USB, accounts, hardware).
+
+## Parallel builder, reviewer, and the phone
+
+A builder chat and a reviewer chat may run at the same time. The builder owns product code, builds with `scripts/build/assemble-debug.ps1`, and installs with `scripts/test/redmi-install.ps1` only when `adb devices` shows serial `55aqpfqkvw9xbafe` as `device`. The reviewer appends `docs/REVIEW_NOTES.md` and stays off the builder's files while `.cursor/agent-lock.json` is missing or that builder lock is under 45 minutes old. Do not start an emulator. Put the SDK on PATH for the session with `scripts/setup/ensure-android-path.ps1`.
+
+## Modern stack (standing rule)
+
+Always use the latest stable versions (2025-2026) of all tools, libraries, and frameworks, with modern UI (Jetpack Compose + Material 3) and current algorithms. Prefer the newest maintained option. Never downgrade unless there is a concrete, reproduced compatibility problem, and document it in `docs/DECISIONS.md`. Full rule: `.cursor/rules/modern-stack.mdc`.
+
+## Human-quality design and clean architecture (standing rule)
+
+The UI must not look AI-generated: no excessive AI labels or markers, a restrained color palette, and clean, uncluttered layouts that look like a skilled human designer made them, while keeping full accessibility for blind users (TalkBack, large touch targets, contrast). Code and algorithms must follow a deliberate, layered, testable architecture, with nothing ad-hoc or random. Full rule: `.cursor/rules/modern-stack.mdc`.

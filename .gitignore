@@ -44,3 +44,13 @@ research/upstream/OpenBot/
 # Generated logs
 outputs/logs/**
 !outputs/logs/.gitkeep
+
+# Local agent-loop state. The hook and the start phrase create these.
+.cursor/loop-state.json
+.cursor/agent-lock.json
+.cursor/hooks/last-session.json
+.cursor/hooks/last-payload.json
+
+# Gradle output directories are ignored above. Keep the debug-build script.
+!scripts/build/
+!scripts/build/**

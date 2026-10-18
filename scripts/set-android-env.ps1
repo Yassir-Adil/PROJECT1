@@ -1,4 +1,5 @@
-# Sets ANDROID_HOME / PATH for the current PowerShell session (and optionally User scope).
+# Prefer scripts/setup/ensure-android-path.ps1 (session ANDROID_HOME + platform-tools, optional -Persist).
+# This older helper also prepends the emulator directory when that folder exists.
 # Run:  .\scripts\set-android-env.ps1
 # Persist: .\scripts\set-android-env.ps1 -Persist
 
