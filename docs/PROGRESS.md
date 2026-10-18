@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-10-18 — A dominant side box still turns (0.8.2)
+
+**Status:** 0.8.2 is built and unit-tested. The Redmi was not attached, so this build is not installed and there is no phone log. Floor stays `NOT_STARTED`. No face photo is stored. No paid voice was added.
+
+### Guidance
+
+- The dominant box is the highest score times area. A box at least 1.5 times the area of the next box is used instead when its score times area is still at least 70 percent of that leader.
+- If that box is left of the center band (center under 0.42) the virtual robot turns right. If it is right of the band (center over 0.58) it turns left. A box in the outer third (under 0.33 or over 0.67) is a slight turn. A box nearer the center band is a fuller turn.
+- One opposite box, or one center box, cancels the turn only when its score times area is at least 70 percent of the dominant box. Weaker boxes are not added together. That was the 0.8.1 hold: a chair on the left stayed Hold because other boxes were treated as both sides.
+- A true center box, an empty frame, and two similarly strong sides still hold.
+
+### Phrases
+
+- Dominant chair on the left, weaker box on the right: “Chair on the left. Turn slightly right. Not a measured gap.”
+- Chair on the right, no similar box on the left: “Chair on the right. Turn slightly left. Not a measured gap.”
+- Strong chair on the left and a similarly strong table on the right: “Objects on both sides. Hold.”
+- Chair in the center: “Chair in the center. Hold.”
+- Empty frame: “No reported object. Hold. An empty picture is not a clear path.”
+
+### Tests and APK
+
+- `:app:testDebugUnitTest` 113/113 PASS, 0 failures, 0 skipped. New cases: dominant left plus a weaker right box turns slightly right; strong left plus strong right holds; center holds; several weaker right boxes do not cancel a left chair; a clearly larger chair is named instead of a smaller higher-score cup.
+- `:sim-core:test` was not run. Kinematics sources did not change.
+- `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` (build-tools 36.0.0): `versionName='0.8.2'`, `versionCode='12'`, `minSdk` 26, `targetSdk` 35, `compileSdk` 35. Badge permissions: `CAMERA`, `VIBRATE`, and the AndroidX non-exported receiver permission. `INTERNET` was not listed.
+- Copied to `outputs/apk/TriGuideAI-0.8.2-debug.apk` (81,441,801 bytes).
+
+### Phone
+
+- `adb devices -l` listed no devices. A USB scan did not show the Redmi (`VID_2717` was absent). `adb install` was not run. No logcat was captured. The installed app on the phone, if it is still 0.8.1, does not contain this change.
+
+### المطلوب منك الآن
+
+1. صِل ريدمي بالكمبيوتر ووافق على تصحيح USB. `adb devices` لازم يُظهر `55aqpfqkvw9xbafe` كـ `device`. بدون هذا لا يمكن تثبيت 0.8.2.
+2. بعد التثبيت: ضع كرسياً في **النصف الأيسر فقط**، بعيداً عن الوسط، لمدة 10 ثوانٍ. يفترض أن تسمع: “Chair on the left. Turn slightly right. Not a measured gap.”
+3. ثم انقله إلى **النصف الأيمن فقط** لمدة 10 ثوانٍ. يفترض أن تسمع: “Chair on the right. Turn slightly left. Not a measured gap.”
+4. إذا بقي الكرسي في الوسط، أو كان جسم قوي على الجهتين معاً، فالتوقف صحيح: “Hold”. لا تفتح الإعدادات في هذه التجربة.
+
 ## 2026-10-18 — Side turns speak, and the side word matches the zone (0.8.1)
 
 **Status:** 0.8.1 install and phone smoke PASS_WITH_WARNINGS on the personal Redmi. A box on the left committed Slight right and the voice log spoke that turn. Floor stays `NOT_STARTED`. No face photo is stored. No paid voice was added.

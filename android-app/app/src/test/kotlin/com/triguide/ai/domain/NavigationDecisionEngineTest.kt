@@ -119,6 +119,96 @@ class NavigationDecisionEngineTest {
         )
         assertEquals(GuidanceAction.HOLD, decision.action)
         assertTrue(decision.reason.contains("both sides"))
+        assertEquals("Objects on both sides. Hold.", VoiceCues.fromDecision(decision)?.english)
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun dominantLeftWithAWeakRightBoxTurnsSlightlyRight() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", 0.80f, 0.18f, 0.25f),
+                    DirectionalCue("bottle", 0.60f, 0.82f, 0.20f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("left", decision.subjectSide)
+        val spoken = VoiceCues.fromDecision(decision)
+        assertEquals("Chair on the left. Turn slightly right. Not a measured gap.", spoken?.english)
+        assertFalse(spoken!!.english.contains("both sides"))
+        assertTrue(spoken.arabic.contains("كرسي"))
+        assertTrue(spoken.arabic.contains("اليسار"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun strongLeftAndStrongRightHold() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", 0.80f, 0.18f, 0.25f),
+                    DirectionalCue("table", 0.80f, 0.84f, 0.20f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals(0.0, decision.linearSpeedMps, 0.0)
+        assertEquals(0.0, decision.steeringRadians, 0.0)
+        assertEquals("both", decision.subjectSide)
+        assertTrue(decision.reason.contains("both sides"))
+        val spoken = VoiceCues.fromDecision(decision)
+        assertEquals("Objects on both sides. Hold.", spoken?.english)
+        assertFalse(spoken!!.english.contains("Turn"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun centerBoxHolds() {
+        val decision = engine.decide(camera(cues = listOf(DirectionalCue("chair", 0.90f, 0.50f, 0.22f))))
+        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("center", decision.subjectSide)
+        assertEquals("Chair in the center. Hold.", VoiceCues.fromDecision(decision)?.english)
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun manyWeakerRightBoxesDoNotCancelADominantLeftChair() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", 0.55f, 0.36f, 0.14f),
+                    DirectionalCue("bottle", 0.50f, 0.75f, 0.07f),
+                    DirectionalCue("cup", 0.48f, 0.86f, 0.06f),
+                    DirectionalCue("book", 0.46f, 0.68f, 0.06f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("left", decision.subjectSide)
+        val spoken = VoiceCues.fromDecision(decision)
+        assertEquals("Chair on the left. Turn right. Not a measured gap.", spoken?.english)
+        assertFalse(spoken!!.english.contains("both sides"))
+        assertNoMetricClaim(decision)
+    }
+
+    @Test
+    fun aClearlyLargestChairIsNamedOverASmallerHigherScoreCup() {
+        val decision = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", 0.36f, 0.16f, 0.40f),
+                    DirectionalCue("cup", 0.95f, 0.24f, 0.16f),
+                ),
+            ),
+        )
+        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
+        assertEquals("chair", decision.subjectLabel)
+        assertEquals("Chair on the left. Turn slightly right. Not a measured gap.", VoiceCues.fromDecision(decision)?.english)
         assertNoMetricClaim(decision)
     }
 

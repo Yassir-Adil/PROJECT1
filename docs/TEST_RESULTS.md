@@ -8,6 +8,23 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — 0.8.2 dominant side turn (phone not attached)
+
+**Status: BLOCKED**
+
+The unit tests and the debug APK succeeded. The install and phone log did not run. `adb devices -l` listed no devices. A USB device scan did not show the Redmi (`VID_2717` was absent). No emulator was started.
+
+### Build
+
+- `:app:testDebugUnitTest` 113/113 PASS, 0 failures, 0 skipped. New cases: a dominant left chair with a weaker right bottle (60 percent of the chair’s score times area) is Slight right and speaks “Chair on the left. Turn slightly right. Not a measured gap.”; a left chair and a right table at 80 percent hold with “Objects on both sides. Hold.”; a center chair holds with “Chair in the center. Hold.”; three weaker right boxes do not add up into a both-sides hold; a clearly larger chair is the spoken subject when a smaller cup has a higher score.
+- `:sim-core:test` was not run. Kinematics sources did not change.
+- `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` (build-tools 36.0.0): `versionName='0.8.2'`, `versionCode='12'`, `minSdk` 26, `targetSdk` 35, `compileSdk` 35. Badge permissions: `CAMERA`, `VIBRATE`, and the AndroidX non-exported receiver permission. `INTERNET` was not listed.
+- Copied to `outputs/apk/TriGuideAI-0.8.2-debug.apk` (81,441,801 bytes).
+
+### Phone
+
+- Not run. `adb install` was not attempted because `55aqpfqkvw9xbafe` was not in `device` state. No logcat. No speaker check.
+
 ## 2026-10-18 — Redmi 0.8.1 side-turn speech
 
 **Status: PASS_WITH_WARNINGS**

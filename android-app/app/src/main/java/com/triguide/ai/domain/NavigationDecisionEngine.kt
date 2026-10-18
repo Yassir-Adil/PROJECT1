@@ -7,8 +7,10 @@ import kotlin.math.abs
  * Turns one observation into a virtual steering choice.
  *
  * Camera samples use the horizontal center of each box. They do not produce meters.
- * A box in the middle band, an empty frame, or two competing sides yields Hold or Unknown.
- * A box clearly to one side suggests a slight turn. A box near the middle band suggests a fuller turn.
+ * A box in the middle band, an empty frame, or two similarly strong sides yields Hold or Unknown.
+ * The dominant box is the highest score times area, or a clearly larger box that is still close in that score.
+ * When that box sits to one side, weaker boxes on the other side do not cancel the turn.
+ * A box in an outer third suggests a slight turn. A box nearer the middle band suggests a fuller turn.
  * How much of the picture a box fills is not treated as a distance.
  * Straight is reserved for the synthetic map, where obstacle positions are authored.
  */
@@ -72,65 +74,27 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 confidence = 0.55f,
             )
         }
-        val dominant = usable.maxBy { weight(it) }
-        if (dominant.centerXNormalized < NavigationConfig.LEFT_THIRD_END) {
+        val dominant = selectDominant(usable)
+        if (dominant.centerXNormalized < NavigationConfig.CENTER_START) {
             if (!escapeBlocked(ImageSide.LEFT, dominant, usable)) {
-                val side = usable.filter { it.centerXNormalized < NavigationConfig.CENTER_START }
-                return steerAwayFrom(ImageSide.LEFT, side.ifEmpty { listOf(dominant) }, observation)
+                return steerAwayFrom(ImageSide.LEFT, observation, dominant)
             }
             return holdForBlockedSide(dominant, usable, observation)
         }
-        if (dominant.centerXNormalized > NavigationConfig.RIGHT_THIRD_START) {
+        if (dominant.centerXNormalized > NavigationConfig.CENTER_END) {
             if (!escapeBlocked(ImageSide.RIGHT, dominant, usable)) {
-                val side = usable.filter { it.centerXNormalized > NavigationConfig.CENTER_END }
-                return steerAwayFrom(ImageSide.RIGHT, side.ifEmpty { listOf(dominant) }, observation)
+                return steerAwayFrom(ImageSide.RIGHT, observation, dominant)
             }
             return holdForBlockedSide(dominant, usable, observation)
         }
-        val left = usable.filter { it.centerXNormalized < NavigationConfig.CENTER_START }
-        val right = usable.filter { it.centerXNormalized > NavigationConfig.CENTER_END }
-        val center = usable.filter { it.centerXNormalized in NavigationConfig.CENTER_START..NavigationConfig.CENTER_END }
-        if (center.isNotEmpty()) {
-            val chosen = center.maxBy { weight(it) }
-            val name = displayLabel(chosen)
-            return hold(
-                reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
-                observation = observation,
-                label = label,
-                confidence = cameraConfidence(chosen),
-                subjectLabel = name,
-                subjectSide = "center",
-            )
-        }
-        if (left.isNotEmpty() && right.isNotEmpty()) {
-            val leftRisk = risk(left)
-            val rightRisk = risk(right)
-            if (leftRisk >= rightRisk * NavigationConfig.DOMINANCE_RATIO && leftRisk > rightRisk) {
-                return steerAwayFrom(side = ImageSide.LEFT, cues = left, observation = observation)
-            }
-            if (rightRisk >= leftRisk * NavigationConfig.DOMINANCE_RATIO && rightRisk > leftRisk) {
-                return steerAwayFrom(side = ImageSide.RIGHT, cues = right, observation = observation)
-            }
-            return hold(
-                reason = "Boxes are on both sides of the image. No confirmed passage. Depth is not measured.",
-                observation = observation,
-                label = label,
-                confidence = cameraConfidence(usable.maxBy { it.confidence }),
-                subjectLabel = "",
-                subjectSide = "both",
-            )
-        }
-        if (left.isNotEmpty()) {
-            return steerAwayFrom(side = ImageSide.LEFT, cues = left, observation = observation)
-        }
-        if (right.isNotEmpty()) {
-            return steerAwayFrom(side = ImageSide.RIGHT, cues = right, observation = observation)
-        }
+        val name = displayLabel(dominant)
         return hold(
-            reason = "No confirmed passage. An empty detection is not open space. Depth is not measured.",
+            reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
             observation = observation,
             label = label,
-            confidence = 0.55f,
+            confidence = cameraConfidence(dominant),
+            subjectLabel = name,
+            subjectSide = "center",
         )
     }
 
@@ -204,18 +168,17 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
 
     private fun steerAwayFrom(
         side: ImageSide,
-        cues: List<DirectionalCue>,
         observation: SceneObservation,
+        subject: DirectionalCue,
     ): NavigationDecision {
-        val strongest = cues.maxBy { it.confidence * it.areaFraction.coerceAtLeast(NavigationConfig.RISK_AREA_FLOOR) }
         val nearCenter = when (side) {
-            ImageSide.LEFT -> strongest.centerXNormalized >= NavigationConfig.LEFT_INNER_CENTER
-            ImageSide.RIGHT -> strongest.centerXNormalized <= NavigationConfig.RIGHT_INNER_CENTER
+            ImageSide.LEFT -> subject.centerXNormalized >= NavigationConfig.LEFT_INNER_CENTER
+            ImageSide.RIGHT -> subject.centerXNormalized <= NavigationConfig.RIGHT_INNER_CENTER
         }
         val action = turnAction(side, strong = nearCenter)
-        val name = displayLabel(strongest)
-        val areaPercent = (strongest.areaFraction.coerceIn(0f, 1f) * 100f).toInt()
-        val detectorConfidence = String.format(Locale.US, "%.2f", strongest.confidence)
+        val name = displayLabel(subject)
+        val areaPercent = (subject.areaFraction.coerceIn(0f, 1f) * 100f).toInt()
+        val detectorConfidence = String.format(Locale.US, "%.2f", subject.confidence)
         val awayWord = if (side == ImageSide.LEFT) "right" else "left"
         val steerWord = if (nearCenter) awayWord else "slightly $awayWord"
         return NavigationDecisions.fromAction(
@@ -224,7 +187,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 "(detector confidence $detectorConfidence, $areaPercent percent of the frame). " +
                 "Steering $steerWord. Depth is not measured. The $awayWord side is not a confirmed gap. " +
                 "The box size is not a distance.",
-            confidence = cameraConfidence(strongest),
+            confidence = cameraConfidence(subject),
             basedOnRealVision = observation.realDetector,
             metricDepthUsed = false,
             perceptionLabel = NavigationConfig.CAMERA_LABEL,
@@ -280,8 +243,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
     }
 
     /**
-     * The outer-third turn waits when another box is strong enough to sit in the
-     * center band or on the opposite side. A weak box does not cancel the turn.
+     * The side turn waits when one other box is similarly strong and sits in the
+     * center band or on the opposite side. Weaker boxes are not added together.
      */
     private fun escapeBlocked(
         occupied: ImageSide,
@@ -333,7 +296,24 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
     private fun strongBlocker(other: DirectionalCue, dominant: DirectionalCue): Boolean {
         val dominantWeight = weight(dominant)
         if (dominantWeight <= 0f) return true
-        return weight(other) * NavigationConfig.DOMINANCE_RATIO >= dominantWeight
+        return weight(other) >= dominantWeight * NavigationConfig.OPPOSITE_SIMILAR_FRACTION
+    }
+
+    /**
+     * Highest score times area. A clearly larger box wins when its score times area
+     * is still close to that leader, so a big chair is not renamed as a smaller hit.
+     */
+    private fun selectDominant(usable: List<DirectionalCue>): DirectionalCue {
+        val byWeight = usable.maxBy { weight(it) }
+        val byArea = usable.maxBy { it.areaFraction }
+        if (byArea === byWeight) return byWeight
+        val runnerUpArea = usable.asSequence().filter { it !== byArea }.maxOf { it.areaFraction }
+        val clearlyLargest = runnerUpArea > 0f &&
+            byArea.areaFraction >= runnerUpArea * NavigationConfig.CLEAR_AREA_RATIO
+        if (clearlyLargest && weight(byArea) >= weight(byWeight) * NavigationConfig.OPPOSITE_SIMILAR_FRACTION) {
+            return byArea
+        }
+        return byWeight
     }
 
     private fun cameraConfidence(cue: DirectionalCue): Float {
@@ -342,10 +322,6 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
 
     private fun weight(cue: DirectionalCue): Float {
         return cue.confidence * cue.areaFraction.coerceAtLeast(NavigationConfig.RISK_AREA_FLOOR)
-    }
-
-    private fun risk(cues: List<DirectionalCue>): Float {
-        return cues.sumOf { cue -> weight(cue).toDouble() }.toFloat()
     }
 
     private fun displayLabel(cue: DirectionalCue): String {

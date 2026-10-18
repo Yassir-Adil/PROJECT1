@@ -207,3 +207,18 @@
 - Version 0.8.1 (`versionCode` 11). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed. Paid TTS is not added.
 - `storeFace` still returns false. Confirm writes a name and `faceStored=0`.
 
+## 2026-10-18 — A dominant side box is not cancelled by weaker boxes
+
+**Decision:** Steer from the dominant camera box when it sits outside the center band (centers 0.42 to 0.58). Dominance is the highest score times area. A box whose area is at least 1.5 times the next box is chosen instead when its score times area is still at least 70 percent of that leader. One opposite box, or one center box, blocks the turn only at that same 70 percent. Weaker boxes are not summed. An outer-third box (under 0.33 or over 0.67) is a slight turn. A box nearer the center band is a fuller turn. Center, empty, and similarly strong both-sides still hold. The spoken line for a winning side names that object only.
+
+**Why**
+
+- On 0.8.1 a heard chair on the left became “objects on both sides, hold” while other boxes were in the room. The right-side chair did say “turn slightly left.”
+- The previous blocker treated an opposite box as equal at about 56 percent of the dominant score times area (`weight * 1.8`). When the dominant center was not inside the outer third, every box on a side was added together, so several weaker boxes could hold a larger chair.
+- The other side is still not called a measured gap. Area is still not a distance.
+
+**Consequences**
+
+- Version 0.8.2 (`versionCode` 12). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed. Paid TTS is not added. No face work in this change.
+- The Redmi was not attached after this build, so the phone has not confirmed the new phrases.
+

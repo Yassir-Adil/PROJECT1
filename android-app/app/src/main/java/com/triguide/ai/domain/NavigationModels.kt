@@ -82,8 +82,9 @@ object NavigationConfig {
     const val CENTER_END = 0.58f
 
     /**
-     * Outer thirds. A dominant box here prefers a side turn.
-     * A strong box in the center band, or on the opposite side, can still hold.
+     * Outer thirds. A dominant box here prefers a slight side turn.
+     * A box still outside the center band, but nearer it, prefers a fuller turn.
+     * A center box, or one opposite box, cancels that turn only when it is similarly strong.
      */
     const val LEFT_THIRD_END = 0.33f
     const val RIGHT_THIRD_START = 0.67f
@@ -94,9 +95,18 @@ object NavigationConfig {
     /** A right box whose center is at or before this value sits near the center band, so the turn is full. */
     const val RIGHT_INNER_CENTER = RIGHT_THIRD_START
 
-    /** Floor used only to weight which side occupies more of the picture. Not a range. */
+    /** Floor used only so a tiny box still has a weight. Not a range. */
     const val RISK_AREA_FLOOR = 0.01f
-    const val DOMINANCE_RATIO = 1.8f
+
+    /**
+     * An opposite or center box at least this fraction of the dominant score×area is similarly strong.
+     * Weaker boxes on the other side do not add together into a both-sides hold.
+     */
+    const val OPPOSITE_SIMILAR_FRACTION = 0.70f
+
+    /** One box is clearly largest when its area is at least this multiple of the next box. */
+    const val CLEAR_AREA_RATIO = 1.5f
+
     const val MAX_CAMERA_CONFIDENCE = 0.75f
 
     const val CONFIRM_FRAMES = 3
