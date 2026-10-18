@@ -78,18 +78,18 @@ object VoiceConfig {
     const val PITCH_MIN = 0.85f
     const val PITCH_MAX = 1.15f
 
-    /** Same critical cue may repeat, but not on every frame. */
-    const val COOLDOWN_CRITICAL_MS = 6_000L
-    const val COOLDOWN_HIGH_MS = 10_000L
-    const val COOLDOWN_NORMAL_MS = 8_000L
+    /** Same critical cue may repeat, but not on every frame. Default silence otherwise. */
+    const val COOLDOWN_CRITICAL_MS = 5_000L
+    const val COOLDOWN_HIGH_MS = 5_000L
+    const val COOLDOWN_NORMAL_MS = 5_000L
     const val COOLDOWN_PAUSED_MS = 4_000L
-    const val COOLDOWN_BRIEF_MS = 8_000L
+    const val COOLDOWN_BRIEF_MS = 12_000L
 
     /** Assumed length of one utterance if the engine never reports completion. */
     const val UTTERANCE_WINDOW_MS = 4_000L
 
     /** Gap between non-critical cues so a flicker does not become a second sentence. */
-    const val MIN_GAP_MS = 1_500L
+    const val MIN_GAP_MS = 2_000L
 
     /** Backoff after the synthesizer rejects a cue, so a missing voice is not retried every frame. */
     const val UNAVAILABLE_RETRY_MS = 5_000L
@@ -220,65 +220,68 @@ object VoiceCues {
     }
 
     /**
-     * Maps a published decision to one stable cue.
-     * The key ignores detector scores and timestamps so a new frame is not a new sentence.
-     * A camera turn names the box and its side. It does not claim the other side is open.
+     * Silence by default when the corridor is clear or only weakly uncertain.
+     * Speak for BLOCKED corridor hits and true camera failures.
      */
     fun fromDecision(decision: NavigationDecision): VoiceCue? {
         if (decision.perceptionLabel == NavigationConfig.MANUAL_LABEL) return null
-        return when (decision.action) {
-            GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> holdCue(decision)
-            else -> {
-                val camera = decision.perceptionLabel == NavigationConfig.CAMERA_LABEL
-                if (camera && decision.subjectLabel.isNotBlank() && decision.subjectSide.isNotBlank()) {
-                    turn(decision.action, decision.subjectLabel, decision.subjectSide)
-                } else {
-                    turn(decision.action)
-                }
-            }
+        if (isSmootherWarmup(decision.reason)) return null
+        return when (decision.pathRisk) {
+            PathRiskLevel.CLEAR_OBSERVED -> null
+            PathRiskLevel.POSSIBLE_OBSTACLE -> null
+            PathRiskLevel.UNKNOWN -> unknownCue(decision)
+            PathRiskLevel.BLOCKED -> blockedCue(decision)
         }
     }
 
-    private fun holdCue(decision: NavigationDecision): VoiceCue? {
-        if (isSmootherWarmup(decision.reason)) return null
+    private fun unknownCue(decision: NavigationDecision): VoiceCue? {
         if (isCameraUnavailable(decision.reason)) return cameraUnavailable()
+        if (decision.reason.contains("contradictory") || decision.reason.contains("unclear")) {
+            return VoiceCue(
+                kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
+                dedupeKey = "uncertain",
+                english = "Path is unclear.",
+                arabic = "ما قادر أحدد الطريق بوضوح.",
+            )
+        }
+        // Stale / missing timestamp: speak once class via cameraUnavailable already.
+        return null
+    }
+
+    private fun blockedCue(decision: NavigationDecision): VoiceCue? {
         val camera = decision.perceptionLabel == NavigationConfig.CAMERA_LABEL
+        if (decision.action != GuidanceAction.HOLD && decision.action != GuidanceAction.UNKNOWN) {
+            return if (camera && decision.subjectLabel.isNotBlank() && decision.subjectSide.isNotBlank()) {
+                turn(decision.action, decision.subjectLabel, decision.subjectSide)
+            } else {
+                turn(decision.action)
+            }
+        }
         if (camera && decision.subjectSide == "center" && decision.subjectLabel.isNotBlank()) {
-            val englishName = SpokenLabels.english(decision.subjectLabel)
-            val arabicName = SpokenLabels.arabic(decision.subjectLabel)
             return VoiceCue(
                 kind = VoiceAlertKind.OBSTACLE_DETECTED,
-                dedupeKey = "obstacle",
-                english = "$englishName in the center. Hold.",
-                arabic = "$arabicName في الوسط. توقف.",
+                dedupeKey = "obstacle-center",
+                english = "Obstacle ahead.",
+                arabic = "في عائق قدامك.",
             )
         }
         if (camera && decision.subjectSide == "both") {
             return VoiceCue(
                 kind = VoiceAlertKind.OBSTACLE_DETECTED,
-                dedupeKey = "obstacle",
-                english = "Objects on both sides. Hold.",
-                arabic = "أجسام على الجهتين. توقف.",
+                dedupeKey = "obstacle-both",
+                english = "Path blocked.",
+                arabic = "الطريق قدامك مسدود.",
             )
         }
-        if (isObstacle(decision.reason)) return obstacle()
-        if (camera && decision.reason.contains("No confirmed passage")) {
-            return VoiceCue(
-                kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
-                dedupeKey = "uncertain",
-                english = "No reported object. Hold. An empty picture is not a clear path.",
-                arabic = "لا جسم مبلغ عنه. توقف. الصورة الفارغة ليست طريقاً واضحاً.",
-            )
+        if (decision.perceptionLabel == NavigationConfig.SYNTHETIC_LABEL && isObstacle(decision.reason)) {
+            return obstacle()
         }
-        if (decision.action == GuidanceAction.UNKNOWN && decision.reason.contains("contradictory")) {
-            return VoiceCue(
-                kind = VoiceAlertKind.NAVIGATION_UNCERTAIN,
-                dedupeKey = "uncertain",
-                english = "The picture is unclear. No direction.",
-                arabic = "الصورة غير واضحة. لا اتجاه.",
-            )
-        }
-        return uncertain()
+        return VoiceCue(
+            kind = VoiceAlertKind.OBSTACLE_DETECTED,
+            dedupeKey = "obstacle",
+            english = "Obstacle ahead.",
+            arabic = "في عائق قدامك.",
+        )
     }
 
     private fun genericTurn(action: GuidanceAction): Phrase {

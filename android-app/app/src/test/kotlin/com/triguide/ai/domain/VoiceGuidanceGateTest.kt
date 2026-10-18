@@ -158,11 +158,11 @@ class VoiceGuidanceGateTest {
 
         val center = engine.decide(camera(cues = listOf(DirectionalCue("person", 0.9f, 0.50f, 0.20f))))
         assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, VoiceCues.fromDecision(center)?.kind)
-        assertEquals("Person in the center. Hold.", VoiceCues.fromDecision(center)?.english)
+        assertEquals("Obstacle ahead.", VoiceCues.fromDecision(center)?.english)
 
         val empty = engine.decide(camera())
-        assertEquals(VoiceAlertKind.NAVIGATION_UNCERTAIN, VoiceCues.fromDecision(empty)?.kind)
-        assertTrue(VoiceCues.fromDecision(empty)!!.english.contains("empty picture"))
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, empty.pathRisk)
+        assertNull(VoiceCues.fromDecision(empty))
 
         val stale = engine.decide(camera(frameAgeMs = NavigationConfig.STALE_FRAME_MS))
         assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, VoiceCues.fromDecision(stale)?.kind)
@@ -190,7 +190,8 @@ class VoiceGuidanceGateTest {
                 catalogComplete = true,
             ),
         )
-        assertEquals("turn-straight", VoiceCues.fromDecision(clear)?.dedupeKey)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, clear.pathRisk)
+        assertNull(VoiceCues.fromDecision(clear))
     }
 
     @Test
@@ -198,7 +199,7 @@ class VoiceGuidanceGateTest {
         val hold = VoiceCues.fromDecision(
             engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.50f, 0.20f)))),
         )
-        assertEquals("Sink in the center. Hold.", hold?.english)
+        assertEquals("Obstacle ahead.", hold?.english)
         assertTrue(gate.consider(input(hold, now = 0L)) is SpeechDirective.Speak)
 
         val turn = VoiceCues.fromDecision(
@@ -211,7 +212,7 @@ class VoiceGuidanceGateTest {
         assertTrue(gate.consider(input(hold, now = 500L)) is SpeechDirective.Silent)
 
         val spoken = gate.consider(
-            input(hold, now = VoiceConfig.MIN_GAP_MS, language = ResolvedVoiceLanguage.ARABIC),
+            input(turn, now = VoiceConfig.MIN_GAP_MS, language = ResolvedVoiceLanguage.ARABIC),
         )
         assertTrue(spoken is SpeechDirective.Speak)
         val text = (spoken as SpeechDirective.Speak).text
@@ -234,7 +235,9 @@ class VoiceGuidanceGateTest {
         assertNull(VoiceCues.fromDecision(second))
         val committed = session.onSynthetic(scene)
         assertEquals(GuidanceAction.STRAIGHT, committed.action)
-        assertEquals("turn-straight", VoiceCues.fromDecision(committed)?.dedupeKey)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, committed.pathRisk)
+        // Clear corridor stays silent by default.
+        assertNull(VoiceCues.fromDecision(committed))
     }
 
     @Test

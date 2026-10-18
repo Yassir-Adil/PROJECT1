@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-10-18 — Path risk / silence-by-default (0.9.0)
+
+**Status:** 0.9.0 built. Unit tests PASS. Redmi not on USB at install time — install pending.
+
+### Guidance
+- `PathRiskAnalyzer` classifies `CLEAR_OBSERVED` / `POSSIBLE_OBSTACLE` / `BLOCKED` / `UNKNOWN`.
+- Empty corridor and ignored COCO clutter (cups, books, frisbee glints, etc.) → CLEAR + virtual STRAIGHT, **silent**. Not a safety certificate.
+- Strong person/furniture in the walking corridor → BLOCKED; center says “Obstacle ahead.” / “في عائق قدامك.”
+- Off-corridor people stay silent.
+- Diagnostic field + `TriGuideNav` log line per decision.
+- Floor still `NOT_STARTED` (SegFormer deferred; see `docs/PATH_RISK_UPGRADE.md`).
+
+### Voice
+- Silence by default on CLEAR and POSSIBLE.
+- Non-critical cooldown ~5 s.
+- Scene briefs need 3+ objects and longer gaps.
+
+### APK
+`outputs/apk/TriGuideAI-0.9.0-debug.apk`
+
 ## 2026-10-18 — A dominant side box still turns (0.8.2)
 
 **Status:** 0.8.2 is built and unit-tested. The Redmi was not attached, so this build is not installed and there is no phone log. Floor stays `NOT_STARTED`. No face photo is stored. No paid voice was added.

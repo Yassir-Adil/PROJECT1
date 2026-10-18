@@ -45,6 +45,10 @@ data class NavigationDecision(
     val subjectLabel: String = "",
     /** Image side of [subjectLabel]: left, right, center, or both. Empty when none. */
     val subjectSide: String = "",
+    /** Corridor risk. CLEAR stays silent; BLOCKED may speak. */
+    val pathRisk: PathRiskLevel = PathRiskLevel.UNKNOWN,
+    /** Short machine log for why this decision was chosen. */
+    val diagnostic: String = "",
 ) {
     fun toSteeringCommand(): SteeringCommand = SteeringCommand(linearSpeedMps, steeringRadians)
 

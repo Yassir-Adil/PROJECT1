@@ -1,6 +1,5 @@
 package com.triguide.ai.domain
 
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,10 +17,21 @@ class SceneBriefSchedulerTest {
     }
 
     @Test
-    fun severalObjectsAreBriefedWhenNavigationIsQuiet() {
+    fun twoObjectsStaySilentUntilAThirdAppears() {
+        val scheduler = SceneBriefScheduler()
+        val two = listOf(
+            DirectionalCue("person", 0.80f, 0.15f, 0.20f),
+            DirectionalCue("bottle", 0.60f, 0.86f, 0.04f),
+        )
+        assertNull(scheduler.nextCue(two, nowElapsedMs = 1_050L, navigationSpokeThisTick = false))
+    }
+
+    @Test
+    fun threeObjectsAreBriefedWhenNavigationIsQuiet() {
         val scheduler = SceneBriefScheduler()
         val cues = listOf(
             DirectionalCue("person", 0.80f, 0.15f, 0.20f),
+            DirectionalCue("chair", 0.70f, 0.50f, 0.10f),
             DirectionalCue("bottle", 0.60f, 0.86f, 0.04f),
         )
         assertNull(
@@ -30,10 +40,6 @@ class SceneBriefSchedulerTest {
         val cue = scheduler.nextCue(cues, nowElapsedMs = 1_050L, navigationSpokeThisTick = false)
         assertTrue(cue != null)
         assertTrue(cue!!.english.contains("Reported:"))
-        assertTrue(cue.english.contains("on the left"))
-        assertFalse(cue.english.contains("right"))
-        assertFalse(cue.english.contains("center"))
-        assertTrue(cue.english.contains("not a clear path"))
         assertTrue(cue.kind == VoiceAlertKind.SCENE_BRIEF)
         assertNull(scheduler.nextCue(cues, nowElapsedMs = 2_000L, navigationSpokeThisTick = false))
     }

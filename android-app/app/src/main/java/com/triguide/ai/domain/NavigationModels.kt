@@ -38,6 +38,8 @@ data class DirectionalCue(
     val confidence: Float,
     val centerXNormalized: Float,
     val areaFraction: Float,
+    /** 0 at the top of the preview, 1 at the bottom. Default mid-frame for older call sites. */
+    val centerYNormalized: Float = 0.55f,
 )
 
 /**
@@ -67,7 +69,8 @@ data class SceneObservation(
 object FloorSegmentationStatus {
     const val STATE = "NOT_STARTED"
     const val DETAIL =
-        "Disabled. No floor model is loaded. MediaPipe DeepLab-v3 has no floor class, so no floor mask is drawn. Open floor is not inferred."
+        "Disabled on device. MediaPipe DeepLab-v3 has no floor class. SegFormer-B0 ADE20K is under evaluation " +
+            "and is not bundled until a mobile ONNX/LiteRT path is proven. Floor alone is never treated as safe."
 }
 
 object NavigationConfig {
@@ -178,6 +181,8 @@ object NavigationDecisions {
         perceptionLabel: String,
         subjectLabel: String = "",
         subjectSide: String = "",
+        pathRisk: PathRiskLevel = PathRiskLevel.UNKNOWN,
+        diagnostic: String = "",
     ): NavigationDecision {
         val bounded = confidence.coerceIn(0f, 1f)
         return NavigationDecision(
@@ -192,6 +197,8 @@ object NavigationDecisions {
             perceptionLabel = perceptionLabel,
             subjectLabel = subjectLabel,
             subjectSide = subjectSide,
+            pathRisk = pathRisk,
+            diagnostic = diagnostic,
         )
     }
 
@@ -204,6 +211,8 @@ object NavigationDecisions {
         perceptionLabel: String,
         subjectLabel: String = "",
         subjectSide: String = "",
+        pathRisk: PathRiskLevel = PathRiskLevel.UNKNOWN,
+        diagnostic: String = "",
     ): NavigationDecision {
         val (speed, steer) = NavigationConfig.speedAndSteer(action)
         return of(
@@ -217,6 +226,8 @@ object NavigationDecisions {
             perceptionLabel = perceptionLabel,
             subjectLabel = subjectLabel,
             subjectSide = subjectSide,
+            pathRisk = pathRisk,
+            diagnostic = diagnostic,
         )
     }
 

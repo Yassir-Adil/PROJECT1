@@ -1,30 +1,33 @@
 package com.triguide.ai.domain
 
+import android.util.Log
 import java.util.Locale
 import kotlin.math.abs
 
 /**
- * Turns one observation into a virtual steering choice.
+ * Turns one observation into a virtual steering choice plus a [PathRiskLevel].
  *
- * Camera samples use the horizontal center of each box. They do not produce meters.
- * A box in the middle band, an empty frame, or two similarly strong sides yields Hold or Unknown.
- * The dominant box is the highest score times area, or a clearly larger box that is still close in that score.
- * When that box sits to one side, weaker boxes on the other side do not cancel the turn.
- * A box in an outer third suggests a slight turn. A box nearer the middle band suggests a fuller turn.
- * How much of the picture a box fills is not treated as a distance.
- * Straight is reserved for the synthetic map, where obstacle positions are authored.
+ * Camera samples use box position in the image. They do not produce meters.
+ * Empty corridor → CLEAR_OBSERVED (not a safety certificate).
+ * Strong corridor obstacle → BLOCKED with Hold or a side escape.
+ * Floor clutter / off-corridor boxes do not force a stop.
  */
 class NavigationDecisionEngine : NavigationDecisionPolicy {
     override fun decide(observation: SceneObservation): NavigationDecision {
-        return when (observation.mode) {
+        val decision = when (observation.mode) {
             PerceptionMode.SYNTHETIC_WORLD -> decideSynthetic(observation)
             PerceptionMode.CAMERA_2D -> decideCamera(observation)
             PerceptionMode.UNAVAILABLE -> unknown(
                 reason = "No real camera frame is available. Open space is not assumed.",
                 observation = observation,
                 label = NavigationConfig.NONE_LABEL,
+                diagnostic = "diag:unknown no_camera_frame",
             )
         }
+        runCatching {
+            Log.i(TAG, "${decision.diagnostic} | risk=${decision.pathRisk} action=${decision.action} | ${decision.reason}")
+        }
+        return decision
     }
 
     private fun decideCamera(observation: SceneObservation): NavigationDecision {
@@ -34,6 +37,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 reason = "No real camera frame is available. Open space is not assumed.",
                 observation = observation,
                 label = NavigationConfig.NONE_LABEL,
+                diagnostic = "diag:unknown detector_not_ready",
             )
         }
         if (observation.contradictory || observation.metricDepthAvailable || cuesAreInvalid(observation.cues)) {
@@ -41,61 +45,109 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 reason = "The camera observation is contradictory. No direction is chosen. Depth is not measured.",
                 observation = observation,
                 label = label,
+                diagnostic = "diag:unknown contradictory_or_invalid_cues",
             )
         }
         val age = observation.frameAgeMs
         if (age == null) {
-            return hold(
-                reason = "The camera frame has no timestamp. The robot holds. Depth is not measured.",
+            return unknown(
+                reason = "The camera frame has no timestamp. Depth is not measured.",
                 observation = observation,
                 label = label,
-                confidence = 0.40f,
+                diagnostic = "diag:unknown missing_timestamp",
             )
         }
         if (age >= NavigationConfig.STALE_FRAME_MS) {
-            return hold(
-                reason = "The camera frame is stale (${age} ms). The robot holds. Depth is not measured.",
+            return unknown(
+                reason = "The camera frame is stale (${age} ms). Depth is not measured.",
                 observation = observation,
                 label = label,
-                confidence = 0.60f,
+                diagnostic = "diag:unknown stale_frame age_ms=$age",
             )
         }
-        val usable = observation.cues.filter { cue ->
-            cue.confidence >= NavigationConfig.MIN_CUE_CONFIDENCE &&
-                cue.confidence <= 1f &&
-                cue.areaFraction > 0f &&
-                cue.centerXNormalized in 0f..1f
-        }
-        if (usable.isEmpty()) {
-            return hold(
-                reason = "No confirmed passage. An empty detection is not open space. Depth is not measured.",
+
+        val risk = PathRiskAnalyzer.analyze(observation.cues)
+        return when (risk.level) {
+            PathRiskLevel.CLEAR_OBSERVED -> clearObserved(observation, risk)
+            PathRiskLevel.POSSIBLE_OBSTACLE -> possibleObstacle(observation, risk)
+            PathRiskLevel.BLOCKED -> blockedCorridor(observation, risk)
+            PathRiskLevel.UNKNOWN -> unknown(
+                reason = "Path risk is unknown. Depth is not measured.",
                 observation = observation,
                 label = label,
-                confidence = 0.55f,
+                diagnostic = risk.diagnostic,
             )
         }
-        val dominant = selectDominant(usable)
-        if (dominant.centerXNormalized < NavigationConfig.CENTER_START) {
-            if (!escapeBlocked(ImageSide.LEFT, dominant, usable)) {
-                return steerAwayFrom(ImageSide.LEFT, observation, dominant)
-            }
-            return holdForBlockedSide(dominant, usable, observation)
-        }
-        if (dominant.centerXNormalized > NavigationConfig.CENTER_END) {
-            if (!escapeBlocked(ImageSide.RIGHT, dominant, usable)) {
-                return steerAwayFrom(ImageSide.RIGHT, observation, dominant)
-            }
-            return holdForBlockedSide(dominant, usable, observation)
-        }
-        val name = displayLabel(dominant)
-        return hold(
-            reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
-            observation = observation,
-            label = label,
-            confidence = cameraConfidence(dominant),
-            subjectLabel = name,
-            subjectSide = "center",
+    }
+
+    private fun clearObserved(
+        observation: SceneObservation,
+        risk: PathRiskResult,
+    ): NavigationDecision {
+        return NavigationDecisions.fromAction(
+            action = GuidanceAction.STRAIGHT,
+            reason = "No confirmed obstacle in the walking corridor. " +
+                "This is not a safety certificate. Depth is not measured. Floor is not verified.",
+            confidence = 0.45f,
+            basedOnRealVision = observation.realDetector,
+            metricDepthUsed = false,
+            perceptionLabel = NavigationConfig.CAMERA_LABEL,
+            pathRisk = PathRiskLevel.CLEAR_OBSERVED,
+            diagnostic = risk.diagnostic,
         )
+    }
+
+    private fun possibleObstacle(
+        observation: SceneObservation,
+        risk: PathRiskResult,
+    ): NavigationDecision {
+        val subject = risk.dominantInCorridor
+        val name = subject?.let { displayLabel(it) }.orEmpty()
+        return hold(
+            reason = "Possible obstacle in the corridor ($name). Watching. Depth is not measured.",
+            observation = observation,
+            label = NavigationConfig.CAMERA_LABEL,
+            confidence = subject?.let { cameraConfidence(it) } ?: 0.35f,
+            subjectLabel = name,
+            subjectSide = subject?.let { sideOf(it) }.orEmpty(),
+            pathRisk = PathRiskLevel.POSSIBLE_OBSTACLE,
+            diagnostic = risk.diagnostic,
+        )
+    }
+
+    private fun blockedCorridor(
+        observation: SceneObservation,
+        risk: PathRiskResult,
+    ): NavigationDecision {
+        val dominant = risk.dominantInCorridor
+            ?: return hold(
+                reason = "Corridor blocked with no dominant label. Depth is not measured.",
+                observation = observation,
+                label = NavigationConfig.CAMERA_LABEL,
+                confidence = 0.55f,
+                pathRisk = PathRiskLevel.BLOCKED,
+                diagnostic = risk.diagnostic,
+            )
+        val side = horizontalBand(dominant)
+        if (side == Band.CENTER) {
+            val name = displayLabel(dominant)
+            return hold(
+                reason = "$name is in the walking corridor center. Stop and check. Depth is not measured.",
+                observation = observation,
+                label = NavigationConfig.CAMERA_LABEL,
+                confidence = cameraConfidence(dominant),
+                subjectLabel = name,
+                subjectSide = "center",
+                pathRisk = PathRiskLevel.BLOCKED,
+                diagnostic = risk.diagnostic,
+            )
+        }
+        val occupied = if (side == Band.LEFT) ImageSide.LEFT else ImageSide.RIGHT
+        val usable = risk.corridorCues
+        if (escapeBlocked(occupied, dominant, usable)) {
+            return holdForBlockedSide(dominant, usable, observation, risk.diagnostic)
+        }
+        return steerAwayFrom(occupied, observation, dominant, risk.diagnostic)
     }
 
     private fun decideSynthetic(observation: SceneObservation): NavigationDecision {
@@ -105,6 +157,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 reason = "Synthetic map observations disagree, so no direction is chosen.",
                 observation = observation,
                 label = label,
+                diagnostic = "diag:unknown synthetic_contradictory",
             )
         }
         if (!observation.metricDepthAvailable || !observation.catalogComplete) {
@@ -115,6 +168,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 basedOnRealVision = false,
                 metricDepthUsed = false,
                 perceptionLabel = label,
+                pathRisk = PathRiskLevel.UNKNOWN,
+                diagnostic = "diag:unknown synthetic_incomplete",
             )
         }
         val blocking = observation.knownObstacles.filter { obstacle ->
@@ -129,6 +184,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 basedOnRealVision = false,
                 metricDepthUsed = true,
                 perceptionLabel = label,
+                pathRisk = PathRiskLevel.CLEAR_OBSERVED,
+                diagnostic = "diag:clear synthetic_empty_corridor",
             )
         }
         val nearestForward = blocking.minOf { it.forwardMeters }
@@ -140,6 +197,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 observation = observation,
                 label = label,
                 confidence = 0.85f,
+                pathRisk = PathRiskLevel.BLOCKED,
+                diagnostic = "diag:blocked synthetic_axis ${onAxis.first().name}",
             )
         }
         val hasLeft = nearest.any { it.lateralMeters > 0.0 }
@@ -150,6 +209,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 observation = observation,
                 label = label,
                 confidence = 0.80f,
+                pathRisk = PathRiskLevel.BLOCKED,
+                diagnostic = "diag:blocked synthetic_both_sides",
             )
         }
         val chosen = nearest.minBy { abs(it.lateralMeters) }
@@ -163,6 +224,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             basedOnRealVision = false,
             metricDepthUsed = true,
             perceptionLabel = label,
+            pathRisk = PathRiskLevel.BLOCKED,
+            diagnostic = "diag:blocked synthetic_side ${chosen.name}",
         )
     }
 
@@ -170,6 +233,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         side: ImageSide,
         observation: SceneObservation,
         subject: DirectionalCue,
+        diagnostic: String,
     ): NavigationDecision {
         val nearCenter = when (side) {
             ImageSide.LEFT -> subject.centerXNormalized >= NavigationConfig.LEFT_INNER_CENTER
@@ -193,6 +257,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             perceptionLabel = NavigationConfig.CAMERA_LABEL,
             subjectLabel = name,
             subjectSide = sideWord(side),
+            pathRisk = PathRiskLevel.BLOCKED,
+            diagnostic = diagnostic,
         )
     }
 
@@ -207,6 +273,22 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         return if (side == ImageSide.LEFT) "left" else "right"
     }
 
+    private fun sideOf(cue: DirectionalCue): String {
+        return when (horizontalBand(cue)) {
+            Band.LEFT -> "left"
+            Band.RIGHT -> "right"
+            Band.CENTER -> "center"
+        }
+    }
+
+    private fun horizontalBand(cue: DirectionalCue): Band {
+        return when {
+            cue.centerXNormalized < NavigationConfig.CENTER_START -> Band.LEFT
+            cue.centerXNormalized > NavigationConfig.CENTER_END -> Band.RIGHT
+            else -> Band.CENTER
+        }
+    }
+
     private fun hold(
         reason: String,
         observation: SceneObservation,
@@ -214,6 +296,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         confidence: Float,
         subjectLabel: String = "",
         subjectSide: String = "",
+        pathRisk: PathRiskLevel = PathRiskLevel.BLOCKED,
+        diagnostic: String = "",
     ): NavigationDecision {
         return NavigationDecisions.fromAction(
             action = GuidanceAction.HOLD,
@@ -224,6 +308,8 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             perceptionLabel = label,
             subjectLabel = subjectLabel,
             subjectSide = subjectSide,
+            pathRisk = pathRisk,
+            diagnostic = diagnostic,
         )
     }
 
@@ -231,6 +317,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         reason: String,
         observation: SceneObservation,
         label: String,
+        diagnostic: String,
     ): NavigationDecision {
         return NavigationDecisions.fromAction(
             action = GuidanceAction.UNKNOWN,
@@ -239,13 +326,11 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             basedOnRealVision = observation.realDetector && observation.mode == PerceptionMode.CAMERA_2D,
             metricDepthUsed = false,
             perceptionLabel = label,
+            pathRisk = PathRiskLevel.UNKNOWN,
+            diagnostic = diagnostic,
         )
     }
 
-    /**
-     * The side turn waits when one other box is similarly strong and sits in the
-     * center band or on the opposite side. Weaker boxes are not added together.
-     */
     private fun escapeBlocked(
         occupied: ImageSide,
         dominant: DirectionalCue,
@@ -265,6 +350,7 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         dominant: DirectionalCue,
         usable: List<DirectionalCue>,
         observation: SceneObservation,
+        diagnostic: String,
     ): NavigationDecision {
         val label = NavigationConfig.CAMERA_LABEL
         val center = usable.filter { cue ->
@@ -275,21 +361,25 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             val chosen = center.maxBy { weight(it) }
             val name = displayLabel(chosen)
             return hold(
-                reason = "$name is in the center of the image. No confirmed passage to either side. Depth is not measured.",
+                reason = "$name is in the walking corridor center. Stop and check. Depth is not measured.",
                 observation = observation,
                 label = label,
                 confidence = cameraConfidence(chosen),
                 subjectLabel = name,
                 subjectSide = "center",
+                pathRisk = PathRiskLevel.BLOCKED,
+                diagnostic = diagnostic,
             )
         }
         return hold(
-            reason = "Boxes are on both sides of the image. No confirmed passage. Depth is not measured.",
+            reason = "Strong boxes on both sides of the corridor. Stop and check. Depth is not measured.",
             observation = observation,
             label = label,
             confidence = cameraConfidence(usable.maxBy { weight(it) }),
             subjectLabel = "",
             subjectSide = "both",
+            pathRisk = PathRiskLevel.BLOCKED,
+            diagnostic = diagnostic,
         )
     }
 
@@ -297,23 +387,6 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         val dominantWeight = weight(dominant)
         if (dominantWeight <= 0f) return true
         return weight(other) >= dominantWeight * NavigationConfig.OPPOSITE_SIMILAR_FRACTION
-    }
-
-    /**
-     * Highest score times area. A clearly larger box wins when its score times area
-     * is still close to that leader, so a big chair is not renamed as a smaller hit.
-     */
-    private fun selectDominant(usable: List<DirectionalCue>): DirectionalCue {
-        val byWeight = usable.maxBy { weight(it) }
-        val byArea = usable.maxBy { it.areaFraction }
-        if (byArea === byWeight) return byWeight
-        val runnerUpArea = usable.asSequence().filter { it !== byArea }.maxOf { it.areaFraction }
-        val clearlyLargest = runnerUpArea > 0f &&
-            byArea.areaFraction >= runnerUpArea * NavigationConfig.CLEAR_AREA_RATIO
-        if (clearlyLargest && weight(byArea) >= weight(byWeight) * NavigationConfig.OPPOSITE_SIMILAR_FRACTION) {
-            return byArea
-        }
-        return byWeight
     }
 
     private fun cameraConfidence(cue: DirectionalCue): Float {
@@ -332,8 +405,10 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         return cues.any { cue ->
             !cue.confidence.isFinite() ||
                 !cue.centerXNormalized.isFinite() ||
+                !cue.centerYNormalized.isFinite() ||
                 !cue.areaFraction.isFinite() ||
                 cue.centerXNormalized !in 0f..1f ||
+                cue.centerYNormalized !in 0f..1f ||
                 cue.areaFraction < 0f ||
                 cue.confidence < 0f ||
                 cue.confidence > 1f
@@ -347,4 +422,9 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
     }
 
     private enum class ImageSide { LEFT, RIGHT }
+    private enum class Band { LEFT, CENTER, RIGHT }
+
+    companion object {
+        private const val TAG = "TriGuideNav"
+    }
 }

@@ -8,6 +8,23 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — 0.9.0 path risk (phone not attached)
+
+**Status: PASS_WITH_WARNINGS** (unit + APK). Phone install **BLOCKED** (no ADB device).
+
+- `:app:testDebugUnitTest` PASS after PathRiskAnalyzer + voice silence changes (includes `PathRiskAnalyzerTest`).
+- `:app:assembleDebug` PASS → `outputs/apk/TriGuideAI-0.9.0-debug.apk` (versionCode 13).
+- `adb devices` empty — not installed on Redmi. No emulator used.
+
+### Before / after (logic, not yet re-measured on phone video)
+
+| Case | Before (0.8.x speech) | After (0.9.0) |
+| --- | --- | --- |
+| Empty frame | Hold + “empty picture…” spoken | CLEAR, STRAIGHT, silent |
+| Small cup / floor clutter | Could steer or hold | Ignored for path, silent |
+| Person center corridor | “Person in the center. Hold.” | “Obstacle ahead.” / Arabic short |
+| Clear corridor | Repeated uncertain | Silent |
+
 ## 2026-10-18 — 0.8.2 dominant side turn (phone not attached)
 
 **Status: BLOCKED**

@@ -19,7 +19,8 @@ class SceneBriefScheduler(
         if (navigationSpokeThisTick) return null
         val line = SceneDescription.briefFromCues(cues)
         val placed = signature(cues)
-        if (placed.count < 2) return null
+        // Silence-by-default: only a dense scene gets a rare brief, never every frame.
+        if (placed.count < 3) return null
         val since = lastAtMs?.let { previous -> nowElapsedMs - previous }
         val dueRepeat = lastKey == placed.key && since != null && since >= repeatMs
         val changed = placed.key != lastKey
@@ -47,7 +48,7 @@ class SceneBriefScheduler(
     private data class Signature(val count: Int, val key: String)
 
     private companion object {
-        const val MIN_GAP_MS = 8_000L
-        const val REPEAT_MS = 20_000L
+        const val MIN_GAP_MS = 12_000L
+        const val REPEAT_MS = 30_000L
     }
 }

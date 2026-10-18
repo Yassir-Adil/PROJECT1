@@ -5,6 +5,7 @@ import com.triguide.ai.sim.PlanarPose
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.PI
@@ -65,21 +66,23 @@ class NavigationDecisionEngineTest {
     }
 
     @Test
-    fun smallEdgeBoxIsASlightTurn() {
+    fun smallFloorClutterCupIsNotAStop() {
         val decision = engine.decide(
-            camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.10f, 0.04f))),
+            camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.50f, 0.02f, centerYNormalized = 0.85f))),
         )
-        assertEquals(GuidanceAction.SLIGHT_RIGHT, decision.action)
-        assertEquals(-NavigationConfig.STEER_SLIGHT_RADIANS, decision.steeringRadians, 1e-9)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, decision.pathRisk)
+        assertEquals(GuidanceAction.STRAIGHT, decision.action)
+        assertNull(VoiceCues.fromDecision(decision))
         assertNoMetricClaim(decision)
     }
 
     @Test
-    fun boxNearTheCenterBandIsAFullTurn() {
+    fun chairNearTheCenterBandIsAFullTurnAway() {
         val decision = engine.decide(
-            camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.36f, 0.04f))),
+            camera(cues = listOf(DirectionalCue("chair", 0.80f, 0.36f, 0.12f))),
         )
         assertEquals(GuidanceAction.RIGHT, decision.action)
+        assertEquals(PathRiskLevel.BLOCKED, decision.pathRisk)
         assertFalse(decision.reason.contains("slightly"))
     }
 
@@ -87,24 +90,26 @@ class NavigationDecisionEngineTest {
     fun centerObstacleHoldsWithoutChoosingASide() {
         val decision = engine.decide(camera(cues = listOf(strongCue("person", center = 0.50f))))
         assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals(PathRiskLevel.BLOCKED, decision.pathRisk)
         assertEquals(0.0, decision.linearSpeedMps, 0.0)
         assertEquals(0.0, decision.steeringRadians, 0.0)
         assertEquals("person", decision.subjectLabel)
         assertEquals("center", decision.subjectSide)
-        assertTrue(decision.reason.contains("center of the image"))
-        assertTrue(decision.reason.contains("No confirmed passage"))
+        assertTrue(decision.reason.contains("corridor center") || decision.reason.contains("Stop and check"))
+        assertEquals("Obstacle ahead.", VoiceCues.fromDecision(decision)?.english)
         assertNoMetricClaim(decision)
     }
 
     @Test
-    fun emptyFrameIsNotAConfirmedPassage() {
+    fun emptyFrameIsClearObservedNotAStopSpeechEvent() {
         val decision = engine.decide(camera())
-        assertEquals(GuidanceAction.HOLD, decision.action)
-        assertEquals(0.0, decision.linearSpeedMps, 0.0)
-        assertTrue(decision.reason.contains("No confirmed passage"))
+        assertEquals(GuidanceAction.STRAIGHT, decision.action)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, decision.pathRisk)
+        assertTrue(decision.reason.contains("No confirmed obstacle"))
+        assertTrue(decision.reason.contains("not a safety certificate"))
         assertTrue(decision.reason.contains("Depth is not measured"))
         assertFalse(decision.metricDepthUsed)
-        assertNotEquals(GuidanceAction.STRAIGHT, decision.action)
+        assertNull(VoiceCues.fromDecision(decision))
     }
 
     @Test
@@ -118,8 +123,9 @@ class NavigationDecisionEngineTest {
             ),
         )
         assertEquals(GuidanceAction.HOLD, decision.action)
-        assertTrue(decision.reason.contains("both sides"))
-        assertEquals("Objects on both sides. Hold.", VoiceCues.fromDecision(decision)?.english)
+        assertEquals(PathRiskLevel.BLOCKED, decision.pathRisk)
+        assertTrue(decision.reason.contains("both sides") || decision.reason.contains("Stop and check"))
+        assertEquals("Path blocked.", VoiceCues.fromDecision(decision)?.english)
         assertNoMetricClaim(decision)
     }
 
@@ -160,7 +166,7 @@ class NavigationDecisionEngineTest {
         assertEquals("both", decision.subjectSide)
         assertTrue(decision.reason.contains("both sides"))
         val spoken = VoiceCues.fromDecision(decision)
-        assertEquals("Objects on both sides. Hold.", spoken?.english)
+        assertEquals("Path blocked.", spoken?.english)
         assertFalse(spoken!!.english.contains("Turn"))
         assertNoMetricClaim(decision)
     }
@@ -171,7 +177,7 @@ class NavigationDecisionEngineTest {
         assertEquals(GuidanceAction.HOLD, decision.action)
         assertEquals("chair", decision.subjectLabel)
         assertEquals("center", decision.subjectSide)
-        assertEquals("Chair in the center. Hold.", VoiceCues.fromDecision(decision)?.english)
+        assertEquals("Obstacle ahead.", VoiceCues.fromDecision(decision)?.english)
         assertNoMetricClaim(decision)
     }
 
@@ -247,10 +253,9 @@ class NavigationDecisionEngineTest {
         assertEquals("chair", decision.subjectLabel)
         assertEquals("center", decision.subjectSide)
         val spoken = VoiceCues.fromDecision(decision)
-        assertEquals("Chair in the center. Hold.", spoken?.english)
+        assertEquals("Obstacle ahead.", spoken?.english)
         assertFalse(spoken!!.english.contains("left"))
-        assertTrue(spoken.arabic.contains("الوسط"))
-        assertFalse(spoken.arabic.contains("اليسار"))
+        assertEquals("في عائق قدامك.", spoken.arabic)
         assertNoMetricClaim(decision)
     }
 
@@ -303,7 +308,8 @@ class NavigationDecisionEngineTest {
                 ),
             ),
         )
-        assertEquals(GuidanceAction.HOLD, below.action)
+        assertEquals(GuidanceAction.STRAIGHT, below.action)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, below.pathRisk)
         assertEquals(0.0, below.steeringRadians, 0.0)
 
         val atFloor = engine.decide(
@@ -321,9 +327,10 @@ class NavigationDecisionEngineTest {
         val decision = engine.decide(
             camera(cues = listOf(DirectionalCue("speck", 0.99f, 0.10f, 0f))),
         )
-        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals(GuidanceAction.STRAIGHT, decision.action)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, decision.pathRisk)
         assertEquals(0.0, decision.steeringRadians, 0.0)
-        assertTrue(decision.reason.contains("No confirmed passage"))
+        assertTrue(decision.reason.contains("No confirmed obstacle"))
     }
 
     @Test
@@ -348,7 +355,8 @@ class NavigationDecisionEngineTest {
         val stale = engine.decide(
             camera(cues = listOf(strongCue("chair", 0.36f)), age = NavigationConfig.STALE_FRAME_MS),
         )
-        assertEquals(GuidanceAction.HOLD, stale.action)
+        assertEquals(GuidanceAction.UNKNOWN, stale.action)
+        assertEquals(PathRiskLevel.UNKNOWN, stale.pathRisk)
         assertEquals(0.0, stale.linearSpeedMps, 0.0)
         assertTrue(stale.reason.contains("stale"))
     }
@@ -356,25 +364,21 @@ class NavigationDecisionEngineTest {
     @Test
     fun missingTimestampDoesNotSteer() {
         val decision = engine.decide(camera(cues = listOf(strongCue("chair", 0.15f)), age = null))
-        assertEquals(GuidanceAction.HOLD, decision.action)
+        assertEquals(GuidanceAction.UNKNOWN, decision.action)
         assertTrue(decision.reason.contains("timestamp"))
         assertEquals(0.0, decision.steeringRadians, 0.0)
     }
 
     @Test
-    fun cameraModeNeverGoesStraight() {
-        val scenes = listOf(
-            camera(),
-            camera(cues = listOf(strongCue("chair", 0.15f))),
-            camera(cues = listOf(strongCue("chair", 0.86f))),
-            camera(cues = listOf(strongCue("chair", 0.50f))),
-            camera(cues = listOf(strongCue("a", 0.15f), strongCue("b", 0.86f))),
-            camera(cues = listOf(strongCue("chair", 0.15f)), age = 5_000L),
-            camera(real = false),
-        )
-        scenes.forEach { scene ->
-            assertNotEquals(GuidanceAction.STRAIGHT, engine.decide(scene).action)
-        }
+    fun emptyCameraCorridorMayGoStraightWithoutClaimingSafety() {
+        val clear = engine.decide(camera())
+        assertEquals(GuidanceAction.STRAIGHT, clear.action)
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, clear.pathRisk)
+        assertTrue(clear.reason.contains("not a safety certificate"))
+
+        val blocked = engine.decide(camera(cues = listOf(strongCue("chair", 0.50f))))
+        assertNotEquals(GuidanceAction.STRAIGHT, blocked.action)
+        assertEquals(PathRiskLevel.BLOCKED, blocked.pathRisk)
     }
 
     @Test
@@ -432,7 +436,7 @@ class NavigationDecisionEngineTest {
     fun magnitudeChangeAlsoWaits() {
         val smoother = TemporalDecisionSmoother()
         val strong = camera(cues = listOf(strongCue("chair", 0.36f)))
-        val slight = camera(cues = listOf(DirectionalCue("cup", 0.80f, 0.10f, 0.04f)))
+        val slight = camera(cues = listOf(DirectionalCue("chair", 0.80f, 0.12f, 0.10f)))
         repeat(NavigationConfig.CONFIRM_FRAMES) { smoother.update(strong) }
         assertEquals(GuidanceAction.RIGHT, smoother.update(slight).action)
         assertEquals(GuidanceAction.RIGHT, smoother.update(slight).action)
@@ -445,7 +449,7 @@ class NavigationDecisionEngineTest {
         val fresh = camera(cues = listOf(strongCue("chair", 0.36f)))
         repeat(NavigationConfig.CONFIRM_FRAMES) { smoother.update(fresh) }
         val stale = smoother.update(fresh.copy(frameAgeMs = NavigationConfig.STALE_FRAME_MS))
-        assertEquals(GuidanceAction.HOLD, stale.action)
+        assertEquals(GuidanceAction.UNKNOWN, stale.action)
         assertTrue(stale.reason.contains("stale"))
         assertEquals(GuidanceAction.HOLD, smoother.update(fresh).action)
     }
@@ -555,7 +559,9 @@ class NavigationDecisionEngineTest {
         assertFalse(scene.metricDepthAvailable)
         assertEquals(100L, scene.frameAgeMs)
         assertEquals(0.90, scene.cues.single().centerXNormalized.toDouble(), 0.001)
-        assertEquals(GuidanceAction.SLIGHT_LEFT, engine.decide(scene).action)
+        // Cup is ignored for path risk; mirrored position alone does not block.
+        assertEquals(PathRiskLevel.CLEAR_OBSERVED, engine.decide(scene).pathRisk)
+        assertEquals(GuidanceAction.STRAIGHT, engine.decide(scene).action)
     }
 
     @Test
@@ -596,7 +602,7 @@ class NavigationDecisionEngineTest {
             nowElapsedMs = 1_000L + NavigationConfig.STALE_FRAME_MS,
         )
         assertEquals(NavigationConfig.STALE_FRAME_MS, scene.frameAgeMs)
-        assertEquals(GuidanceAction.HOLD, engine.decide(scene).action)
+        assertEquals(GuidanceAction.UNKNOWN, engine.decide(scene).action)
     }
 
     @Test

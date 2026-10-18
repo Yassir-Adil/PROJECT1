@@ -289,6 +289,7 @@ private fun MoreScreen(
         item { StatusLine("Mode", "Research and Simulation") }
         item { StatusLine("Detection", detectionLine) }
         item { StatusLine("Decision", decision.action.userLabel) }
+        item { StatusLine("Path risk", decision.pathRisk.name) }
         item { StatusLine("Reason", decision.reason) }
         item { StatusLine("Front wheel", "${formatWheelDegrees(robot.steeringRadians)} degrees") }
         item { StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}") }

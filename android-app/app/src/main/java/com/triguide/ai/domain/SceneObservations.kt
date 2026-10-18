@@ -43,11 +43,13 @@ object SceneObservations {
             }
             val boxWidth = (detected.right - detected.left).coerceAtLeast(0f)
             val boxHeight = (detected.bottom - detected.top).coerceAtLeast(0f)
+            val centerY = (detected.top + detected.bottom) / 2f
             DirectionalCue(
                 label = detected.label,
                 confidence = detected.confidence,
                 centerXNormalized = center / width,
                 areaFraction = (boxWidth * boxHeight) / (width * height),
+                centerYNormalized = (centerY / height).coerceIn(0f, 1f),
             )
         }
         val age = frame.completedAtElapsedMs?.let { completed ->
