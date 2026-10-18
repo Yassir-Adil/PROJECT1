@@ -8,6 +8,63 @@ Installs and smoke tests for this user run on the personal Redmi only. Do not st
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — Redmi 0.4.1 install, plus 0.4.0 camera lines
+
+**Status: PASS_WITH_WARNINGS**
+
+Physical device only. `adb devices -l` after `adb kill-server` and `adb start-server`:
+
+```
+55aqpfqkvw9xbafe       device product:ruby_global model:22101316G device:ruby transport_id:1
+```
+
+No emulator was attached. `adb` was not on PATH. Binary: `C:\Users\yassi\AppData\Local\Android\Sdk\platform-tools\adb.exe` (Android Debug Bridge 1.0.41, version 37.0.1-15733141).
+
+Properties read with `adb -s 55aqpfqkvw9xbafe shell getprop`:
+
+| Property | Value |
+| --- | --- |
+| ro.product.manufacturer | Xiaomi |
+| ro.product.marketname | Redmi Note 12 Pro 5G |
+| ro.product.model | 22101316G |
+| ro.product.device | ruby |
+| ro.build.version.release | 14 |
+| ro.build.version.sdk | 34 |
+| ro.mi.os.version.name | OS2.0 |
+| ro.build.version.incremental | OS2.0.16.0.UMOMIXM |
+| ro.miui.ui.version.name | V816 |
+
+### 0.4.0 camera and speech engine (observed before the 0.4.1 rebuild)
+
+- `adb -s 55aqpfqkvw9xbafe install -r outputs\apk\TriGuideAI-0.4.0-debug.apk` → `Performing Streamed Install` / `Success`.
+- Launch `com.triguide.ai/.MainActivity` → resumed. Package `versionName=0.4.0` `versionCode=4`.
+- A UI dump while that process was in front showed Live Vision, not Home. This session did not send taps. Screen text included `Camera: Streaming. Preview 14 FPS. Inference 9 FPS, last 53 ms, average 59 ms` and `MediaPipe EfficientDet-Lite0 int8 found no objects at or above 0.50 confidence.` Decision text at that dump: Hold, reason “No confirmed passage…”, front wheel 0.0 degrees. The preview view started near the bottom of the 2400 px screen.
+- Later logcat from pid 31381: `TriGuideNav` `Camera 2D HOLD chair is in the center of the image. No confirmed passage to either side. Depth is not measured.` and `TriGuideVoice` `speak result=0 queue=0 kind=OBSTACLE_DETECTED lang=ENGLISH rate=1.0 text=Obstacle detected. Hold.`
+- `speak result=0` is `TextToSpeech.SUCCESS` (the engine accepted the utterance). Whether the speaker was audible was not checked by ear. Quiet mode was not toggled. TalkBack was not walked.
+
+### 0.4.1 build and install
+
+JDK 17.0.20.1 (`JAVA_HOME=C:\Users\yassi\AppData\Local\Java\jdk-17.0.20.1+1`), `ANDROID_HOME=C:\Users\yassi\AppData\Local\Android\Sdk`, Gradle wrapper 8.11.1, `--no-daemon`.
+
+Command: `gradlew.bat :app:testDebugUnitTest :sim-core:test :app:assembleDebug --no-daemon`
+
+- BUILD SUCCESSFUL in 57s.
+- `:app:testDebugUnitTest` executed: 71 tests, 0 failures, 0 errors, 0 skipped (includes 6 new `PhoneDemoStatusTest` cases).
+- `:sim-core:test` was UP-TO-DATE and was not re-executed. The existing XML `TEST-com.triguide.ai.sim.TricycleKinematicsTest.xml` timestamp `2026-10-17T23:45:27` records 9 tests, 0 failures.
+
+APK:
+
+| File | Bytes | SHA-256 |
+| --- | --- | --- |
+| `android-app/app/build/outputs/apk/debug/app-debug.apk` | 81,342,405 | `ECD2D12F731458A803AB5E179C91682AB993A320DF217750B06D70FA8FAE1AF8` |
+| `outputs/apk/TriGuideAI-0.4.1-debug.apk` | 81,342,405 | same hash |
+
+- First `adb install -r` of that APK: `Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]`. The phone stayed `device`. The installed package was still 0.4.0.
+- Retry `adb install -r -t` about one minute later: `Performing Streamed Install` / `Success` (about 8 seconds). No install dialog was visible in a UI dump taken during that retry; the launcher was in front.
+- After install: `versionCode=5` `versionName=0.4.1`. `am start` → `topResumedActivity` `com.triguide.ai/.MainActivity`, pid 9367. Logcat had no FATAL for the app.
+- Home UI dump text: disclaimer present; title `TriGuide`; `Detection: READY. MediaPipe EfficientDet-Lite0 int8`; `Decision: Unknown`; `Reason: Navigation has not received an observation.`; `Front wheel: 0.0 degrees`; floor `NOT_STARTED`; `Voice: On. Rate 1.0. Quiet mode off. Device language. Offline English and Arabic voices are installed.`; primary button `Live Vision`.
+- Live Vision, a new box, and a new spoken cue were not opened on 0.4.1. `adb shell input keyevent` failed: `SecurityException` … `INJECT_EVENTS`. That matches HyperOS with USB debugging (Security settings) off.
+
 ## 2026-10-18 — Redmi install and launch (0.4.0)
 
 **Status: PASS_WITH_WARNINGS**

@@ -1,7 +1,11 @@
 package com.triguide.ai.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
@@ -53,8 +57,11 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.triguide.ai.BuildConfig
 import com.triguide.ai.camera.CameraXSource
+import com.triguide.ai.domain.CameraPermissionAction
+import com.triguide.ai.domain.CameraPermissionPrompt
 import com.triguide.ai.domain.CameraStartResult
 import com.triguide.ai.domain.DetectionReports
+import com.triguide.ai.domain.DetectorStatusText
 import com.triguide.ai.domain.DetectorConfig
 import com.triguide.ai.domain.DetectorReadiness
 import com.triguide.ai.domain.FloorSegmentationStatus
@@ -126,6 +133,9 @@ fun TriGuideRoot() {
     val context = LocalContext.current
     val services = remember { AppServices(context.applicationContext) }
     var screen by remember { mutableStateOf(Screen.Home) }
+    BackHandler(enabled = screen != Screen.Home) {
+        screen = Screen.Home
+    }
     DisposableEffect(services) {
         onDispose {
             services.detection.close()
@@ -170,6 +180,8 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
     val voiceSettings by services.voiceSettings.settings.collectAsStateWithLifecycle()
     val voiceStatus by services.speaker.status.collectAsStateWithLifecycle()
+    val robot by services.robot.state.collectAsStateWithLifecycle()
+    val detectionLine = DetectorStatusText.line(readiness, detail)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -177,30 +189,39 @@ private fun HomeScreen(services: AppServices, onNavigate: (Screen) -> Unit) {
     ) {
         item {
             Text(
-                text = "TriGuide AI",
+                text = "TriGuide",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. Camera boxes can steer the virtual robot from their position in the image. That is not a measured clearance. No physical robot is connected.",
+                text = "Phone camera, on-device object detection, and a virtual three-wheel robot. A box is a position in the image. It is not a measured clearance. No physical robot is connected.",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
         item { StatusLine("Mode", "Research and Simulation") }
-        item { StatusLine("Object detection", "$readiness. $detail") }
-        item { StatusLine("Navigation", "${decision.action.userLabel}. ${decision.perceptionLabel}") }
+        item { StatusLine("Detection", detectionLine) }
+        item { StatusLine("Decision", decision.action.userLabel) }
+        item { StatusLine("Reason", decision.reason) }
+        item { StatusLine("Front wheel", "${formatWheelDegrees(robot.steeringRadians)} degrees") }
         item { StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}") }
-        item { StatusLine("Voice guidance", "${voiceSettings.summary()}. $voiceStatus") }
-        item { StatusLine("Virtual robot", "Kinematic simulator ready") }
+        item { StatusLine("Voice", "${voiceSettings.summary()}. $voiceStatus") }
+        item { StatusLine("Virtual robot", "Kinematic simulator ready. Speed ${formatSpeedMps(robot.linearSpeedMps)} m/s.") }
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
-        item { NavButton("Start Camera", "Open the live camera preview") { onNavigate(Screen.Camera) } }
-        item { NavButton("Robot Simulation", "Open the manual three-wheel simulator") { onNavigate(Screen.Simulator) } }
-        item { NavButton("Test Scenarios", "Open labeled scenario placeholders") { onNavigate(Screen.Scenarios) } }
-        item { NavButton("Diagnostics", "Open camera and engine diagnostics") { onNavigate(Screen.Diagnostics) } }
-        item { NavButton("Settings", "Open app settings and the safety notice") { onNavigate(Screen.Settings) } }
+        item {
+            Text(
+                text = "Next: open Live Vision, allow the camera, and point the phone at a real object.",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+            )
+        }
+        item { NavButton("Live Vision", "Open the live camera preview", primary = true) { onNavigate(Screen.Camera) } }
+        item { NavButton("Robot Simulation", "Open the three-wheel simulator", primary = false) { onNavigate(Screen.Simulator) } }
+        item { NavButton("Test Scenarios", "Open the list of checks that are not running yet", primary = false) { onNavigate(Screen.Scenarios) } }
+        item { NavButton("Diagnostics", "Open camera, detection, decision, and voice status", primary = false) { onNavigate(Screen.Diagnostics) } }
+        item { NavButton("Settings", "Open voice, quiet mode, and the safety notice", primary = false) { onNavigate(Screen.Settings) } }
     }
 }
 
@@ -212,9 +233,16 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
+    var requestAttempted by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
+        requestAttempted = true
         granted = allowed
     }
+    val activity = context as? android.app.Activity
+    val permissionAction = CameraPermissionPrompt.action(
+        requestAttempted = requestAttempted,
+        shouldShowRationale = activity?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == true,
+    )
     var cameraState by remember { mutableStateOf("Idle") }
     val readiness by services.detection.readiness.collectAsStateWithLifecycle()
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
@@ -251,37 +279,61 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Live Vision", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(Modifier.height(8.dp))
-        GuidanceReadout(decision = decision, applied = applied, showPath = true)
-        Spacer(Modifier.height(8.dp))
+        ScreenHeader(title = "Live Vision", onBack = onBack)
+        Text(
+            DetectorStatusText.line(readiness, detail),
+            color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+            fontSize = 16.sp,
+            modifier = Modifier.semantics {
+                contentDescription = DetectorStatusText.line(readiness, detail)
+            },
+        )
+        DecisionHeadline(decision = decision, applied = applied)
         VoiceCueLine(lastVoice)
-        Spacer(Modifier.height(8.dp))
         Text(
             observation.summary,
             color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
-            modifier = Modifier
-                .padding(vertical = 8.dp)
-                .semantics { contentDescription = observation.summary },
+            modifier = Modifier.semantics { contentDescription = observation.summary },
         )
         when {
             !granted -> {
+                val openSettings = permissionAction == CameraPermissionAction.OpenAppSettings
                 Text(
-                    "Camera permission is required to show a live preview. Nothing is uploaded.",
+                    if (openSettings) {
+                        "Camera permission is off, and Android will not ask again from this screen. Open Settings and allow Camera for TriGuide. Nothing is uploaded."
+                    } else {
+                        "Camera permission is required to show a live preview. Nothing is uploaded."
+                    },
                     color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 18.sp,
                 )
                 Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { launcher.launch(Manifest.permission.CAMERA) },
+                    onClick = {
+                        if (openSettings) {
+                            openAppSettings(context)
+                        } else {
+                            launcher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 56.dp)
-                        .semantics { contentDescription = "Grant camera permission" },
+                        .semantics {
+                            contentDescription = if (openSettings) {
+                                "Open app settings to allow the camera"
+                            } else {
+                                "Grant camera permission"
+                            }
+                        },
                 ) {
-                    Text("Grant camera permission", fontSize = 18.sp)
+                    Text(
+                        if (openSettings) "Open app settings" else "Grant camera permission",
+                        fontSize = 18.sp,
+                    )
                 }
             }
             else -> {
@@ -330,7 +382,7 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp),
+                        .height(320.dp),
                 ) {
                     AndroidView(
                         factory = { previewView },
@@ -374,8 +426,8 @@ private fun CameraScreen(services: AppServices, onBack: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        BackButton(onBack)
+        Spacer(Modifier.height(8.dp))
+        GuidanceDetail(decision = decision, applied = applied, showPath = true)
     }
 
     DisposableEffect(Unit) {
@@ -495,7 +547,7 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Robot Simulation", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        ScreenHeader(title = "Robot Simulation", onBack = onBack)
         Text(
             "Virtual tricycle. Wheelbase ${TricycleKinematics.DEFAULT_WHEELBASE_METERS} m. ${mode.description}",
             color = MaterialTheme.colorScheme.onBackground,
@@ -606,7 +658,6 @@ private fun SimulatorScreen(services: AppServices, onBack: () -> Unit) {
                 Text("Reset pose", fontSize = 18.sp)
             }
         }
-        BackButton(onBack)
     }
 }
 
@@ -619,16 +670,15 @@ private fun ScenariosScreen(onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Test Scenarios", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        ScreenHeader(title = "Test Scenarios", onBack = onBack)
         Text(
-            "These cards are not an indoor evaluation. They do not inject detections. The synthetic map and the navigation unit tests are separate from this list.",
+            "These cards are not an indoor evaluation. They do not inject detections. Use Live Vision for the camera, or Robot Simulation and then Synthetic world for the authored map.",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
         ScenarioCard("Straight corridor", "NOT_STARTED. Not an evaluation set.")
         ScenarioCard("Obstacle on the left", "NOT_STARTED. This card does not inject an obstacle.")
         ScenarioCard("Blocked path", "NOT_STARTED. This card does not inject a detection.")
-        BackButton(onBack)
     }
 }
 
@@ -672,23 +722,29 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Diagnostics", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        ScreenHeader(title = "Diagnostics", onBack = onBack)
+        SectionLabel("Camera")
         StatusLine("Version", BuildConfig.VERSION_NAME)
         StatusLine("Camera permission", if (granted) "granted" else "not granted")
+        SectionLabel("Detection")
+        StatusLine("Detection", DetectorStatusText.line(readiness, detail))
         StatusLine("Detection engine", readiness.name)
         StatusLine("Detection detail", detail)
         StatusLine("Real detector loaded", (readiness == DetectorReadiness.READY).toString())
         StatusLine("Observation", observation.summary)
         StatusLine("Observation from a real result", observation.realDetector.toString())
+        SectionLabel("Decision")
         StatusLine("Smoothed decision", "${smoothed.action.userLabel}. ${smoothed.reason}")
         StatusLine("Smoothed confidence", NavigationDecisions.formatConfidence(smoothed.confidence))
         StatusLine("Raw decision", "${raw.action.userLabel}. ${raw.reason}")
         StatusLine("Metric depth used", smoothed.metricDepthUsed.toString())
         StatusLine("Vision sample", smoothed.basedOnRealVision.toString())
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
+        SectionLabel("Voice")
         StatusLine("Voice guidance", voiceSettings.summary())
         StatusLine("Voice engine", voiceStatus)
         StatusLine("Last voice cue", lastVoice)
+        SectionLabel("Performance")
         StatusLine(
             "Performance",
             performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
@@ -696,10 +752,12 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Preview frames seen", frames.toString())
         StatusLine("Inferences completed", inferences.toString())
         StatusLine("Inference error", inferenceError ?: "none")
+        SectionLabel("Hardware")
         StatusLine("Hardware", services.hardware.connectionLabel)
         StatusLine("Hardware accepts commands", services.hardware.dispatch(SteeringCommand(0.0, 0.0)).accepted.toString())
+        SectionLabel("Robot")
         StatusLine("Sim speed m/s", format(robot.linearSpeedMps))
-        BackButton(onBack)
+        StatusLine("Front wheel", "${formatWheelDegrees(robot.steeringRadians)} degrees")
     }
 }
 
@@ -715,7 +773,7 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        ScreenHeader(title = "Settings", onBack = onBack)
         StatusLine("Research and Simulation Mode", "On. This cannot be turned off in this build.")
         VoiceSettingsSection(
             settings = settings,
@@ -738,7 +796,6 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 18.sp,
         )
-        BackButton(onBack)
     }
 }
 
@@ -753,16 +810,47 @@ private fun StatusLine(label: String, value: String) {
 }
 
 @Composable
-private fun NavButton(label: String, description: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
+private fun ScreenHeader(title: String, onBack: () -> Unit) {
+    Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+    BackButton(onBack)
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .semantics { contentDescription = description },
-    ) {
-        Text(label, fontSize = 18.sp)
+            .padding(top = 8.dp)
+            .semantics { contentDescription = text },
+    )
+}
+
+@Composable
+private fun NavButton(label: String, description: String, primary: Boolean, onClick: () -> Unit) {
+    val modifier = Modifier
+        .fillMaxWidth()
+        .heightIn(min = 56.dp)
+        .semantics { contentDescription = description }
+    if (primary) {
+        Button(onClick = onClick, modifier = modifier) {
+            Text(label, fontSize = 18.sp)
+        }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier) {
+            Text(label, fontSize = 18.sp)
+        }
     }
+}
+
+private fun openAppSettings(context: android.content.Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", context.packageName, null)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
 }
 
 @Composable

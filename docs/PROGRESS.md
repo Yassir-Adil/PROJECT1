@@ -1,5 +1,32 @@
 # Progress Log
 
+## 2026-10-18 — Redmi 0.4.1 home, after a real 0.4.0 camera pass
+
+**Status:** 0.4.1 install and Home launch PASS_WITH_WARNINGS on the personal Redmi. Live Vision on 0.4.1 was not opened. The earlier 0.4.0 camera and speech-engine lines are recorded below and are not repeated as a 0.4.1 proof.
+
+### Phone
+
+`adb devices -l` listed only `55aqpfqkvw9xbafe` as `device` (Xiaomi `22101316G`, market name Redmi Note 12 Pro 5G, device `ruby`, Android 14 / SDK 34, HyperOS `OS2.0.16.0.UMOMIXM`). No emulator was started or installed to. `adb` was not on PATH. Binary: `C:\Users\yassi\AppData\Local\Android\Sdk\platform-tools\adb.exe`.
+
+### 0.4.0 on the phone (before the UI change)
+
+- `adb install -r outputs/apk/TriGuideAI-0.4.0-debug.apk` → Success. `versionName=0.4.0` `versionCode=4`.
+- `MainActivity` launched and was the resumed activity.
+- A later UI dump showed Live Vision already open. This session did not inject taps. The screen text was `Camera: Streaming. Preview 14 FPS. Inference 9 FPS, last 53 ms, average 59 ms` and, at that moment, no objects at or above 0.50.
+- Logcat from that process: `TriGuideNav` `chair is in the center of the image` and `TriGuideVoice` `speak result=0` `kind=OBSTACLE_DETECTED` `lang=ENGLISH` `text=Obstacle detected. Hold.` Result 0 means the speech engine accepted the utterance. Sound from the speaker was not confirmed by ear.
+
+### 0.4.1
+
+- Live Vision keeps the decision, the reason, and the front wheel above a taller preview. Back sits at the top of each screen, and the system Back key returns Home. A permanent camera denial offers app settings. Home states the detector as READY or not ready. One accent color. The launcher name is TriGuide.
+- `versionName` 0.4.1 (`versionCode` 5). APK: `outputs/apk/TriGuideAI-0.4.1-debug.apk` (81,342,405 bytes).
+- Unit tests executed: `:app:testDebugUnitTest` 71/71 PASS. `:sim-core:test` was UP-TO-DATE (earlier XML the same day: 9/9, 0 failures). It was not re-run.
+- First `adb install -r` of 0.4.1 returned `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. A retry about a minute later returned Success. Installed package is `versionName=0.4.1` `versionCode=5`. Home was the resumed activity (pid 9367). No FATAL line. Home text included `Detection: READY`, `Decision: Unknown`, `Front wheel: 0.0 degrees`, and offline English and Arabic voices installed. Live Vision was not opened on this build. `adb shell input` is denied (`INJECT_EVENTS`), so buttons were not tapped from the PC.
+
+### Still open
+
+- On 0.4.1, the user opens Live Vision and points at a real object. Confirm a box, the wheel, and whether the cue is heard.
+- Turn on USB debugging (Security settings) if the next install is canceled again, or if PC taps are needed. Steps: `docs/DEVICE_COMPATIBILITY.md`.
+
 ## 2026-10-18 — Redmi install and launch (phone only)
 
 **Status:** install and launch PASS_WITH_WARNINGS on the personal Redmi. Live camera, accuracy, and spoken-cue checks NOT_STARTED.

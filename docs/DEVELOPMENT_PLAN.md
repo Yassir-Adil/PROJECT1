@@ -12,7 +12,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Foundation choice | Option B | `docs/DECISIONS.md` |
 | Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
 | Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
-| Redmi install | NOT_STARTED | Earlier polls saw the phone as MTP only. A later `adb devices` listed Xiaomi `22101316G` and the package was not installed. See `docs/TEST_RESULTS.md` |
+| Redmi install | PASS_WITH_WARNINGS | `55aqpfqkvw9xbafe` is `device`. 0.4.1 is installed and Home launched. 0.4.0 showed a streaming camera and a chair line. 0.4.1 Live Vision was not opened. See `docs/TEST_RESULTS.md` |
 | Real obstacle detection | PASS_WITH_WARNINGS | MediaPipe EfficientDet-Lite0 loads and runs on the emulator. Accuracy and Redmi are open. See `docs/TEST_RESULTS.md` |
 | Floor segmentation | NOT_STARTED | Disabled in 0.4.0. No floor model is loaded |
 | Camera boxes to virtual steering | PASS_WITH_WARNINGS | Unit tests 65/65 app + 9/9 kinematics. Emulator synthetic wheel moved. Emulator camera held because it saw zero objects. Redmi open |
@@ -24,7 +24,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 - [x] `AGENTS.md` + `.cursor/rules`
 - [x] Progress / decisions / research docs
 - [x] JDK 17 + Android SDK + Android Studio (Studio was already installed)
-- [ ] `adb devices` sees Redmi
+- [x] `adb devices` sees Redmi (`55aqpfqkvw9xbafe`, Android 14)
 - [x] Git init (local). Private GitHub remote still optional
 
 **Exit criteria:** `sdkmanager`/`adb` usable; Android app project can assemble. Assemble result is in `docs/TEST_RESULTS.md`.
@@ -34,9 +34,9 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 - [x] Kotlin Android app (CameraX preview, accessibility-minded shell).
 - [x] Gradle Wrapper and debug APK (`outputs/apk/TriGuideAI-0.1.0-debug.apk`).
 - [x] Install and launch on emulator `Pixel_8a` (activity visible). Interactive camera/TalkBack not tapped.
-- [ ] Install on a Redmi via ADB.
+- [x] Install on the Redmi via cable ADB (0.4.1, after one `INSTALL_FAILED_USER_RESTRICTED`).
 
-**Exit criteria:** APK installs and launches on the phone (verified, not assumed). Phone check is still open. Emulator launch is recorded in `docs/TEST_RESULTS.md`.
+**Exit criteria:** APK installs and launches on the phone (verified, not assumed). 0.4.1 install and Home launch are recorded in `docs/TEST_RESULTS.md`. A Live Vision pass on 0.4.1 is still open.
 
 ## Phase 2 — Real-time camera pipeline
 

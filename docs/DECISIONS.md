@@ -107,3 +107,18 @@
 - Simulation paused is spoken once when an assist mode stops, and it can be queued behind the current sentence. It does not cut off a turn.
 - Floor segmentation remains `NOT_STARTED` and disabled.
 
+## 2026-10-18 — Phone demo layout 0.4.1, cable ADB stays the install path
+
+**Decision:** Keep inference, the model, and the voice gate as they are. Change only the phone screens so a demo can see the decision, the reason, and the wheel without scrolling past them, and keep cable ADB as the install path.
+
+**Why**
+
+- On the Redmi, the 0.4.0 Live Vision dump placed the camera preview near the bottom of a 2400 px screen, under a long readout. The chair log happened while that preview was mostly off screen.
+- HyperOS can cancel `adb install` with `INSTALL_FAILED_USER_RESTRICTED` even after an earlier install succeeded. A cable retry worked. Wireless ADB was not used. It does not make detection or speech faster, and it is a worse first-install path.
+- `adb shell input` is denied until USB debugging (Security settings) is on. The app cannot turn that on. The user taps the phone, or enables that developer switch.
+
+**Consequences**
+
+- Version 0.4.1 (`versionCode` 5). System Back returns Home. A camera denial that will not show the dialog again opens app settings. The detector line says READY only when the engine is ready.
+- No new model, no depth, no network permission.
+

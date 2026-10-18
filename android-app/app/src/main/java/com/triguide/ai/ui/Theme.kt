@@ -8,8 +8,8 @@ import androidx.compose.ui.graphics.Color
 private val HighContrastDark = darkColorScheme(
     primary = Color(0xFFFFE14A),
     onPrimary = Color(0xFF111111),
-    secondary = Color(0xFF9BE7FF),
-    onSecondary = Color(0xFF042028),
+    secondary = Color(0xFFD4D4D4),
+    onSecondary = Color(0xFF111111),
     background = Color(0xFF0B0B0C),
     onBackground = Color(0xFFF7F7F7),
     surface = Color(0xFF1C1C1F),

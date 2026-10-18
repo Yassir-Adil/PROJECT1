@@ -25,40 +25,33 @@ import com.triguide.ai.domain.SteeringCommand
 import java.util.Locale
 import kotlin.math.roundToInt
 
+internal fun formatWheelDegrees(radians: Double): String {
+    return String.format(Locale.US, "%.1f", Math.toDegrees(radians))
+}
+
+internal fun formatSpeedMps(metersPerSecond: Double): String {
+    return String.format(Locale.US, "%.2f", metersPerSecond)
+}
+
 @Composable
-fun GuidanceReadout(
+fun DecisionHeadline(
     decision: NavigationDecision,
     applied: SteeringCommand,
-    showPath: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val manual = decision.perceptionLabel == NavigationConfig.MANUAL_LABEL
     val title = if (manual) "Manual" else decision.action.userLabel
-    val confidenceText = if (manual) {
-        "not used"
-    } else {
-        "${(decision.confidence * 100f).roundToInt().coerceIn(0, 100)} percent"
-    }
-    val wheelDegrees = Math.toDegrees(applied.steeringRadians)
-    val wheelText = String.format(Locale.US, "%.1f", wheelDegrees)
-    val speedText = String.format(Locale.US, "%.2f", applied.linearSpeedMps)
+    val wheelText = formatWheelDegrees(applied.steeringRadians)
     val spoken = "Research and Simulation Mode. Decision $title. Reason: ${decision.reason} " +
-        "Confidence $confidenceText. Front wheel response $wheelText degrees. " +
-        "Virtual speed $speedText meters per second. Source ${decision.perceptionLabel}. " +
-        IllustrativePath.LABEL
+        "Front wheel response $wheelText degrees."
     Column(
         modifier = modifier.semantics { contentDescription = spoken },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = "Research and Simulation Mode",
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 14.sp,
-        )
-        Text(
             text = "Decision: $title",
             color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 18.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
@@ -67,12 +60,36 @@ fun GuidanceReadout(
             fontSize = 16.sp,
         )
         Text(
-            text = "Confidence: $confidenceText",
+            text = "Front wheel: $wheelText degrees",
             color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
         )
+    }
+}
+
+@Composable
+fun GuidanceDetail(
+    decision: NavigationDecision,
+    applied: SteeringCommand,
+    showPath: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val manual = decision.perceptionLabel == NavigationConfig.MANUAL_LABEL
+    val confidenceText = if (manual) {
+        "not used"
+    } else {
+        "${(decision.confidence * 100f).roundToInt().coerceIn(0, 100)} percent"
+    }
+    val speedText = formatSpeedMps(applied.linearSpeedMps)
+    val spoken = "Confidence $confidenceText. Virtual speed $speedText meters per second. " +
+        "Source ${decision.perceptionLabel}. ${IllustrativePath.LABEL}"
+    Column(
+        modifier = modifier.semantics { contentDescription = spoken },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Text(
-            text = "Front wheel response: $wheelText degrees",
+            text = "Confidence: $confidenceText",
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 16.sp,
         )
@@ -99,6 +116,22 @@ fun GuidanceReadout(
                     .height(96.dp),
             )
         }
+    }
+}
+
+@Composable
+fun GuidanceReadout(
+    decision: NavigationDecision,
+    applied: SteeringCommand,
+    showPath: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        DecisionHeadline(decision = decision, applied = applied)
+        GuidanceDetail(decision = decision, applied = applied, showPath = showPath)
     }
 }
 
