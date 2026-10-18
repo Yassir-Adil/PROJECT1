@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "C:\\PROGRA~1\\PYTHON~1\\python.exe -X utf8 .cursor/hooks/tri_guide_loop.py",
+        "timeout": 10
+      }
+    ],
+    "stop": [
+      {
+        "command": "C:\\PROGRA~1\\PYTHON~1\\python.exe -X utf8 .cursor/hooks/tri_guide_loop.py",
+        "timeout": 10,
+        "loop_limit": 12
+      }
+    ]
+  }
+}

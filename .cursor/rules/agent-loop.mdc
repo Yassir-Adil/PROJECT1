@@ -1,0 +1,26 @@
+---
+description: Builder and reviewer loops that continue without a new user prompt
+alwaysApply: true
+---
+
+# Agent loop
+
+Read `docs/AGENT_WORKFLOW.md` when the user starts or stops a loop. The system context has `TriGuide session id`. If it does not, use `.cursor/hooks/last-session.json` only when `written_utc` is under 3 minutes old.
+
+- `شغّل البناء` or `Start TriGuide builder`: arm builder only. Write `.cursor/loop-state.json` first, with this chat's id, then do one master-plan unit.
+- `شغّل المراجعة` or `Start TriGuide reviewer`: arm reviewer only, same file, then review.
+- Arming one role clears the other role if it has this same conversation id. Never arm a chat that did not receive the phrase.
+- `أوقف الحلقة` or `Stop TriGuide loop`: set both `enabled` flags to false, then stop.
+- One builder chat. While `.cursor/agent-lock.json` is missing or a builder lock is under 45 minutes old, the reviewer only appends `docs/REVIEW_NOTES.md`.
+- Do not reopen fingerprint control or screen triple-tap.
+- Do not start an emulator. Redmi ADB only when `adb devices` shows `55aqpfqkvw9xbafe` as `device`.
+- If blocked on the user, set that role's `enabled` to false, write `docs/AGENT_STATUS.md`, and end with `LOOP_PAUSE`.
+
+Loop state shape:
+
+```json
+{
+  "builder": { "enabled": false, "conversation_id": "" },
+  "reviewer": { "enabled": false, "conversation_id": "" }
+}
+```
