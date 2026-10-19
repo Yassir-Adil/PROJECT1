@@ -2,13 +2,518 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-19 — Local engineering gate and private-input regression
+
+**Engineering gate: PASS, with documented Lint warnings.** Run:
+`scripts/test/verify-local.ps1`, offline default, existing JDK17/SDK35/Python eval
+environment. Final machine-readable result:
+`outputs/reports/quality-gate/20261019T083518346232Z/summary.json`.
+
+| Check | Actual result |
+| --- | --- |
+| App JVM (forced test execution) | 339, zero failures/errors/skips |
+| sim-core JVM (forced test execution) | 10, zero failures/errors/skips |
+| New policy unittest suite | 18, zero failures/errors/skips |
+| Existing evaluation unittest suite | 10, zero failures/errors/skips |
+| Scene-manifest example | Valid template, no real labeled media; not an accuracy pass |
+| Debug / release assembly | PASS; no staging over existing outputs/apk artifact |
+| Lint debug / release | 0 errors/fatal; 40 / 30 warnings, not suppressed |
+| APK content | Four pinned models in debug, one in release; no private image |
+| Permissions / debug isolation | Only camera/vibrate/internal receiver permission; debug activities DUMP-protected; release no ARCore/diagnostic activity/model |
+| Local evidence policy | 7 ignore probes, no private tracked files in known roots; source backup exclusions present |
+
+Initial Lint attempt offline failed on uncached collection-jvm:1.4.0, not a
+source defect. One online public dependency-resolution run then revealed
+ProduceStateDoesNotAssignValue at existing `value++`; explicit assignment fixed
+the Lint issue without changing cadence or disabling the check. Subsequent full
+gate ran offline. Version-update, TOML and localization warnings remain; no
+dependency/toolchain upgrade is claimed. Scoped source hygiene checks are
+separate from old bridge Markdown hard-break whitespace already in this tree.
+
+New tests include private APK fixture/unreviewed weight, missing/changed model,
+duplicate ZIP entry, added sensitive/network permission, ARCore leakage into
+release, debug protection, missing backup exclusion, force-tracked private
+capture, changed/untracked/deleted source fingerprints, and empty/failed/skipped
+test-result rejection. These are not functional accuracy tests of camera scenes.
+
+**Phone static-input regression: PASS**, separate from the local-only gate:
+`outputs/reports/quality-gate/20261019T082859291386Z/phone-static/summary.json`.
+Backup installed APK first; temporary candidate installed over USB with data
+preserved. Absent `files/diagnostic-inputs/scene.jpg` refused explicitly. Supplied
+consented existing fixture then decoded as 1440x2560, input SHA-256
+`63a5308d3c3e0413ce761f575eccc057a6fd4f7053f2a89e20132bdeb90d3711`, and
+MOSAIC completed 3 CPU invokes after two warmups. No camera/depth/voice event.
+This CPU-only short input test is not the NNAPI live benchmark or accuracy QA.
+Deleted only temporary phone input copies created for this run; local image is
+preserved at `outputs/reports/local-inputs/wall-scene.jpg`.
+
+Original 0.9.22/35 restored, pulled and verified identical before/after:
+`05e3bcbbb8df465cd8b91cd1de3c89f19605ec5a3e5f300ddd48b16a3c5473ca`.
+App left force-stopped; no auto-resume. Working debug SHA is
+`76a7ea52e3de56d8eba8df8b46d2490659ea19b813dbb8d635020077e15e17e6`;
+unchanged release SHA is
+`34c42542c68f4e1df7d77eaa12c82c12c158a5452260f068009054fe1582e05f`.
+Old APKs may contain the old private fixture; do not distribute them based on a
+PASS of the newly built APK. No push/publication, upload or paid activation.
+
+Not re-tested: real UI lifecycle/camera scenes, hearing/TalkBack, navigation
+accuracy, walking, sustained thermal/battery or depth/edge-height accuracy.
+No critical stopping or evidence gate was relaxed. Audit/plan:
+`docs/ENGINEERING_AUDIT_2026-10-19.md`.
+
+## 2026-10-19 — 0.9.22 surface lab, paused return and depth support
+
+**Status: PASS_WITH_WARNINGS.** Final 339 app/10 sim tests and debug/release
+build pass (53 s). Nineteen new surface/priority/restore tests. USB phone confirms
+ARCore AUTOMATIC/raw support with **frames=0**, no resumed ARCore camera.
+
+- Final real More-button entry, Describe, Stop, result-callback More return and
+  Back to Guidance paused pass; no sampled results after Stop. Eight-second
+  default-silent regression passes. TTS acceptance is not heard-audio proof.
+- Control run callback-to-map p50/p90 50.11/70.40 ms. Earlier 60-s component
+  run 42.33/52.46 ms used the pre-lifecycle candidate; no speedup claim.
+- Kept installed **0.9.22/35**, exact SHA
+  `05E3BCBBB8DF465CD8B91CD1DE3C89F19605EC5A3E5F300DDD48B16A3C5473CA`.
+  Original backup preserved; no data clear. Release excludes ARCore/models;
+  both manifests offline. Release bytes changed legitimately this round.
+- Final raw evidence: `outputs/reports/redmi-evidence/20261019-surfaces-depth/final-v3/`.
+  Aborted attempts, viewport assertion mistakes and open height/accuracy/audio/
+  lifecycle limits: `docs/SURFACE_LAB_AND_DEPTH_2026-10-19.md`.
+
+## 2026-10-19 — USB versus paired Wi-Fi transport
+
+**Status: PASS_WITH_WARNINGS.** Cable ADB and Windows USB interfaces are healthy
+in this sample. Known serial confirmed over both transports, 12/12 shell requests
+each. USB p50/p90 **35.99/41.46 ms**, Wi-Fi **41.99/46.65 ms**. One identical
+88,732,901-byte APK pull per transport took **2.118 s USB / 3.646 s Wi-Fi**;
+both copies hash-match original 0.9.21/34. No install, app launch, source edit,
+settings change or repeat JVM build/suite. Single-transfer timing is not a
+controlled throughput study, an install-speed guarantee, or an on-device AI
+performance result. See `docs/REDMI_USB_TRANSPORT_CHECK_2026-10-19.md`.
+
+## 2026-10-19 — Combined observation UI, explicit voice, and silent regression
+
+**Status: PASS_WITH_WARNINGS.** Final debug candidate tested on paired Redmi.
+
+- **320/320 app**, **10/10 unchanged sim-core**, debug/release assemble pass.
+  Nine new tests cover fresh/invalid/expired objects, cautious descriptions,
+  empty-frame wording and quiet/off/stopped speech policy.
+- Fixed cached-render-clock rejection of newly completed detector frames.
+  After correction, a normal Describe tap reached the handler and offline TTS
+  (`speech_accepted=true`); Stop produced `reason=user_stop`, with no sampled
+  frames/starts in the three-second post-stop log. Audible quality unverified.
+- 20-s combined run: 214 detector completions, 165 accepted segmentation results
+  (163 measured), **zero description/speech requests**. Callback-to-map p50/p90
+  **42.85/52.61 ms**; not capture latency or an accuracy/speedup claim.
+- Eight-second default-mode regression remained silent with detector disabled.
+  Actual screenshots confirm reused yellow named boxes and original theme.
+- Final candidate SHA:
+  `565B0145FAF6CC85894FF451C04045B4F54512E4BF03B2DF308E570ED0D38BED`.
+  Original 0.9.21/34 restored, installed hash matches
+  `88828908DDE8C254A1AE0343B8073C80C0766518DEE706A7D8F1CEC3A07AF338`.
+- Release bytes unchanged; no production navigation or network changes.
+  Method, aborted QA attempts, screenshots, raw paths and limits:
+  `docs/COMBINED_VISION_PREVIEW_2026-10-19.md`.
+
+## 2026-10-19 — Real camera MOSAIC diagnostic and frame admission
+
+**Status: PASS_WITH_WARNINGS.** Two 20-second CameraX/MOSAIC runs and two
+pause/late-output checks passed on Redmi over paired Wi-Fi. Debug-only.
+
+- Final **311/311 app tests** (20 new) pass; unchanged sim-core remains **10/10**.
+  Debug/release assemble pass; release hash unchanged.
+- Scalar -> bulk RGB observed prepare p50/p90: **56.81/73.11 -> 8.00/8.62 ms**.
+  Callback-to-decoded-map p50/p90: **81.65/99.87 -> 30.15/32.17 ms**.
+  Not sensor capture-to-result, concurrent detector throughput, or accuracy.
+- Measured accepted rates **7.95 -> 6.75/s** under the same 10/s cap but
+  different live scenes/camera cadence; no result-FPS improvement claimed.
+- Gate tests include invalid/order/cadence/busy/age/stop/restart/concurrency;
+  raw-byte packing matches the scalar reference. Static wall/floor proportions
+  remain identical after shared-runtime extraction and optimization.
+- Each phone cycle restored original **0.9.21/34** with installed APK hash
+  `88828908DDE8C254A1AE0343B8073C80C0766518DEE706A7D8F1CEC3A07AF338`.
+- Candidate SHA `1390D008DE44E1F2A48DE202F7AE63F5A385FE77CADBAED5473BFA52BFE517A4`.
+- Method/raw paths/review limits: `docs/LIVE_SEGMENTER_DIAGNOSTIC_2026-10-19.md`.
+  No navigation, speech, recording, walking, or heard-audio validation added.
+
+## 2026-10-19 — Post-fix Redmi static replay over paired Wi-Fi
+
+**Status: PASS_WITH_WARNINGS.** Wireless pairing/recovery, diagnostic install,
+three static batches, and exact original APK restoration verified.
+
+- MOSAIC reference RGB / NNAPI / 1000 runs: p50 **17.06 ms**, p90 **21.14 ms**,
+  mean 17.75 ms, **56.35 sequential inferences/s**; 100/100 nodes delegated.
+- MOSAIC legacy input / NNAPI / 20 runs: p50 17.56 ms, p90 19.48 ms.
+- DeepLab UINT8 reference RGB / CPU / 20 runs: p50 736.88 ms, p90 744.79 ms.
+- All three batches completed actual INT32 decoding and logged
+  `VOICE_EVENTS=none`. No live camera, walking, guidance, or accuracy test.
+- Candidate SHA: `DC0BE8CED37F89C1771D3EFC58B09870252E01E962CB354DFA1F8C833BD9E567`.
+- Before/after installed original SHA:
+  `88828908DDE8C254A1AE0343B8073C80C0766518DEE706A7D8F1CEC3A07AF338`;
+  **0.9.21/34** restored, app data not cleared, app left stopped.
+- An earlier install attempt failed offline before any installation. Recovery
+  rediscovered the changed TLS connect port; all actual test/restore work used
+  Wi-Fi with USB absent. No OS privilege or USB root-cause fix is claimed.
+- Raw logs/APKs/summary: `outputs/reports/redmi-evidence/20261019-postfix-1792392212884/`.
+  Method/limits: `docs/REDMI_WIRELESS_AND_POSTFIX_PROBE_2026-10-19.md`.
+- No code/build changes or repeat JVM/Python suites in this phone-only session;
+  the sealed candidate's prior **291 + 10 JVM / 10 Python** results stand.
+
+## 2026-10-19 — ADE20K 2,000-pair semantic evaluation and debug contract fixes
+
+**Status: PASS_WITH_WARNINGS.** Offline runs complete. The phone run was pending
+at this checkpoint and is now completed in the newer entry above.
+
+- Official archive: 967,382,037 bytes, SHA-256
+  `7FF1BE44964418441F542A7CC1E1A650E7DC0FC275F5D23252BC9BBDBC977B29`;
+  all 44,429 ZIP entries passed CRC. Extracted 2,000 image/mask validation pairs.
+- Full Top31 mIoU: MOSAIC **58.8138%**, float DeepLab **55.2504%**, UINT8 DeepLab
+  **54.8354%**. All runs scored the same 321,270,074 valid pixels and 31 classes.
+- Stair-to-floor diagnostic: **19.4504% / 15.2106% / 20.0002%**, respectively,
+  over 1,799,391 resized stair pixels in 180 images. These are pixel fractions,
+  not scene-level hazard recall or walking safety.
+- Five deterministic 64-image subset runs isolate input/geometry choices.
+  All frame/model/script hashes and raw counters are in
+  `outputs/reports/ade20k-eval/`; full interpretation is in
+  `docs/ADE20K_OFFLINE_EVALUATION_2026-10-19.md`.
+- **10/10 Python tests** pass, including scalar-reference scoring and actual
+  LiteRT bilinear/nearest kernel comparison for a 2048x1536 fixture.
+- **291/291 app JVM tests**, zero failures/errors. Final debug build/test:
+  **BUILD SUCCESSFUL in 42s**. Sim-core's unchanged **10/10** suite remains passing.
+  Release assembled in the prior combined build and its hash remains unchanged.
+- Corrected the debug-only decoder to pinned INT32 maps with 32 category IDs;
+  default UINT8 uses reference RGB codes; legacy requantization is explicit.
+- Debug APK SHA-256:
+  `DC0BE8CED37F89C1771D3EFC58B09870252E01E962CB354DFA1F8C833BD9E567`.
+  Release SHA-256:
+  `5B2D6B483624277B032F1F3FC3C10DF6DA928C6D820C31BDE0E62EC505C40540`.
+  Release has zero diagnostic assets and no diagnostic activity or INTERNET.
+- Two Cursor CLI Ask-mode reviews completed without edits; Codex independently
+  verified findings and rejected two unsupported proposed fixes with tests.
+- Redmi became unavailable before backup/install. The failed read-only backup
+  preflight performed no device mutation; the new debug APK was not installed.
+  Last verified installed original is 0.9.21/34 from the earlier static probe.
+
+## 2026-10-19 — Segmenter static model benchmark and restore (0.9.21)
+
+**Status: PASS_WITH_WARNINGS.** Local static-image diagnostic only; not a walking,
+accuracy, or navigation test.
+
+- Redmi `55aqpfqkvw9xbafe`: DeepLab float, DeepLab uint8, and MOSAIC R4 were
+  replayed on the same 1440×2560 still at 512×512. DeepLab uint8 CPU p50 was
+  738.67–744.44 ms; float p50 was 395.53–414.31 ms. MOSAIC CPU median p50 was
+  359.80 ms.
+- MOSAIC R4 NNAPI: TFLite logged **100/100 nodes delegated** into one NNAPI
+  partition. Two 20-run batches measured p50 17.62/17.72 ms and p90
+  17.89/18.68 ms. A 1,000-run batch measured p50 **17.39 ms**, p90 **22.36 ms**,
+  mean 18.24 ms (**54.82 sequential static-image inferences/s**).
+- Source review of the [official MLPerf ADE20K evaluator](https://github.com/mlcommons/mobile_app_open/blob/master/flutter/cpp/datasets/ade20k.cc)
+  showed category IDs **1..31** with zero treated as ignored/background. Combined
+  with the [ADE20K category list](https://github.com/CSAILVision/sceneparsing/blob/master/objectInfo150.txt),
+  this yields a source-backed Top-31 label table for diagnostic logs. The debug
+  validator's former 0..30 range incorrectly rejected 31; it is now corrected
+  and tested. This changes diagnostics only, not camera/navigation behavior.
+- Class-ID outputs repeated in the measured samples. Names are now mapped using
+  the ADE20K Top-31 taxonomy and MLPerf evaluator contract, but there is no
+  ground-truth mask for the owner-provided still. This is not accuracy evidence
+  or live camera FPS. No navigation, speech, turns, `CLEAR`, or user-facing
+  safety cue used these models.
+- Process/thermal/battery figures are single snapshots only, not controlled
+  sustained resource measurements. Full raw measurements and limits:
+  `docs/DEEPLAB_UINT8_REDMI_AB_SETUP_2026-10-19.md`.
+- Final build command `:app:assembleDebug :app:testDebugUnitTest :sim-core:test
+  :app:assembleRelease`: **BUILD SUCCESSFUL in 36s**. App JVM **287/287** and
+  sim-core **10/10** pass. The app tests executed on the final debug diagnostic;
+  sim-core had also been explicitly rerun successfully in the same validation
+  sequence and was unchanged in this build.
+- Debug APK SHA-256:
+  `A8BD6CA1A72FDA333772F4468B5D9A6262CAC5A46A2570C92769CD98670A8076`.
+  Release APK SHA-256:
+  `5B2D6B483624277B032F1F3FC3C10DF6DA928C6D820C31BDE0E62EC505C40540`.
+  Diagnostic candidates/activity are debug-only; release has no diagnostic
+  assets/activity or `INTERNET` permission.
+- Original Redmi app restored: versionName **0.9.21**, versionCode **34**;
+  installed APK was pulled after restoration and its SHA-256 exactly matched
+  the saved pre-test APK `88828908DDE8C254A1AE0343B8073C80C0766518DEE706A7D8F1CEC3A07AF338`.
+- No walking or eyes-closed test. No claim of safe navigation.
+
+## 2026-10-19 — Relative-depth risk-gate benchmark + Redmi install (0.9.21)
+
+**Status: PASS_WITH_WARNINGS** (synthetic HOLD-only matrix + install). No model runtime.
+
+- `:app:testDebugUnitTest` **287** PASS, 0 failures.
+- `:sim-core:test` **10** PASS.
+- `assembleDebug` → `outputs/apk/TriGuideAI-0.9.21-debug.apk` (88,732,901 bytes),
+  SHA-256 `88828908DDE8C254A1AE0343B8073C80C0766518DEE706A7D8F1CEC3A07AF338`.
+- Redmi `55aqpfqkvw9xbafe`: install Success; `dumpsys` **versionName=0.9.21** /
+  versionCode **34**. No walking / eyes-closed test.
+- Benchmark asserts: normal depth never clears detector HOLD; wall/drop raise HOLD;
+  signature has no CLEAR/STRAIGHT.
+
+## 2026-10-19 — Relative-depth policy slice + Redmi baseline (0.9.20)
+
+**Status: PASS_WITH_WARNINGS** (policy-only depth analyzer; not wired to navigation).
+
+- Added `RelativeDepthEvidence` as a model-agnostic, fail-closed contract for future
+  normalized inverse-depth input.
+- Unit coverage includes wall/large obstacle, possible drop, normal-floor diagnostic,
+  stale, out-of-order, malformed, empty, and non-finite evidence.
+- No model asset, camera wiring, TTS, `CLEAR`, `TURN`, or navigation behavior was added.
+- `:app:testDebugUnitTest` **267** PASS, 0 failures; `:sim-core:test` **10** PASS;
+  `assembleDebug` PASS.
+
+## 2026-10-19 — Relative-depth model preflight gate (0.9.20)
+
+**Status: PASS_WITH_WARNINGS** (metadata/preflight only; no model runtime).
+
+- Added `RelativeDepthModelContract` for the MiDaS small LiteRT fp16 benchmark
+  candidate. The contract pins the expected asset path, SHA-256, tensor shape,
+  ImageNet normalization, relative-inverse-depth output, source, and MIT license
+  metadata.
+- Added tests for missing, malformed, mismatched, and matching hashes. A matching
+  hash only permits a future local benchmark; it does not permit navigation, TTS,
+  `CLEAR`, `STRAIGHT`, or `TURN`.
+- Candidate file remains unbundled. No network permission, download path, camera
+  wiring, or model interpreter was added.
+- Added and tested `RelativeDepthRiskGate` plus a 4 Hz cadence gate. Depth can only
+  raise a diagnostic HOLD; it cannot remove detector risk or create clearance, and
+  it is not wired to live navigation.
+- A trial of the official LiteRT `2.2.0` CPU runtime was rejected and removed after
+  the build reported Kotlin metadata `2.3.0` versus this project’s `2.0.0`. Do not
+  upgrade Kotlin/Lifecycle as part of the depth spike; create a separate compatibility
+  branch and golden-output gate first.
+- `:app:testDebugUnitTest` **267** PASS, 0 failures; `:sim-core:test` **10** PASS;
+  `assembleDebug` PASS.
+
+## 2026-10-19 — Redmi stationary baseline: closed-door-wall (0.9.20)
+
+**Status: PASS_WITH_WARNINGS** (valid stationary phone capture; no walking).
+
+- Redmi `55aqpfqkvw9xbafe` accepted the APK and ran the locked-scene harness.
+- Start/end evidence shows the intended hallway, closed door, wall, and floor.
+- 137 real inference samples in 20 seconds; FPS **6.85**; latency p50 **109 ms**;
+  p90 **126 ms**.
+- Navigation: `HOLD` 0 log lines, `UNKNOWN` 517 log lines, `CLEAR/TURN` **0**.
+- Voice requests: 0; this is a log summary only and is **not** an audible-quality claim.
+- Battery **51%**; temperature **39.0°C**; total PSS **257,824 kB** at capture end.
+- Report: `outputs/reports/redmi-evidence/closed-door-wall-perf-validated-20261019-095853/`.
+- The harness now rejects locked/non-foreground runs and measures FPS from latency-only
+  inference events rather than throttled detection-description logs.
+- No walking, eyes-closed, safety, or path-clear claim was made.
+
+## 2026-10-19 — Foundation milestone (0.9.20)
+
+**Status: PASS_WITH_WARNINGS** (desktop unit + assemble + Redmi install).
+
+- `:app:testDebugUnitTest` **257** PASS, 0 failures (was 246 baseline; +foundation and depth-policy tests).
+- `:sim-core:test` **10** PASS.
+- `assembleDebug` → `android-app/app/build/outputs/apk/debug/app-debug.apk`
+  (88,885,881 bytes), SHA-256
+  `DD42542A82042F3AEF5A392F564E56E50002ED1B31CF356A7BF63BA29C30846C`.
+- Audits: INTERNET `tools:node="remove"` present; single `setAnalyzer`; no live “path clear” authorization strings in nav; ImageProxy closed via sole `use{}` in `CameraXSource`.
+- `git diff --check`: CRLF conversion warnings only (no whitespace-error lines).
+- Redmi install: completed on 0.9.20. No walking tests.
+- Owner ear (camera-active tone): **not confirmed**.
+
+## 2026-10-19 — Open-lane green strip + soft beep (0.9.19)
+
+**Status: PASS_WITH_WARNINGS** (desktop unit + assemble). Phone install **BLOCKED**
+(no ADB device at install).
+
+- `:app:testDebugUnitTest` **248** PASS, 0 failures (includes `OpenLaneCueTest`,
+  updated `AiVisionDiagnosticTest` open-lane assertions).
+- `:sim-core:test` **10** PASS (same session earlier).
+- `assembleDebug` → `outputs/apk/TriGuideAI-0.9.19-debug.apk` (88,700,133 bytes),
+  SHA-256 `CF26CDE44F6DFB8678347BD62638699B59797626C8C15BE96AE7DAFDB82B5731`.
+- `scripts/test/redmi-install.ps1`: ERROR — Redmi `55aqpfqkvw9xbafe` not listed.
+- Owner ear/scene (green lane visible; quiet beep-beep; chair → no green/beep):
+  **not run**.
+
+## 2026-10-19 — Milestone B AI Vision overlay (0.9.18)
+
+**Status: PASS** (desktop unit + assemble + Redmi install). Owner ear/scene and
+Codex checklist are separate; audible TTS not verified here.
+
+- `.\scripts\build\assemble-debug.ps1` →
+  `outputs/apk/TriGuideAI-0.9.18-debug.apk` (88,867,433 bytes), SHA-256
+  `26127F192BE77CA4FEB8AEB300808088420D41174F6F7EB69870009D1AF373AE`.
+- `:app:testDebugUnitTest` **246** PASS (0 failures), including new
+  `AiVisionDiagnosticTest`.
+- `:sim-core:test` **10** PASS.
+- `adb devices` showed `55aqpfqkvw9xbafe` as `device`;
+  `scripts/test/redmi-install.ps1` Success; `dumpsys`
+  `versionName=0.9.18` `versionCode=31`.
+- No emulator. No SegFormer/ADE20K assets. Overlay does not authorize CLEAR.
+
+## 2026-10-19 — `closed-door-wall` stationary Redmi scene
+
+**Status: PASS_WITH_WARNINGS.** The requested collector command completed on
+the physical Redmi and produced a usable local screenshot of closed doors/wall
+and tile floor. No walking occurred.
+
+- `HOLD=0`, `UNKNOWN=322`, `CLEAR/turn=0` filtered navigation lines.
+- Detector: 17 logged samples, approximate FPS `0.61`, latency p50 `77 ms`,
+  p90 `91 ms`. Most frames had no usable detection; one low-confidence
+  below-threshold refrigerator label appeared.
+- Voice: one `Guidance on.` request, no obstacle request. This is log evidence,
+  not proof of audible output.
+- Memory/battery: total PSS `162194 KB`, native heap `57204 KB`, Dalvik heap
+  `4360 KB`, battery `100`, USB charging, temperature raw `335`.
+- Artifact: `outputs/reports/redmi-evidence/closed-door-wall-20261019-050957/`.
+
+The result correctly stayed `UNKNOWN`; it does not validate floor
+segmentation, a free walking area, or a safe path.
+
+## 2026-10-19 — Redmi evidence collector smoke
+
+**Status: PASS_WITH_WARNINGS.** The collector ran locally on physical Redmi
+`55aqpfqkvw9xbafe`; the view was owner/body occlusion and is not a walkability
+scene.
+
+- Script: `scripts/test/redmi-evidence-baseline.ps1`.
+- No APK install, data clear, video recording, walking, upload, or emulator
+  use occurred.
+- Latest `owner-occlusion` run: 14 detector log samples over the configured
+  short capture, approximate FPS 2.33, latency p50 64 ms / p90 86 ms,
+  `HOLD=98` and `UNKNOWN=12` filtered navigation lines, `CLEAR/turn=0`.
+- Voice requests in the log were startup `Guidance on.` and one
+  `Obstacle ahead.`; one obstacle request was skipped while TTS initialized.
+  Log acceptance is not audible-output evidence.
+- Memory/battery snapshot: total PSS `165396 KB`, native heap `60636 KB`,
+  Dalvik heap `5432 KB`, battery `100`, USB charging, temperature raw `339`.
+
+This confirms the camera stream and fail-closed reporting path can be observed
+on the phone. It does not validate floor segmentation, free walking space,
+turns, or a safe path.
+
+## 2026-10-18 — Evidence replay harness and Redmi baseline
+
+**Status: PASS_WITH_WARNINGS.** The local diagnostic seam is implemented; no
+captured scene data or live navigation integration exists yet.
+
+- `.\gradlew.bat :app:testDebugUnitTest :sim-core:test --no-daemon` passed:
+  app JVM `204/204`, sim JVM `10/10`.
+- `.\gradlew.bat :app:assembleDebug --no-daemon` passed. APK remains
+  version `0.9.14/27`; SHA-256 is
+  `00207876D9A8649AEA42580021DAD8CF490B56185FFCA31EFEF6D0866D913240`.
+- The new `EvidenceReplayHarness` is pure local JVM code around
+  `FloorMaskEvidenceEvaluator`; it records evidence states, issues, latency,
+  FPS, decision keys, and voice-event keys without calling navigation, TTS,
+  CameraX, network, or model loading.
+- The scene manifest is a template only. `test-data` still has no captured
+  frames/masks, and `ground_truth` is `pending` for every required scene.
+- Stationary Redmi smoke used the already-installed build and produced
+  `no_camera_frame` / `UNKNOWN` only in the sampled interval. No `CLEAR`, turn,
+  safe-path wording, or upload was observed. The camera-stream start/retry
+  check remains open and no walking was performed.
+
+The next phone pass must first establish a visible/streaming camera on the
+same stationary scene matrix; it must not be scored as segmentation accuracy
+until consented labels and usable evidence files exist.
+
 ## Phone-only policy (user, 2026-10-18)
 
 Installs and smoke tests for this user run on the personal Redmi only. Do not start, install to, or smoke-test an emulator (`emulator-5554` included). If the phone is missing, unauthorized, or offline, stop and record the blocker. Do not fall back to an emulator.
 
 Emulator sections below are historical. They are **non-authoritative** for this user from this note forward. A phone result replaces them when the same check is run on the Redmi.
 
+## 2026-10-18 — 0.9.14 Redmi STOP/Back regression
+
+**Status: PASS_WITH_WARNINGS.** 0.9.14/27 installed on Redmi
+`55aqpfqkvw9xbafe`; user-heard audio and TalkBack remain unverified.
+
+- Reproduced 0.9.13 failure: after STOP → More → Android Back, the screen
+  showed running Live Vision/STOP again without an explicit restart
+  (`redmi-0913-after-more.png`). Source cause: Back and tool-page callbacks
+  called `LiveNavState.start()`.
+- Replaced automatic start on system/tool Back with screen-only return.
+  Three new `LiveNavStateTest` cases pass. Total app JVM 200/200; sim JVM
+  10/10; debug build passed. APK metadata 0.9.14/27; SHA-256
+  `25D20786100EAE71D33159ADED7CAF1807B5BC3F3D30BEF8D9AFE556CDCDA11B`.
+- `adb install -r -t` Success; `dumpsys package` confirmed 0.9.14/27.
+  STOP at 23:23:04.535, More gesture at 23:23:12.531, then Android Back:
+  `redmi-0914-paused-more-back.png` shows paused UI, no preview or STOP. One
+  in-flight Nav callback occurred at 23:23:04.664; none later in the checked
+  interval. Explicit triple-left restart registered at 23:23:36.696; STOP
+  registered again at 23:23:43.208. App left paused.
+- Diagnostics in 0.9.13 More screen visually stated floor segmentation
+  NOT_STARTED, no bundled/validated model, and boxes are not an open path.
+  0.9.14 changed no Diagnostics wording. No actual floor model was tested.
+
+## 2026-10-18 — 0.9.13 Redmi partial smoke
+
+**Status: PASS_WITH_WARNINGS** for install/version, preview, conservative
+decision, STOP, fixed mat scene, and paused Describe; other real-device checks
+remain **NOT_STARTED**.
+
+- Exact 0.9.13/26 validated APK installed with `adb install -r -t` Success;
+  prior installed version was 0.9.10/23. `dumpsys package` confirmed 0.9.13/26
+  and camera permission granted. No clear-data command was run.
+- `redmi-0913-live-2.png`: camera preview visible, a left `person` box over the
+  owner's arm, header/status and one STOP. Logcat showed BLOCKED/HOLD and no
+  detector-only movement decision in the sampled frames. First post-launch
+  screenshot was black during startup; a later one rendered correctly.
+- STOP ADB tap registered at 23:11:05.277, paused speech request at
+  23:11:05.393; `redmi-0913-stopped.png` confirms the paused UI and stopped
+  preview. One in-flight nav callback occurred at 23:11:05.394, with none later
+  in the checked log. Three UP swipes later triggered DESCRIBE once.
+- On a fixed tile/mat scene from 23:15:17 to 23:16:15, start/end screenshots
+  show no boxes and `Path not confirmed`. In the 23:15 log minute, 506
+  navigation entries were UNKNOWN and there were zero `TriGuideVoice`
+  requests. The mat is not a corridor; no free-path claim follows.
+- After 23:16:35, rapidly changing detector labels included whole-frame
+  `tv`, `person`, `toilet`, `bed`, and `cat`; two obstacle TTS requests came at
+  23:16:36 and 23:16:47. This was no longer a controlled static scene, so
+  repeat-speech causality is not established. At 23:17:34, three UP swipes on
+  the paused UI requested `Guidance paused. Restart to describe.`, not a stale
+  scene description. The app remained paused after this check.
+- ADB briefly fell offline and required owner USB-debugging reauthorization.
+  An actual corridor, wide-chair edge, TalkBack, user-heard audio quality, and
+  mask-model accuracy were not tested. `speak result=0` means TTS accepted the
+  request, not that its sound was heard or liked.
+
+## 2026-10-18 — 0.9.13 diagnostic floor-mask seam
+
+**Status: PASS_WITH_WARNINGS** for desktop tests/build; phone test **BLOCKED**
+because `adb devices -l` listed no device.
+
+- `:app:testDebugUnitTest` 197/197 (including 15 new `FloorMaskEvidenceTest`
+  cases) and `:sim-core:test` 10/10; zero failures, errors, or skipped cases.
+  `:app:assembleDebug` BUILD SUCCESSFUL. `aapt dump badging` confirmed
+  `com.triguide.ai`, versionName 0.9.13, versionCode 26.
+- Both `outputs/apk/TriGuideAI-0.9.13-debug.apk` and
+  `C:\Users\yassi\Videos\TriGuide-Tests\triguide-0.9.13-validated-20261018.apk`
+  are 88,650,981 bytes with matching SHA-256
+  `2CE55AFFD78B6CA62846415B53D8A4DDF37A698B2F772A70A789998E22DB0CEF`.
+- The new evaluator is pure and has no camera/navigation/TTS call site. Toy
+  masks test software behavior only; no segmenter, labeled phone-clip accuracy,
+  scene geometry, mobility safety, or audible output was validated. No emulator.
+- After Cursor's independent source review, a focused even-width bottom-seed
+  test was added. Full JVM suite and build were re-run successfully; APK code
+  and SHA-256 are unchanged. Mapping metadata is not checked against a real
+  camera/model producer and must remain disconnected from navigation.
+
+## 2026-10-18 — 0.9.12 box-extent hazard screening
+
+**Status: PASS_WITH_WARNINGS** for JVM tests/build; phone test **BLOCKED** because ADB lists no device.
+
+- `:app:testDebugUnitTest` 182/182 and `:sim-core:test` 10/10, zero failures. `:app:assembleDebug` BUILD SUCCESSFUL. Output metadata: `versionName=0.9.12`, `versionCode=25`.
+- Exact APK: `outputs/apk/TriGuideAI-0.9.12-debug.apk` (88,650,981 bytes), SHA-256 `F950A37F9675772E667650CE72D062ADBE4FE94949D9F3CE62302DEA597A7666`. Matching test copy: `C:\Users\yassi\Videos\TriGuide-Tests\triguide-0.9.12-validated-20261018.apk`.
+- New tests cover box overlap with walking corridor, ignored knife/cup at the edge, wholly outside objects, mirrored bounds, and invalid bounds. No real-world detection accuracy or positive route evidence was established. `adb devices -l` returned only the header; no phone install/launch/logcat, no emulator.
+
+## 2026-10-18 — 0.9.11 stop-only UI and safety hardening
+
+**Status: PASS_WITH_WARNINGS** for JVM tests/build; phone test **BLOCKED** because ADB lists no device.
+
+- `:app:testDebugUnitTest` 176/176, zero failures/errors; `:sim-core:test` 10/10, zero failures/errors.
+- `:app:assembleDebug` BUILD SUCCESSFUL. Output metadata: `com.triguide.ai`, `versionName=0.9.11`, `versionCode=24`.
+- Exact copied APK: `outputs/apk/TriGuideAI-0.9.11-debug.apk`, 88,650,981 bytes, SHA-256 `58B18750401174BE92C48D5A194949E9FE7D2AE16D321D706967C85C0330D82C`. Matching immutable test copy: `C:\Users\yassi\Videos\TriGuide-Tests\triguide-0.9.11-validated-20261018.apk`.
+- Desktop coverage includes short fail-closed status speech, lower-corridor cup/knife risk, camera false-CLEAR/turn defense, and stale/paused Describe rejection. Compose touch timing, layout, TalkBack traversal, actual TTS audio, and live-camera behavior were **not** phone-tested.
+- `adb devices -l` returned only the header; no install/launch/logcat attempt and no emulator.
+
 ## 2026-10-18 — 0.9.0 path risk (phone not attached)
+
+Historical result superseded by the 0.9.12 camera evidence contract above. In particular, the old `CLEAR`/`STRAIGHT` behavior in the table below is **not** current phone-camera behavior.
 
 **Status: PASS_WITH_WARNINGS** (unit + APK). Phone install **BLOCKED** (no ADB device).
 

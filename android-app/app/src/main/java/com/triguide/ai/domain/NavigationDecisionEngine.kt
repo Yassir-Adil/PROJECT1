@@ -8,8 +8,8 @@ import kotlin.math.abs
  * Turns one observation into a virtual steering choice plus a [PathRiskLevel].
  *
  * Camera samples use box position in the image. They do not produce meters.
- * Empty corridor → CLEAR_OBSERVED (not a safety certificate).
- * Strong corridor obstacle → BLOCKED with Hold or a side escape.
+ * Object detections alone cannot establish walkable space; no usable corridor evidence → UNKNOWN.
+ * A camera obstacle → BLOCKED and Hold; boxes do not prove an alternate side is walkable.
  * Floor clutter / off-corridor boxes do not force a stop.
  */
 class NavigationDecisionEngine : NavigationDecisionPolicy {
@@ -66,9 +66,30 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             )
         }
 
-        val risk = PathRiskAnalyzer.analyze(observation.cues)
+        return decideCameraRisk(observation, PathRiskAnalyzer.analyze(observation.cues))
+    }
+
+    /** Pure decision seam for regression-testing an accidental camera CLEAR result. */
+    internal fun decideCameraRisk(
+        observation: SceneObservation,
+        risk: PathRiskResult,
+    ): NavigationDecision {
+        if (observation.mode != PerceptionMode.CAMERA_2D) {
+            return unknown(
+                reason = "A camera risk was supplied for a non-camera observation.",
+                observation = observation,
+                label = NavigationConfig.NONE_LABEL,
+                diagnostic = "diag:unknown camera_risk_mode_mismatch",
+            )
+        }
+        val label = NavigationConfig.CAMERA_LABEL
         return when (risk.level) {
-            PathRiskLevel.CLEAR_OBSERVED -> clearObserved(observation, risk)
+            PathRiskLevel.CLEAR_OBSERVED -> unknown(
+                reason = "Camera boxes cannot verify walkable area. Depth is not measured.",
+                observation = observation,
+                label = label,
+                diagnostic = "diag:unknown camera_clear_without_positive_evidence",
+            )
             PathRiskLevel.POSSIBLE_OBSTACLE -> possibleObstacle(observation, risk)
             PathRiskLevel.BLOCKED -> blockedCorridor(observation, risk)
             PathRiskLevel.UNKNOWN -> unknown(
@@ -78,23 +99,6 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
                 diagnostic = risk.diagnostic,
             )
         }
-    }
-
-    private fun clearObserved(
-        observation: SceneObservation,
-        risk: PathRiskResult,
-    ): NavigationDecision {
-        return NavigationDecisions.fromAction(
-            action = GuidanceAction.STRAIGHT,
-            reason = "No confirmed obstacle in the walking corridor. " +
-                "This is not a safety certificate. Depth is not measured. Floor is not verified.",
-            confidence = 0.45f,
-            basedOnRealVision = observation.realDetector,
-            metricDepthUsed = false,
-            perceptionLabel = NavigationConfig.CAMERA_LABEL,
-            pathRisk = PathRiskLevel.CLEAR_OBSERVED,
-            diagnostic = risk.diagnostic,
-        )
     }
 
     private fun possibleObstacle(
@@ -147,7 +151,18 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
         if (escapeBlocked(occupied, dominant, usable)) {
             return holdForBlockedSide(dominant, usable, observation, risk.diagnostic)
         }
-        return steerAwayFrom(occupied, observation, dominant, risk.diagnostic)
+        val name = displayLabel(dominant)
+        val observedSide = sideWord(occupied)
+        return hold(
+            reason = "$name is detected on the $observedSide side. Camera boxes do not confirm a walkable gap; stop and check. Depth is not measured.",
+            observation = observation,
+            label = NavigationConfig.CAMERA_LABEL,
+            confidence = cameraConfidence(dominant),
+            subjectLabel = name,
+            subjectSide = observedSide,
+            pathRisk = PathRiskLevel.BLOCKED,
+            diagnostic = risk.diagnostic,
+        )
     }
 
     private fun decideSynthetic(observation: SceneObservation): NavigationDecision {
@@ -226,39 +241,6 @@ class NavigationDecisionEngine : NavigationDecisionPolicy {
             perceptionLabel = label,
             pathRisk = PathRiskLevel.BLOCKED,
             diagnostic = "diag:blocked synthetic_side ${chosen.name}",
-        )
-    }
-
-    private fun steerAwayFrom(
-        side: ImageSide,
-        observation: SceneObservation,
-        subject: DirectionalCue,
-        diagnostic: String,
-    ): NavigationDecision {
-        val nearCenter = when (side) {
-            ImageSide.LEFT -> subject.centerXNormalized >= NavigationConfig.LEFT_INNER_CENTER
-            ImageSide.RIGHT -> subject.centerXNormalized <= NavigationConfig.RIGHT_INNER_CENTER
-        }
-        val action = turnAction(side, strong = nearCenter)
-        val name = displayLabel(subject)
-        val areaPercent = (subject.areaFraction.coerceIn(0f, 1f) * 100f).toInt()
-        val detectorConfidence = String.format(Locale.US, "%.2f", subject.confidence)
-        val awayWord = if (side == ImageSide.LEFT) "right" else "left"
-        val steerWord = if (nearCenter) awayWord else "slightly $awayWord"
-        return NavigationDecisions.fromAction(
-            action = action,
-            reason = "$name is on the ${sideWord(side)} of the image " +
-                "(detector confidence $detectorConfidence, $areaPercent percent of the frame). " +
-                "Steering $steerWord. Depth is not measured. The $awayWord side is not a confirmed gap. " +
-                "The box size is not a distance.",
-            confidence = cameraConfidence(subject),
-            basedOnRealVision = observation.realDetector,
-            metricDepthUsed = false,
-            perceptionLabel = NavigationConfig.CAMERA_LABEL,
-            subjectLabel = name,
-            subjectSide = sideWord(side),
-            pathRisk = PathRiskLevel.BLOCKED,
-            diagnostic = diagnostic,
         )
     }
 

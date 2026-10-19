@@ -56,7 +56,7 @@ object DetectorConfig {
      */
     const val MODEL_SCORE_THRESHOLD = 0.25f
 
-    /** Drawn on the preview and eligible to steer the virtual robot. */
+    /** Drawn on the preview. Detector-only boxes do not authorize CLEAR/STRAIGHT or side gaps. */
     const val SCORE_THRESHOLD = 0.35f
     const val MAX_RESULTS = 8
     const val TASKS_VERSION = "1.1.1"

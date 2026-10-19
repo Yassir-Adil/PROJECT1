@@ -10,6 +10,19 @@ Debug APKs from the script below land in `outputs/apk/TriGuideAI-<versionName>-d
 
 ## Scripts / الأوامر
 
+Local engineering verification (tests, Lint, debug/release builds, APK model and
+privacy checks; **no phone install/control**):
+
+```powershell
+.\scripts\test\verify-local.ps1
+```
+
+Defaults to offline Gradle and existing tools. Prerequisites, explicit dependency
+download option, current architecture, ranked gaps and evidence boundaries:
+[`docs/ENGINEERING_AUDIT_2026-10-19.md`](docs/ENGINEERING_AUDIT_2026-10-19.md).
+Personal captures and generated reports stay local/ignored; publish only reviewed,
+redacted summaries. A passing gate is not walking-safety validation.
+
 From the repo root in PowerShell:
 
 ```powershell
@@ -33,6 +46,7 @@ The install script stops if that phone is missing or not in the `device` state. 
 | --- | --- |
 | `AGENTS.md` | Standing instructions for AI agents |
 | `docs/DEVELOPMENT_PLAN.md` | Phased plan |
+| `docs/ENGINEERING_AUDIT_2026-10-19.md` | Current audit, local quality gate, data policy and prioritized next work |
 | `docs/DECISIONS.md` | Why Option B |
 | `docs/TEST_RESULTS.md` | Commands that actually ran |
 | `docs/SAFETY_LIMITATIONS.md` | What this build must not be used for |

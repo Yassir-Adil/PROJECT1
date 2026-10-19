@@ -78,12 +78,30 @@ object VoiceConfig {
     const val PITCH_MIN = 0.85f
     const val PITCH_MAX = 1.15f
 
-    /** Same critical cue may repeat, but not on every frame. Default silence otherwise. */
+    /**
+     * Non-hazard critical cues (camera unavailable) may repeat after this gap if re-emitted.
+     * Persistent obstacles use [HAZARD_REMINDER_MS] instead — see VoiceGuidanceGate.
+     */
     const val COOLDOWN_CRITICAL_MS = 5_000L
     const val COOLDOWN_HIGH_MS = 5_000L
     const val COOLDOWN_NORMAL_MS = 5_000L
     const val COOLDOWN_PAUSED_MS = 4_000L
     const val COOLDOWN_BRIEF_MS = 12_000L
+
+    /**
+     * Identical blocked-state reminder while a hazard episode is still active.
+     * Detector-only camera BLOCKED cues share one episode; box-count wording flutter is not a new hazard.
+     */
+    const val HAZARD_REMINDER_MS = 30_000L
+
+    /**
+     * Minimum time before a *distinct* non-camera hazard identity may interrupt.
+     * Camera ahead/both-side keys are the same episode and never use this path.
+     */
+    const val HAZARD_CHANGE_DEBOUNCE_MS = 1_500L
+
+    /** Continuous non-blocked ticks before the hazard episode ends (allows re-entry announce). */
+    const val HAZARD_CLEAR_MS = 1_500L
 
     /** Assumed length of one utterance if the engine never reports completion. */
     const val UTTERANCE_WINDOW_MS = 4_000L
@@ -134,9 +152,9 @@ object VoiceConfig {
     }
 
     fun cooldownMs(kind: VoiceAlertKind): Long = when (kind) {
-        VoiceAlertKind.OBSTACLE_DETECTED,
-        VoiceAlertKind.CAMERA_UNAVAILABLE,
-        -> COOLDOWN_CRITICAL_MS
+        // Obstacles are gated by hazard-episode policy, not this interval.
+        VoiceAlertKind.OBSTACLE_DETECTED -> HAZARD_REMINDER_MS
+        VoiceAlertKind.CAMERA_UNAVAILABLE -> COOLDOWN_CRITICAL_MS
         VoiceAlertKind.NAVIGATION_UNCERTAIN -> COOLDOWN_HIGH_MS
         VoiceAlertKind.TURN_SUGGESTION -> COOLDOWN_NORMAL_MS
         VoiceAlertKind.SIMULATION_PAUSED -> COOLDOWN_PAUSED_MS
@@ -166,9 +184,21 @@ data class VoiceCue(
 }
 
 object VoiceCues {
+    const val HAZARD_KEY_HOLD = "obstacle-hold"
+    /**
+     * Single hazard-episode identity for all detector-only camera BLOCKED HOLD cues.
+     * Spoken wording may still say "ahead" vs "path blocked"; box-count flutter must not
+     * open a new episode (no object track IDs exist yet).
+     */
+    const val HAZARD_KEY_CAMERA_BLOCKED = "obstacle-camera-blocked"
+    /** Historical ahead wording key; [VoiceGuidanceGate] collapses it into [HAZARD_KEY_CAMERA_BLOCKED]. */
+    const val HAZARD_KEY_AHEAD = "obstacle-ahead"
+    /** Historical both-side wording key; collapsed into [HAZARD_KEY_CAMERA_BLOCKED]. */
+    const val HAZARD_KEY_BLOCKED = "obstacle-blocked"
+
     fun obstacle(): VoiceCue = VoiceCue(
         kind = VoiceAlertKind.OBSTACLE_DETECTED,
-        dedupeKey = "obstacle",
+        dedupeKey = HAZARD_KEY_HOLD,
         english = "Obstacle detected. Hold.",
         arabic = "عقبة مكتشفة. توقف.",
     )
@@ -200,9 +230,17 @@ object VoiceCues {
 
     fun cameraUnavailable(): VoiceCue = VoiceCue(
         kind = VoiceAlertKind.CAMERA_UNAVAILABLE,
-        dedupeKey = "camera",
+        dedupeKey = "camera-unavailable",
         english = "Camera unavailable.",
         arabic = "الكاميرا غير متاحة.",
+    )
+
+    /** Spoken once when the camera recovers after a real unavailable episode. */
+    fun cameraRestored(): VoiceCue = VoiceCue(
+        kind = VoiceAlertKind.SESSION_NOTICE,
+        dedupeKey = "camera-restored",
+        english = "Camera ready.",
+        arabic = "الكاميرا جاهزة.",
     )
 
     fun paused(): VoiceCue = VoiceCue(
@@ -250,17 +288,12 @@ object VoiceCues {
 
     private fun blockedCue(decision: NavigationDecision): VoiceCue? {
         val camera = decision.perceptionLabel == NavigationConfig.CAMERA_LABEL
-        if (decision.action != GuidanceAction.HOLD && decision.action != GuidanceAction.UNKNOWN) {
-            return if (camera && decision.subjectLabel.isNotBlank() && decision.subjectSide.isNotBlank()) {
-                turn(decision.action, decision.subjectLabel, decision.subjectSide)
-            } else {
-                turn(decision.action)
-            }
-        }
+        // A camera-labelled decision never authorizes a movement cue, even if a
+        // future decision-engine regression accidentally supplies a turn or STRAIGHT.
         if (camera && decision.subjectSide == "center" && decision.subjectLabel.isNotBlank()) {
             return VoiceCue(
                 kind = VoiceAlertKind.OBSTACLE_DETECTED,
-                dedupeKey = "obstacle-center",
+                dedupeKey = HAZARD_KEY_CAMERA_BLOCKED,
                 english = "Obstacle ahead.",
                 arabic = "في عائق قدامك.",
             )
@@ -268,17 +301,22 @@ object VoiceCues {
         if (camera && decision.subjectSide == "both") {
             return VoiceCue(
                 kind = VoiceAlertKind.OBSTACLE_DETECTED,
-                dedupeKey = "obstacle-both",
+                dedupeKey = HAZARD_KEY_CAMERA_BLOCKED,
                 english = "Path blocked.",
                 arabic = "الطريق قدامك مسدود.",
             )
+        }
+        if (decision.perceptionLabel == NavigationConfig.SYNTHETIC_LABEL &&
+            decision.action != GuidanceAction.HOLD && decision.action != GuidanceAction.UNKNOWN
+        ) {
+            return turn(decision.action)
         }
         if (decision.perceptionLabel == NavigationConfig.SYNTHETIC_LABEL && isObstacle(decision.reason)) {
             return obstacle()
         }
         return VoiceCue(
             kind = VoiceAlertKind.OBSTACLE_DETECTED,
-            dedupeKey = "obstacle",
+            dedupeKey = HAZARD_KEY_CAMERA_BLOCKED,
             english = "Obstacle ahead.",
             arabic = "في عائق قدامك.",
         )
@@ -290,10 +328,14 @@ object VoiceCues {
             GuidanceAction.SLIGHT_LEFT -> Phrase("Turn slightly left.", "انعطف يساراً قليلاً.", "turn-slight-left")
             GuidanceAction.RIGHT -> Phrase("Turn right.", "انعطف يميناً.", "turn-right")
             GuidanceAction.SLIGHT_RIGHT -> Phrase("Turn slightly right.", "انعطف يميناً قليلاً.", "turn-slight-right")
-            GuidanceAction.STRAIGHT -> Phrase("Straight ahead.", "للأمام.", "turn-straight")
+            GuidanceAction.STRAIGHT -> Phrase(
+                "Simulation: continue forward.",
+                "المحاكاة: استمر للأمام.",
+                "turn-straight",
+            )
             GuidanceAction.HOLD, GuidanceAction.UNKNOWN -> Phrase(
-                "Navigation uncertain.",
-                "الملاحة غير مؤكدة.",
+                "Stop and check. Path not confirmed.",
+                "توقف وتحقق. المسار غير مؤكد.",
                 "uncertain",
             )
         }
@@ -377,6 +419,13 @@ sealed class SpeechDirective {
  * Allows a cue through only when speech is on, quiet mode permits it,
  * the same cue is outside its cooldown, and a lower cue is not talking over a higher one.
  * A critical cue with a new key interrupts the utterance already in progress.
+ *
+ * Persistent [VoiceAlertKind.OBSTACLE_DETECTED] cues form one hazard episode: announce the
+ * first confirmation immediately, remind after [VoiceConfig.HAZARD_REMINDER_MS]. All detector-only
+ * camera BLOCKED cues share [VoiceCues.HAZARD_KEY_CAMERA_BLOCKED] so ahead/both-side wording
+ * flutter is not a new hazard. A genuinely distinct non-camera hazard key may interrupt after
+ * [VoiceConfig.HAZARD_CHANGE_DEBOUNCE_MS]. Clearing blocked for [VoiceConfig.HAZARD_CLEAR_MS]
+ * ends the episode so re-entry speaks again.
  */
 class VoiceGuidanceGate {
     private val lock = Any()
@@ -391,9 +440,18 @@ class VoiceGuidanceGate {
     private var snapshotUntilMs: Long = 0L
     private var snapshotPriority: SpeechPriority? = null
     private var snapshotText: String = "none"
+    private var snapshotHazardEpisodeKey: String? = null
+    private var snapshotHazardAnnouncedAtMs: Long = 0L
 
     /** A committed turn that could not be spoken yet. Spoken once the cooldown and gap allow it. */
     private var queuedTurn: VoiceCue? = null
+
+    /** Active hazard episode key, or null when the corridor is not in a blocked episode. */
+    private var hazardEpisodeKey: String? = null
+    private var hazardLastSeenAtMs: Long = 0L
+    private var hazardAnnouncedAtMs: Long = 0L
+    private var hazardChangeSeenAtMs: Long = 0L
+    private var pendingHazardChangeKey: String? = null
 
     private val lastSpokenState = MutableStateFlow("none")
     val lastSpokenText: StateFlow<String> = lastSpokenState.asStateFlow()
@@ -401,6 +459,7 @@ class VoiceGuidanceGate {
     fun consider(input: VoiceGateInput): SpeechDirective = synchronized(lock) {
         val settings = input.settings.sanitized()
         val cue = input.cue
+        updateHazardEpisode(cue, input.nowElapsedMs)
         if (!settings.speechEnabled) {
             queuedTurn = null
             return@synchronized SpeechDirective.Silent
@@ -437,6 +496,8 @@ class VoiceGuidanceGate {
         lastSpokenAtMs = snapshotAtMs
         speakingUntilMs = snapshotUntilMs
         activePriority = snapshotPriority
+        hazardEpisodeKey = snapshotHazardEpisodeKey
+        hazardAnnouncedAtMs = snapshotHazardAnnouncedAtMs
         unavailableUntilMs = nowElapsedMs + VoiceConfig.UNAVAILABLE_RETRY_MS
         lastSpokenState.value = snapshotText
     }
@@ -452,7 +513,14 @@ class VoiceGuidanceGate {
         snapshotUntilMs = 0L
         snapshotPriority = null
         snapshotText = "none"
+        snapshotHazardEpisodeKey = null
+        snapshotHazardAnnouncedAtMs = 0L
         queuedTurn = null
+        hazardEpisodeKey = null
+        hazardLastSeenAtMs = 0L
+        hazardAnnouncedAtMs = 0L
+        hazardChangeSeenAtMs = 0L
+        pendingHazardChangeKey = null
         lastSpokenState.value = "none"
     }
 
@@ -475,7 +543,11 @@ class VoiceGuidanceGate {
     }
 
     private fun canEmit(cue: VoiceCue, now: Long): Boolean {
-        if (coolingDown(cue, now)) return false
+        if (cue.kind == VoiceAlertKind.OBSTACLE_DETECTED) {
+            if (!hazardMaySpeak(cue, now)) return false
+        } else if (coolingDown(cue, now)) {
+            return false
+        }
         val speaking = activePriority != null && now < speakingUntilMs
         val interrupt = speaking && shouldInterrupt(cue)
         if (speaking && !interrupt && cue.delivery == VoiceDelivery.CONTINUOUS) return false
@@ -494,6 +566,61 @@ class VoiceGuidanceGate {
         return cue.dedupeKey == lastSpokenKey && now - lastSpokenAtMs < VoiceConfig.cooldownMs(cue.kind)
     }
 
+    private fun updateHazardEpisode(cue: VoiceCue?, now: Long) {
+        if (cue?.kind == VoiceAlertKind.OBSTACLE_DETECTED) {
+            hazardLastSeenAtMs = now
+            val key = hazardEpisodeIdentity(cue.dedupeKey)
+            if (hazardEpisodeKey == null) {
+                // First confirmation of a new episode — announce path decides timing.
+                pendingHazardChangeKey = null
+                hazardChangeSeenAtMs = 0L
+                return
+            }
+            if (key != hazardEpisodeKey) {
+                if (pendingHazardChangeKey != key) {
+                    pendingHazardChangeKey = key
+                    hazardChangeSeenAtMs = now
+                }
+            } else {
+                pendingHazardChangeKey = null
+                hazardChangeSeenAtMs = 0L
+            }
+            return
+        }
+        if (hazardEpisodeKey != null && now - hazardLastSeenAtMs >= VoiceConfig.HAZARD_CLEAR_MS) {
+            hazardEpisodeKey = null
+            hazardAnnouncedAtMs = 0L
+            pendingHazardChangeKey = null
+            hazardChangeSeenAtMs = 0L
+        }
+    }
+
+    private fun hazardMaySpeak(cue: VoiceCue, now: Long): Boolean {
+        val key = hazardEpisodeIdentity(cue.dedupeKey)
+        if (hazardEpisodeKey == null) {
+            return true
+        }
+        if (key != hazardEpisodeKey) {
+            val seenAt = if (pendingHazardChangeKey == key) hazardChangeSeenAtMs else now
+            return now - seenAt >= VoiceConfig.HAZARD_CHANGE_DEBOUNCE_MS
+        }
+        return now - hazardAnnouncedAtMs >= VoiceConfig.HAZARD_REMINDER_MS
+    }
+
+    /**
+     * Camera detector BLOCKED cues share one identity. Historical ahead/blocked string keys
+     * collapse here so a static room cannot re-alert from box-count wording alone.
+     */
+    private fun hazardEpisodeIdentity(dedupeKey: String): String {
+        return when (dedupeKey) {
+            VoiceCues.HAZARD_KEY_CAMERA_BLOCKED,
+            "obstacle-ahead",
+            "obstacle-blocked",
+            -> VoiceCues.HAZARD_KEY_CAMERA_BLOCKED
+            else -> dedupeKey
+        }
+    }
+
     private fun emit(
         cue: VoiceCue,
         settings: VoiceSettings,
@@ -507,10 +634,19 @@ class VoiceGuidanceGate {
         snapshotUntilMs = speakingUntilMs
         snapshotPriority = activePriority
         snapshotText = lastSpokenState.value
+        snapshotHazardEpisodeKey = hazardEpisodeKey
+        snapshotHazardAnnouncedAtMs = hazardAnnouncedAtMs
         lastSpokenKey = cue.dedupeKey
         lastSpokenAtMs = now
         activePriority = cue.priority
         speakingUntilMs = now + VoiceConfig.UTTERANCE_WINDOW_MS
+        if (cue.kind == VoiceAlertKind.OBSTACLE_DETECTED) {
+            hazardEpisodeKey = hazardEpisodeIdentity(cue.dedupeKey)
+            hazardAnnouncedAtMs = now
+            hazardLastSeenAtMs = now
+            pendingHazardChangeKey = null
+            hazardChangeSeenAtMs = 0L
+        }
         val text = cue.text(language)
         lastSpokenState.value = text
         return SpeechDirective.Speak(
@@ -526,6 +662,11 @@ class VoiceGuidanceGate {
     private fun shouldInterrupt(cue: VoiceCue): Boolean {
         val active = activePriority ?: return false
         if (cue.priority.rank > active.rank) return true
+        if (cue.kind == VoiceAlertKind.OBSTACLE_DETECTED) {
+            // Reminder of the same episode must not barge in; a distinct hazard identity may.
+            val identity = hazardEpisodeIdentity(cue.dedupeKey)
+            return identity != hazardEpisodeKey || hazardEpisodeKey == null
+        }
         return cue.priority == SpeechPriority.CRITICAL && cue.dedupeKey != lastSpokenKey
     }
 }

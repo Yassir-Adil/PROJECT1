@@ -63,6 +63,16 @@ class PersonConsentStoreTest {
     }
 
     @Test
+    fun arabicRememberUtterancePreparesSave() {
+        val store = PersonConsentStore(tempDir())
+        store.setFeatureEnabled(true)
+        val pending = store.handleUtterance("تذكر هذا الشخص باسم أحمد", nowElapsedMs = 8L)
+        assertEquals("أحمد", store.snapshot.value.pendingName)
+        assertTrue(pending.arabic.contains("لا تُحفظ أي صورة") || pending.english.contains("No photo"))
+        assertTrue(store.list().isEmpty())
+    }
+
+    @Test
     fun theCameraCannotStoreAFaceOrMatchAStranger() {
         val directory = tempDir()
         val store = PersonConsentStore(directory)

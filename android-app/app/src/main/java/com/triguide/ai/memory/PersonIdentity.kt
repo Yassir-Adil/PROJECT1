@@ -219,10 +219,10 @@ class PersonConsentStore(
 
 object RememberPersonCommand {
     private val english = Regex(
-        """(?i)\bremember this person as\s+([A-Za-z][A-Za-z '\-]{0,40})""",
+        """(?i)\b(?:remember|save) this person as\s+([A-Za-z][A-Za-z '\-]{0,40})""",
     )
     private val arabic = Regex(
-        """احفظ هذا الشخص باسم\s+([\u0600-\u06FF][\u0600-\u06FF \-]{0,40})""",
+        """(?:احفظ|تذكر)\s+هذا الشخص باسم\s+([\u0600-\u06FF][\u0600-\u06FF \-]{0,40})""",
     )
 
     fun parse(utterance: String): String? {

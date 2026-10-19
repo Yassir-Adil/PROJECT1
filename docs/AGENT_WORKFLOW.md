@@ -29,6 +29,7 @@ After that sentence, a project hook (`.cursor/hooks.json`) submits the next step
 The builder, on its own:
 
 - Reads `docs/DEVELOPMENT_PLAN.md` and the latest `docs/PROGRESS.md`.
+- Reads `docs/BRIDGE_FROM_GPT.md` at the start of each loop turn. A non-placeholder `CURSOR_TASK` from Codex takes priority, and the builder writes evidence or a blocker to `docs/BRIDGE_TO_GPT.md` after it handles that task.
 - Does the next unfinished plan item. Phone stays the computer. No robot body.
 - Does not reopen fingerprint control or screen triple-tap.
 - Builds the debug APK and runs unit tests, and writes only results it actually ran.

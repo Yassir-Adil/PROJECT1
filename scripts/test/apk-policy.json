@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "package": "com.triguide.ai",
+  "minimum_jvm_tests": {"app": 339, "sim": 10},
+  "minimum_python_tests": {"policy": 18, "evaluation": 10},
+  "models": [
+    {
+      "asset": "assets/models/efficientdet_lite0.tflite",
+      "sha256": "0720bf247bd76e6594ea28fa9c6f7c5242be774818997dbbeffc4da460c723bb",
+      "variants": ["debug", "release"]
+    },
+    {
+      "asset": "assets/diagnostics/deeplabv3_mnv2_ade20k_float.tflite",
+      "sha256": "12a2141f28928a9bccce5063d0f868211c9d2633a263b9141594ff300daeafc0",
+      "variants": ["debug"]
+    },
+    {
+      "asset": "assets/diagnostics/deeplabv3_mnv2_ade20k_uint8.tflite",
+      "sha256": "2d58c681d81b5e181816b81cc815b82edf3daad905b4d7d35afade80aee93b5f",
+      "variants": ["debug"]
+    },
+    {
+      "asset": "assets/diagnostics/mobile_segmenter_r4_quant_argmax_uint8.tflite",
+      "sha256": "da8b3822a22fde45ecaf0ff32022287eff58b500096971b04f3c1b292da66a3c",
+      "variants": ["debug"]
+    }
+  ],
+  "non_model_assets": ["assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm"],
+  "notes": "Packaging pins, not model licensing or navigation approval. Provenance/rights: docs/OPEN_SOURCE_LICENSES.md and docs/ADE20K_OFFLINE_EVALUATION_2026-10-19.md. Debug educational weights are supplied separately; no automatic download."
+}

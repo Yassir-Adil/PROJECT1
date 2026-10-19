@@ -23,14 +23,135 @@ class VoiceGuidanceGateTest {
     }
 
     @Test
-    fun sameCriticalCueSpeaksAgainOnlyAfterItsCooldown() {
+    fun stableBlockedHazardRemindsOnlyAfterThirtySeconds() {
         val cue = VoiceCues.obstacle()
         assertTrue(gate.consider(input(cue, now = 0L)) is SpeechDirective.Speak)
         gate.onUtteranceFinished(400L)
-        assertTrue(gate.consider(input(cue, now = VoiceConfig.COOLDOWN_CRITICAL_MS - 1)) is SpeechDirective.Silent)
-        val again = gate.consider(input(cue, now = VoiceConfig.COOLDOWN_CRITICAL_MS))
-        assertTrue(again is SpeechDirective.Speak)
-        assertFalse((again as SpeechDirective.Speak).interrupt)
+        // Former 5 s critical cooldown must stay silent for a persistent episode.
+        assertTrue(gate.consider(input(cue, now = 5_000L)) is SpeechDirective.Silent)
+        assertTrue(
+            gate.consider(input(cue, now = VoiceConfig.HAZARD_REMINDER_MS - 1)) is SpeechDirective.Silent,
+        )
+        val reminder = gate.consider(input(cue, now = VoiceConfig.HAZARD_REMINDER_MS))
+        assertTrue(reminder is SpeechDirective.Speak)
+        assertFalse((reminder as SpeechDirective.Speak).interrupt)
+    }
+
+    @Test
+    fun stableBlockedSixtySecondsYieldsOneReminder() {
+        val cue = aheadCue()
+        assertTrue(gate.consider(input(cue, now = 0L)) is SpeechDirective.Speak)
+        gate.onUtteranceFinished(400L)
+        var speaks = 0
+        var t = 50L
+        // Exclusive of the exact 60 s boundary (second reminder cadence).
+        while (t < 60_000L) {
+            if (gate.consider(input(cue, now = t)) is SpeechDirective.Speak) {
+                speaks++
+                gate.onUtteranceFinished(t + 400L)
+            }
+            t += 50L
+        }
+        assertEquals(1, speaks)
+    }
+
+    @Test
+    fun alternatingCameraAheadAndBlockedKeysStayOneEpisodeForSixtySeconds() {
+        // Legacy distinct keys still flutter in logs; gate must collapse them into one episode.
+        val ahead = aheadCue()
+        val blocked = blockedCue()
+        assertEquals(VoiceCues.HAZARD_KEY_AHEAD, ahead.dedupeKey)
+        assertEquals(VoiceCues.HAZARD_KEY_BLOCKED, blocked.dedupeKey)
+        assertTrue(ahead.dedupeKey != blocked.dedupeKey)
+
+        assertTrue(gate.consider(input(ahead, now = 0L)) is SpeechDirective.Speak)
+        gate.onUtteranceFinished(400L)
+
+        var speaks = 0
+        var t = 50L
+        var useAhead = false
+        while (t < 60_000L) {
+            val cue = if (useAhead) ahead else blocked
+            useAhead = !useAhead
+            if (gate.consider(input(cue, now = t)) is SpeechDirective.Speak) {
+                speaks++
+                gate.onUtteranceFinished(t + 400L)
+            }
+            t += 50L
+        }
+        // One 30 s reminder only — key flutter must not add speaks.
+        assertEquals(1, speaks)
+    }
+
+    @Test
+    fun cameraHoldDecisionsAlternatingSidesDoNotExtraSpeak() {
+        val centerHold = VoiceCues.fromDecision(
+            engine.decide(camera(cues = listOf(DirectionalCue("chair", 0.90f, 0.50f, 0.55f)))),
+        )
+        val bothHold = VoiceCues.fromDecision(
+            engine.decide(
+                camera(
+                    cues = listOf(
+                        DirectionalCue("chair", 0.90f, 0.30f, 0.55f),
+                        DirectionalCue("table", 0.90f, 0.70f, 0.55f),
+                    ),
+                ),
+            ),
+        )
+        assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, centerHold?.kind)
+        assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, bothHold?.kind)
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, centerHold?.dedupeKey)
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, bothHold?.dedupeKey)
+
+        assertTrue(gate.consider(input(centerHold, now = 0L)) is SpeechDirective.Speak)
+        gate.onUtteranceFinished(400L)
+        var speaks = 0
+        var t = 50L
+        var useCenter = false
+        while (t < 60_000L) {
+            val cue = if (useCenter) centerHold else bothHold
+            useCenter = !useCenter
+            if (gate.consider(input(cue, now = t)) is SpeechDirective.Speak) {
+                speaks++
+                gate.onUtteranceFinished(t + 400L)
+            }
+            t += 50L
+        }
+        assertEquals(1, speaks)
+    }
+
+    @Test
+    fun recoveryThenReEntryAnnouncesAgainImmediately() {
+        val cue = aheadCue()
+        assertTrue(gate.consider(input(cue, now = 0L)) is SpeechDirective.Speak)
+        gate.onUtteranceFinished(300L)
+        // Clear the episode with non-hazard ticks.
+        assertTrue(gate.consider(input(cue = null, now = 500L)) is SpeechDirective.Silent)
+        assertTrue(
+            gate.consider(
+                input(cue = null, now = 500L + VoiceConfig.HAZARD_CLEAR_MS),
+            ) is SpeechDirective.Silent,
+        )
+        val reentered = gate.consider(
+            input(cue, now = 500L + VoiceConfig.HAZARD_CLEAR_MS + 50L),
+        )
+        assertTrue(reentered is SpeechDirective.Speak)
+        assertEquals("Obstacle ahead.", (reentered as SpeechDirective.Speak).text)
+    }
+
+    @Test
+    fun startupWithImmediateObstacleSpeaksOnceThenStaysQuiet() {
+        val cue = aheadCue()
+        val first = gate.consider(input(cue, now = 0L))
+        assertTrue(first is SpeechDirective.Speak)
+        gate.onUtteranceFinished(400L)
+        // Matches the noisy Redmi opening window (~16 s) that previously spoke three times.
+        for (t in 1_000L..16_000L step 50L) {
+            assertTrue(
+                "unexpected speak at $t",
+                gate.consider(input(cue, now = t)) is SpeechDirective.Silent,
+            )
+        }
     }
 
     @Test
@@ -44,6 +165,27 @@ class VoiceGuidanceGateTest {
         assertTrue((obstacle as SpeechDirective.Speak).interrupt)
         assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, obstacle.kind)
         assertEquals("Obstacle detected. Hold.", obstacle.text)
+    }
+
+    @Test
+    fun criticalObstacleInterruptsEveryLowerPriorityObservationCue() {
+        val lowerPriorityCues = listOf(
+            VoiceCues.turn(GuidanceAction.LEFT),
+            VoiceCues.uncertain(),
+            VoiceCues.paused(),
+            VoiceCues.sceneBrief("Person observed.", "تم رصد شخص."),
+        )
+
+        lowerPriorityCues.forEachIndexed { index, cue ->
+            val isolatedGate = VoiceGuidanceGate()
+            val first = isolatedGate.consider(input(cue, now = 0L))
+            assertTrue("lower-priority cue did not speak at index $index", first is SpeechDirective.Speak)
+
+            val urgent = isolatedGate.consider(input(VoiceCues.obstacle(), now = 200L))
+            assertTrue("obstacle did not speak at index $index", urgent is SpeechDirective.Speak)
+            assertTrue("obstacle did not interrupt at index $index", (urgent as SpeechDirective.Speak).interrupt)
+            assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, urgent.kind)
+        }
     }
 
     @Test
@@ -146,22 +288,33 @@ class VoiceGuidanceGateTest {
 
     @Test
     fun decisionsMapToStableCues() {
-        val left = engine.decide(camera(cues = listOf(DirectionalCue("chair", 0.9f, 0.15f, 0.20f))))
+        val left = engine.decide(camera(cues = listOf(DirectionalCue("chair", 0.9f, 0.30f, 0.20f))))
         val leftCue = VoiceCues.fromDecision(left)
-        assertEquals(VoiceAlertKind.TURN_SUGGESTION, leftCue?.kind)
-        assertEquals("turn-slight-right", leftCue?.dedupeKey)
-        assertEquals("Chair on the left. Turn slightly right. Not a measured gap.", leftCue?.english)
-        assertTrue(leftCue!!.arabic.contains("كرسي"))
-        assertFalse(leftCue.english.contains("center"))
-        assertTrue(leftCue.arabic.contains("اليسار"))
-        assertFalse(leftCue.english.contains("meter"))
+        assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, leftCue?.kind)
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, leftCue?.dedupeKey)
+        assertEquals("Obstacle ahead.", leftCue?.english)
 
         val center = engine.decide(camera(cues = listOf(DirectionalCue("person", 0.9f, 0.50f, 0.20f))))
         assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, VoiceCues.fromDecision(center)?.kind)
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, VoiceCues.fromDecision(center)?.dedupeKey)
         assertEquals("Obstacle ahead.", VoiceCues.fromDecision(center)?.english)
 
+        val both = engine.decide(
+            camera(
+                cues = listOf(
+                    DirectionalCue("chair", 0.9f, 0.30f, 0.55f),
+                    DirectionalCue("table", 0.9f, 0.70f, 0.55f),
+                ),
+            ),
+        )
+        val bothCue = VoiceCues.fromDecision(both)
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, bothCue?.dedupeKey)
+        assertEquals("Path blocked.", bothCue?.english)
+
         val empty = engine.decide(camera())
-        assertEquals(PathRiskLevel.CLEAR_OBSERVED, empty.pathRisk)
+        assertEquals(PathRiskLevel.UNKNOWN, empty.pathRisk)
+        assertEquals(GuidanceAction.UNKNOWN, empty.action)
+        assertEquals(0.0, empty.linearSpeedMps, 0.0)
         assertNull(VoiceCues.fromDecision(empty))
 
         val stale = engine.decide(camera(frameAgeMs = NavigationConfig.STALE_FRAME_MS))
@@ -195,18 +348,55 @@ class VoiceGuidanceGateTest {
     }
 
     @Test
-    fun aTurnQueuedBehindHoldIsSpokenOnceTheGapAllowsIt() {
+    fun regressedCameraMovementDecisionNeverBecomesSpokenMovement() {
+        listOf(
+            GuidanceAction.LEFT,
+            GuidanceAction.SLIGHT_LEFT,
+            GuidanceAction.RIGHT,
+            GuidanceAction.SLIGHT_RIGHT,
+            GuidanceAction.STRAIGHT,
+        ).forEach { action ->
+            val regressed = NavigationDecisions.fromAction(
+                action = action,
+                reason = "Synthetic regression input: detector box only.",
+                confidence = 0.60f,
+                basedOnRealVision = true,
+                metricDepthUsed = false,
+                perceptionLabel = NavigationConfig.CAMERA_LABEL,
+                subjectLabel = "chair",
+                subjectSide = "left",
+                pathRisk = PathRiskLevel.BLOCKED,
+            )
+            val cue = VoiceCues.fromDecision(regressed)
+            assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, cue?.kind)
+            assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, cue?.dedupeKey)
+            assertFalse(cue!!.english.lowercase().contains("turn"))
+            assertFalse(cue.english.lowercase().contains("walk"))
+            assertFalse(cue.arabic.contains("انعطف"))
+        }
+
+        val falseClear = NavigationDecisions.fromAction(
+            action = GuidanceAction.RIGHT,
+            reason = "Camera boxes only.",
+            confidence = 0.50f,
+            basedOnRealVision = true,
+            metricDepthUsed = false,
+            perceptionLabel = NavigationConfig.CAMERA_LABEL,
+            pathRisk = PathRiskLevel.CLEAR_OBSERVED,
+        )
+        assertNull(VoiceCues.fromDecision(falseClear))
+    }
+
+    @Test
+    fun aCommittedTurnQueuedBehindHoldIsSpokenOnceTheGapAllowsIt() {
         val hold = VoiceCues.fromDecision(
             engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.50f, 0.20f)))),
         )
         assertEquals("Obstacle ahead.", hold?.english)
         assertTrue(gate.consider(input(hold, now = 0L)) is SpeechDirective.Speak)
 
-        val turn = VoiceCues.fromDecision(
-            engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.80f, 0.20f)))),
-        )
-        assertEquals("Sink on the right. Turn slightly left. Not a measured gap.", turn?.english)
-        assertFalse(turn!!.english.contains("center"))
+        // Camera boxes alone must not suggest a turn; exercise the speech gate with an already-committed cue.
+        val turn = VoiceCues.turn(GuidanceAction.SLIGHT_LEFT)
         assertTrue(gate.consider(input(turn, now = 200L)) is SpeechDirective.Silent)
         gate.onUtteranceFinished(400L)
         assertTrue(gate.consider(input(hold, now = 500L)) is SpeechDirective.Silent)
@@ -216,11 +406,23 @@ class VoiceGuidanceGateTest {
         )
         assertTrue(spoken is SpeechDirective.Speak)
         val text = (spoken as SpeechDirective.Speak).text
-        assertTrue(text.contains("اليمين"))
-        assertTrue(text.contains("انعطف يساراً قليلاً"))
-        assertTrue(text.contains("ليس فراغاً مقاساً"))
-        assertFalse(text.contains("الوسط"))
+        assertEquals("انعطف يساراً قليلاً.", text)
         assertEquals(ResolvedVoiceLanguage.ARABIC, spoken.language)
+    }
+
+    @Test
+    fun movingBlockedBoxDoesNotBypassObstacleSpeechCooldown() {
+        val center = VoiceCues.fromDecision(
+            engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.50f, 0.20f)))),
+        )
+        val side = VoiceCues.fromDecision(
+            engine.decide(camera(cues = listOf(DirectionalCue("sink", 0.90f, 0.70f, 0.20f)))),
+        )
+
+        assertEquals(VoiceCues.HAZARD_KEY_CAMERA_BLOCKED, center?.dedupeKey)
+        assertEquals(center?.dedupeKey, side?.dedupeKey)
+        assertTrue(gate.consider(input(center, now = 0L)) is SpeechDirective.Speak)
+        assertTrue(gate.consider(input(side, now = 200L)) is SpeechDirective.Silent)
     }
 
     @Test
@@ -247,6 +449,37 @@ class VoiceGuidanceGateTest {
         assertTrue(english.contains("not a safety proof"))
         assertTrue(VoiceCues.sample(ResolvedVoiceLanguage.ARABIC).isNotBlank())
     }
+
+    @Test
+    fun unknownPerceptionSourceCannotProduceTurnSpeech() {
+        val unknownSource = NavigationDecisions.fromAction(
+            action = GuidanceAction.RIGHT,
+            reason = "Unverified source supplied a turn.",
+            confidence = 0.8f,
+            basedOnRealVision = false,
+            metricDepthUsed = false,
+            perceptionLabel = NavigationConfig.NONE_LABEL,
+            pathRisk = PathRiskLevel.BLOCKED,
+        )
+        val cue = VoiceCues.fromDecision(unknownSource)
+        assertEquals(VoiceAlertKind.OBSTACLE_DETECTED, cue?.kind)
+        assertFalse(cue!!.english.lowercase().contains("turn"))
+        assertFalse(cue.english.lowercase().contains("walk"))
+    }
+
+    private fun aheadCue(): VoiceCue = VoiceCue(
+        kind = VoiceAlertKind.OBSTACLE_DETECTED,
+        dedupeKey = VoiceCues.HAZARD_KEY_AHEAD,
+        english = "Obstacle ahead.",
+        arabic = "في عائق قدامك.",
+    )
+
+    private fun blockedCue(): VoiceCue = VoiceCue(
+        kind = VoiceAlertKind.OBSTACLE_DETECTED,
+        dedupeKey = VoiceCues.HAZARD_KEY_BLOCKED,
+        english = "Path blocked.",
+        arabic = "الطريق قدامك مسدود.",
+    )
 
     private fun input(
         cue: VoiceCue?,

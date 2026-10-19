@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TriGuideTheme {
-                TriGuideRoot()
+                TriGuideRoot(startPaused = savedInstanceState != null)
             }
         }
     }

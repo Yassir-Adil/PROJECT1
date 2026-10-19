@@ -8,29 +8,35 @@ import org.junit.Test
 
 class GuidanceSpeechTest {
     @Test
-    fun openSpeaksExactlyOneWhatsAheadLine() {
+    fun openSpeaksExactlyOneGuidanceOnStatusLine() {
         val tracker = SessionSpeechTracker()
         val first = tracker.guidanceStartLines()
-        assertEquals(listOf("whats-ahead"), first.map { it.id })
-        assertEquals("What's ahead?", first.single().english)
-        assertEquals("قدامك في شنو؟", first.single().arabic)
+        assertEquals(listOf("guidance-on"), first.map { it.id })
+        assertEquals("Guidance on.", first.single().english)
+        assertEquals("التوجيه يعمل.", first.single().arabic)
         assertFalse(first.any { it.id == "disclaimer" })
         assertFalse(first.any { it.id == "gesture-hint" })
-        // Still available for on-screen copy, not for the open speaker path.
+        assertFalse(first.any { it.id == "whats-ahead" })
+        // Rhetorical prompt remains available but is not the automatic open path.
+        assertEquals("What's ahead?", GuidanceSpeech.whatsAhead.english)
         assertTrue(GuidanceSpeech.disclaimer.english.startsWith("Research and Simulation Mode."))
         assertTrue(GuidanceSpeech.GESTURE_ON_SCREEN.contains("Triple-tap"))
     }
 
     @Test
-    fun introHoldIsShortAfterTheOpenQuestion() {
+    fun introHoldIsShortAfterTheOpenStatus() {
         val tracker = SessionSpeechTracker()
         val first = tracker.guidanceStartLines()
         tracker.suppressAfter(first, nowElapsedMs = 1_000L)
         assertEquals(1_000L + GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS, tracker.suppressNavigationUntilMs)
+    }
 
-        val restart = tracker.guidanceStartLines()
-        tracker.suppressAfter(restart, nowElapsedMs = 5_000L)
-        assertEquals(5_000L + GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS, tracker.suppressNavigationUntilMs)
+    @Test
+    fun hazardAtOpenSkipsTheStatusLine() {
+        val tracker = SessionSpeechTracker()
+        tracker.markStartupSkippedForHazard(nowElapsedMs = 2_000L)
+        assertTrue(tracker.startupLineDelivered)
+        assertEquals(2_000L, tracker.suppressNavigationUntilMs)
     }
 
     @Test
@@ -86,7 +92,7 @@ class GuidanceSpeechTest {
     }
 
     @Test
-    fun cameraSpeechGateIsSilentWhileStartingAndOnlyFiresOnceOnFailure() {
+    fun cameraSpeechGateAnnouncesUnavailableOnceAndRecoveryOnce() {
         val gate = CameraSpeechGate()
         assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
         assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
@@ -94,7 +100,47 @@ class GuidanceSpeechTest {
         val failed = gate.cueForTransition(CameraLifecyclePhase.FAILED)
         assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, failed?.kind)
         assertNull(gate.cueForTransition(CameraLifecyclePhase.FAILED))
+        val restored = gate.cueForTransition(CameraLifecyclePhase.STREAMING)
+        assertEquals(VoiceAlertKind.SESSION_NOTICE, restored?.kind)
+        assertEquals("Camera ready.", restored?.english)
         assertNull(gate.cueForTransition(CameraLifecyclePhase.STREAMING))
         assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        // A new unavailable episode may announce again.
+        val failedAgain = gate.cueForTransition(CameraLifecyclePhase.FAILED)
+        assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, failedAgain?.kind)
+    }
+
+    @Test
+    fun cameraUnavailableStaysLatchedAcrossFailedStartingRetries() {
+        val gate = CameraSpeechGate()
+        // Clean first open: starting → streaming must not invent a recovery line.
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.IDLE))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STREAMING))
+
+        val firstFail = gate.cueForTransition(CameraLifecyclePhase.FAILED)
+        assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, firstFail?.kind)
+        assertEquals("Camera unavailable.", firstFail?.english)
+
+        // Retry phases must not clear the episode or re-speak unavailable.
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.IDLE))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.FAILED))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.PERMISSION_REQUIRED))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.FAILED))
+
+        val restored = gate.cueForTransition(CameraLifecyclePhase.STREAMING)
+        assertEquals(VoiceAlertKind.SESSION_NOTICE, restored?.kind)
+        assertEquals("Camera ready.", restored?.english)
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STREAMING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+
+        // After real recovery, a later failure is a new episode.
+        val secondFail = gate.cueForTransition(CameraLifecyclePhase.FAILED)
+        assertEquals(VoiceAlertKind.CAMERA_UNAVAILABLE, secondFail?.kind)
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.STARTING))
+        assertNull(gate.cueForTransition(CameraLifecyclePhase.FAILED))
     }
 }

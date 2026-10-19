@@ -20,6 +20,47 @@ Build an **Android AI navigation + robotic steering simulation** that helps **vi
 - Use **Auto-review** for tool approvals; ask the user only when permission or physical interaction is required (USB debugging, phone unlock, installer UI, GitHub auth).
 - Prefer strongest available models for planning/hard bugs; Composer for routine implementation when suitable.
 
+## Local engineering gate (2026-10-19)
+
+Use `scripts/test/verify-local.ps1` for the normal engineering check: Python/JVM
+tests, both APK builds, Lint, final APK model/permission/isolation policy and
+known private-evidence roots. It defaults to offline, never installs or controls
+the phone, and writes a new ignored report directory. Do not replace this with
+assembly-only verification or call it a safety/accuracy pass. Current audit,
+prerequisites and ranked follow-ups: `docs/ENGINEERING_AUDIT_2026-10-19.md`.
+Private fixtures must be separately supplied to app-private storage, not APK
+assets; do not publish old APKs/reports merely because the new APK passes.
+
+## Proactive, capability-first engineering (owner request, 2026-10-19)
+
+Within authorized development, act as the technical lead; the owner supplies the
+goal, not an exhaustive feature list. Proactively identify and fix relevant gaps
+without waiting for the owner to name each improvement.
+
+- At a meaningful phase boundary, check current device/OS capabilities and
+  installed services before recommending a model swap, retraining, cloud service
+  or new sensor. Verify actual runtime support: ARCore/depth, camera features,
+  motion sensors, accelerators and offline speech as relevant. Refresh cheap
+  checks when the environment changes; do not repeat a full audit for every edit.
+- Reuse maintained components, pretrained models and suitable existing datasets
+  first. Check primary sources, code/weight/data licenses, compatibility and real
+  device measurements. Never assume a popular model solves the actual failure.
+- Keep a concise prioritized gap/options list in the existing development plan:
+  useful unused capabilities, expected value, evidence, cost, risk, next test and
+  reason for deferral. Investigate broadly; integrate only justified improvements,
+  not everything available. Avoid dead code, feature bloat and cosmetic-only progress.
+- Prefer two coherent high-value improvements per round, with required integration,
+  safety fixes and verification completed. Preserve working behavior and user edits.
+- Use free/local options and existing hardware first. Do not purchase, activate
+  paid services, upload private images, publish or materially expand permissions
+  without explicit authorization. General autonomy does not waive these limits.
+- For TriGuide, separate observation, measured geometry and movement permission.
+  No rug-label obstacle bypass, fabricated confidence, CLEAR/turn without evidence,
+  or safety/eyes-closed-walking claim. Keep STOP and uncertainty behavior intact.
+- Distinguish implemented/tested/planned results. Ask only for a genuinely missing
+  decision or physical step, stating that step directly. Cursor work remains
+  bounded and non-overlapping, with its latest response reviewed before reassignment.
+
 ## Tech direction (default until revised)
 
 - Language: **Kotlin** + modern Android (CameraX, Jetpack).

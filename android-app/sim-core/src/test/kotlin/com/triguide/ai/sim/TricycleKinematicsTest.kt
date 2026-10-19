@@ -2,6 +2,7 @@ package com.triguide.ai.sim
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.tan
 
@@ -56,22 +57,44 @@ class TricycleKinematicsTest {
             wheelbaseMeters = wheelbase,
             dtSeconds = dt,
         )
-        val expectedHeading = speed * tan(steer) / wheelbase * dt
-        assertEquals(speed * dt, next.xMeters, 1e-9)
-        assertEquals(0.0, next.yMeters, 1e-9)
+        val yawRate = speed * tan(steer) / wheelbase
+        val expectedHeading = yawRate * dt
+        val radius = speed / yawRate
+        assertEquals(radius * kotlin.math.sin(expectedHeading), next.xMeters, 1e-9)
+        assertEquals(radius * (1.0 - kotlin.math.cos(expectedHeading)), next.yMeters, 1e-9)
         assertEquals(expectedHeading, next.headingRadians, 1e-9)
     }
 
     @Test
     fun reversingWithPositiveSteerDecreasesHeading() {
+        val speed = -1.0
+        val steer = 0.2
+        val dt = 0.1
         val next = TricycleKinematics.step(
             pose = origin,
-            command = DriveCommand(speedMetersPerSecond = -1.0, steeringRadians = 0.2),
+            command = DriveCommand(speedMetersPerSecond = speed, steeringRadians = steer),
+            wheelbaseMeters = wheelbase,
+            dtSeconds = dt,
+        )
+        val yawRate = speed * tan(steer) / wheelbase
+        val headingChange = yawRate * dt
+        val radius = speed / yawRate
+        assertEquals(radius * kotlin.math.sin(headingChange), next.xMeters, 1e-9)
+        assertEquals(radius * (1.0 - kotlin.math.cos(headingChange)), next.yMeters, 1e-9)
+        org.junit.Assert.assertTrue(next.headingRadians < 0.0)
+    }
+
+    @Test
+    fun nearZeroSteeringRemainsFiniteAndStraight() {
+        val next = TricycleKinematics.step(
+            pose = origin,
+            command = DriveCommand(speedMetersPerSecond = 1.0, steeringRadians = 1e-12),
             wheelbaseMeters = wheelbase,
             dtSeconds = 0.1,
         )
-        assertEquals(-0.1, next.xMeters, 1e-9)
-        org.junit.Assert.assertTrue(next.headingRadians < 0.0)
+        assertEquals(0.1, next.xMeters, 1e-9)
+        assertEquals(0.0, next.yMeters, 1e-9)
+        assertTrue(next.headingRadians.isFinite())
     }
 
     @Test

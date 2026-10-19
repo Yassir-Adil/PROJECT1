@@ -1,0 +1,102 @@
+---
+description: OWNER REQUEST (2026-10-18 10:48 MYT) - change app voice/UX behaviour. Implement in current app, commit, install on Redmi.
+alwaysApply: true
+---
+# Owner request: change TriGuide app behaviour (verbatim from owner)
+
+"التطبيق دلوقتي مزعج وبيتكلم كتير. المطلوب تغيير السلوك كالتالي:
+
+1. أول ما اليوزر يفتح التطبيق، الكاميرا تشتغل فوراً ويقول جملة واحدة قصيرة زي 'قدامك في شنو؟' وبعدها يسكت تماماً.
+
+2. بعد الجملة دي، التطبيق يستنى اليوزر يقرر. اليوزر هيقول مثلاً 'أنا عايز أمشي على اليمين' أو أي اتجاه.
+
+3. بعد كلام اليوزر، التطبيق يبدأ يوجّه: يقول 'امشي قدام' أو 'في طريق فاضي' لحد ما يلاقي إن الطريق فعلاً فاضي في الاتجاه اللي اليوزر اختاره، ساعتها يقول 'تيرن رايت' أو الاتجاه المطلوب.
+
+4. لو في عائق على جهة (زي كرسي على الشمال)، يقول 'تيرن رايت أ ليتل' - يعني لفة بسيطة في الاتجاه التاني.
+
+5. لما يوصل لمفترق طرق تاني، يقول 'هنا في مفترق طرق' ويعرض الخيارات بذكاء، مش كلام طويل.
+
+6. شيل كل الجمل الزايدة: رسالة 'ثري تاتش أون ذا سكرين تو ريستارت' و'البصمة ما بتنفعش' و'الكاميرا أنافيليبل' تتقال كتير أوي - الكلام ده ميتعملش صوت، يظهر في اللوج بس. الصوت يكون للجمل المهمة بس.
+
+7. التحكم يكون بالصوت أساساً، والزرار للضرورة فقط."
+
+## Delivery (owner)
+Implement this in the current app code, make a commit for the new version, and install it on the Redmi (serial 55aqpfqkvw9xbafe) if it is connected. No emulator.
+
+## Reviewer note (Grok Bot) - safety, does not change the owner's intent
+- Point 3: never say "path is clear" / "في طريق فاضي". Camera-only detection cannot prove a path is free (project safety rule). Use wording like "ما في عائق ظاهر، امشي بحذر" / "No obstacle seen, go carefully". Same for turn prompts: they are hints, not guarantees.
+- Point 5 (intersections) needs a detection method that does not exist yet; mark it as planned/experimental in KNOWN_ISSUES.md rather than faking it.
+- Keep STOP / danger alerts spoken immediately even during the silent waiting state.
+- Speech recognition must be on-device (no INTERNET permission). Record test results honestly in TEST_RESULTS.md; voice output still needs owner confirmation by ear.
+- Delete this rule file (or mark it DONE) once implemented.
+## Reviewer safety finding (Grok Bot, 2026-10-18 11:03 MYT) - PathRiskAnalyzer.kt v0.9.x
+- NavigationIgnoreLabels + the "floor clutter" rule (y>0.62, area<0.08) can turn a book/cup/bowl/knife/scissors/phone lying on the floor directly ahead into CLEAR_OBSERVED with a straight-ahead cue. That is a trip hazard for a blind user.
+- Fix: any detected object (any label) whose box overlaps the lower walking corridor must be at least POSSIBLE_OBSTACLE, never CLEAR. Ignore lists may only apply outside the corridor. Add unit tests for this and an entry in KNOWN_ISSUES.md.
+## Reviewer safety finding #2 (Grok Bot, 2026-10-18 12:10 MYT) - seen chair/table became CLEAR_OBSERVED (v0.9.2 on Redmi)
+Not implemented yet: finding #1 above. shouldDropFromPath drops ignore-list labels anywhere; FLOOR_CLUTTER_* constants are unused; test smallFloorCupIsIgnored locks in the unsafe behaviour.
+Fix (domain/PathRiskAnalyzer.kt and related):
+1. Pass 0.25-0.35 score detections (currently only logged as below=) to PathRiskAnalyzer as weak cues; weak cue in corridor => POSSIBLE_OBSTACLE. Only >=0.35 may be BLOCKED. Empty navigation input must never produce CLEAR + go-straight.
+2. inCorridor(): replace centre-x test with box overlap of corridor (x 0.25-0.75, box bottom at or below y 0.38); keep large-box rule. Add left/right/top/bottom to DirectionalCue (SceneObservations.kt).
+3. Ignore list applies only outside the corridor; inside it any label is at least POSSIBLE_OBSTACLE. Delete unused floor-clutter constants. Off-corridor evidence must not return CLEAR (contradicts comment at line 13).
+4. Empty frame / off-path only: stay silent, or say only "No obstacle seen, go carefully". Fix docs/PROGRESS.md:182 to match the code.
+5. Tests: smallFloorCupIsIgnored -> expect POSSIBLE_OBSTACLE; add chair 0.30 in corridor -> POSSIBLE; wide table centred x 0.92 covering corridor -> POSSIBLE/BLOCKED; small chair at y 0.30 -> at least POSSIBLE.
+6. Log reason code + cue boxes with every navigation decision.
+## Reviewer note #3 (Grok Bot, 2026-10-18 13:08 MYT) - before committing 0.9.2 / R0 / 0.9.3
+- 0.9.3 was installed after assembleDebug only. Unit tests have not run since 11:39, though R0 changed PathRiskAnalyzerTest, NavigationDecisionEngineTest, VoiceGuidanceGateTest.
+- sim-core TricycleKinematicsTest.kt line 96 uses assertTrue without importing it: add the import.
+- Run :app:testDebugUnitTest and :sim-core:test, record real results in TEST_RESULTS.md, update PROGRESS.md and AGENT_STATUS.md for 0.9.3, then commit.
+- ~38 files differ only by LF/CRLF line endings: consider adding .gitattributes (* text=auto) so commits contain real changes only.
+## Reviewer note #4 (Grok Bot, 2026-10-18 15:03 MYT)
+- 0.9.7 emergency stop: a 3-second hold is too slow for a blind user. Emergency stop must act immediately on touch-down (or <=300 ms), with vibration + spoken confirmation; accidental-trigger protection belongs on RESUME, not on STOP.
+- Commit now: 37 files (+1865/-621) uncommitted since 11:00. Commit 0.9.2-0.9.6 in logical commits before more features.
+- Depth / wall research (GUIDANCE_TRUST_IMPROVEMENT_PLAN.md): Grok Bot is benchmarking depth options (MiDaS small, Depth Anything V2 small, ARCore Depth on Redmi) for speed, licence and sources. Do not pick a depth model until that comparison is in research/ or docs/RESEARCH_NOTES.md.
+## Reviewer note #5 (Grok Bot, 2026-10-18 15:12 MYT) - depth comparison done: "Depth v0 - MiDaS small, HOLD-only"
+Choice: MiDaS v2.1 small, 256x256 (MIT code+weights). LiteRT fp16 (litert-community, 33.5 MB) + Qualcomm AI Hub w8a8 (17.8 MB) as CPU fallback. Relative depth only: it may RAISE risk, never produce CLEAR. Runner-up ARCore Raw Depth: support for 22101316G unconfirmed; separate later task (check + log only). Do NOT use Depth Anything V2 Base/Large (CC-BY-NC).
+Slice:
+1. Add both model files with SHA-256 to the model registry and OPEN_SOURCE_LICENSES.md.
+2. GPU delegate first, then CPU; log which started; both fail => UNKNOWN.
+3. Own thread, 3-5 Hz, drop frames; must not slow camera/detector.
+4. Policy: overall risk = max(detector, depth). Wall/large near region filling corridor in 3 of last 5 depth frames => HOLD. Sudden break in floor region => HOLD. Depth missing/older than 500 ms => UNKNOWN. No per-frame min-max normalisation (a full-frame wall would look normal).
+5. Unit tests on synthetic depth maps: wall => HOLD; normal floor => UNKNOWN (never CLEAR); floor break => HOLD; stale frame => UNKNOWN; depth never lowers detector risk. Banned "path clear" phrases test still passes; no INTERNET permission.
+6. Measure on the Redmi with the benchmark protocol (30 s warm-up, 300 frames, median+p90, temperature, GPU/CPU).
+7. Owner ear test: blank wall at 1 m and 2 m => HOLD within 1 s; walking toward closed door => HOLD; open doorway never "clear"; stairs down expected to fail => record as known limitation.
+Full report (sources, licences, numbers): ask Grok Bot / research/03-depth-model-comparison.md.
+## Reviewer note #6 (Grok Bot, 2026-10-18 16:51 MYT) - floor segmentation research done: slice WALK-0 (logged only)
+Report: research/04-floor-segmentation-comparison.md. Model: DeepLabV3 MobileNetV2 ADE20K (Apache-2.0 code+weights; ADE20K images are research/education terms - flag before any commercial use), converted LiteRT 257x257 fp32 (file not yet copied here; regenerate with research/convert_deeplab_ade20k.py from the TF model zoo checkpoint deeplabv3_mnv2_ade20k_train_2018_12_03, or ask Grok Bot), SHA-256 9003f85b700bce8e448505a19f578752d046b3906deb3110fd0bdea868077328 (verify hash after conversion). Do NOT bundle SegFormer (NVIDIA non-commercial). No stock MediaPipe segmenter has a floor class.
+Key safety finding: all tested models label downward stairs as "floor" at times, and sidewalks as "road". Floor mask can never prove safety.
+WALK-0:
+- Run every 3rd frame, off the detector thread. Log per frame under logcat tag TriGuideFloor: floor share and stairs share for left/centre/right bottom strips. Walkable = floor, sidewalk, path, rug only (road/grass/earth = not walkable). stairs/stairway/step pixels = hazard.
+- NO speech and NO change to navigation decisions in this slice.
+- Future turn-hint gate (not wired now): slight left/right only if that side floor share >= 0.6, no stairs pixels on that side or centre, no detector/depth hazard there, all evidence fresh; otherwise HOLD/UNKNOWN. Floor evidence never yields "straight" or "clear".
+Acceptance: A1 unit tests (chair in corridor still HOLD; >=2% stairs logged as hazard; road-only = 0 floor; >500 ms = STALE; load failure = UNAVAILABLE, app keeps running; no speech/decision code calls the gate). A2 Redmi benchmark per protocol (30 s warm-up, >=300 inferences, median+p90, detector FPS drop <=20%, CPU vs GPU, fp32 vs int8, 10-min thermal). A3 offline replay of >=5 labelled owner clips (open corridor, wall/door, rug/shadow, stairs down, low object). A4 each TriGuideFloor line matched to same-frame nav decision. A5 no INTERNET permission, no images saved. A6 Grok Bot safety review + owner test before anything reaches speech.
+## Reviewer note #7 (Grok Bot, 2026-10-19 11:10 MYT)
+- Model/dataset licences are already verified with sources in research/03-depth-model-comparison.md and research/04-floor-segmentation-comparison.md. Use those instead of "treat as / confirm" placeholders in research/model-candidates. Key points: DeepLabV3 MNv2 ADE20K code+weights Apache-2.0, ADE20K images research/education terms; MiDaS v2.1 small MIT; SegFormer NVIDIA non-commercial (do not bundle); MediaPipe DeepLab is Pascal VOC (no floor class); SelfieMulticlass has no floor class.
+- Do not re-research these; ask Grok Bot for any missing licence.
+- Static wall test (206 frames UNKNOWN, 0 HOLD): expected until depth/floor is wired. Priority: wire MiDaS small HOLD-only (note #5) so a wall at 1-2 m gives HOLD.
+- Commit now: ~24 h and 43 files uncommitted.
+## Reviewer note #8 (Grok Bot, 2026-10-19 13:50 MYT) - MOSAIC/MLCommons segmentation: labels + licences verified (research/06-segmentation-licence-and-labels.md)
+- SAFETY: MOSAIC R4 and MLCommons DeepLab (512, int32 map 0..31) are Top-31 ADE20K models: NO stairs/stairway/step/escalator/path class, and they never output 0 (other). On a staircase photo stairs became wall/floor/chair. With these models floor(4)/rug(29) must never count as walkable, and "no stairs" means nothing. Drop-offs only from depth/ARCore. Road(7)/grass(10)/earth(14) never walkable.
+- Ade20kTop31ClassIds.kt matches the official objectInfo150 IDs: mark verified (DeepLabDiagnosticActivity.kt:147 log tag). Add a test that no stairs label can ever be produced by Top-31 models.
+- Bug: DeepLabDiagnosticActivity.kt:313 CLASS_COUNT = 31 should be 32 (used at lines 157, 226, 249).
+- letterbox() (lines 163-175) centre-pads; MLPerf reference pads bottom/right. Match it or document it.
+- FloorSegmenterModelContract.kt expects 256x256, which matches neither file (MLCommons 512; our conversion 257 float -> logits [1,65,65,151], channel 0 = other, 1..150 = official IDs).
+- Licences: MOSAIC + MLCommons DeepLab = MLCommons Association License (Apache-2.0 text); bundling OK with licence + attribution "trained on ADE20K (MIT CSAIL, non-commercial images) + ImageNet". Soften "not approved for redistribution" in DEEPLAB_REDMI_STATIC_PROBE doc; update KNOWN_ISSUES.md:8, DECISIONS.md, DEEPLAB_UINT8 setup doc, PHASE2 benchmark doc, OPEN_SOURCE_LICENSES.md (rows + SHA-256). Commercial use needs a legal/data review. PROJECT1 is public: keep .tflite out of git; fetch with a hash-pinned script.
+- Still owed: live-camera MOSAIC NNAPI benchmark per protocol (camera frame -> result), labelled scenes incl. stairs down and a rug. 17.4 ms is model-only on a repeated still; keep it labelled so.
+- Open: DeepLab uint8 labelled indoor floor as sea(27)/water(22) on the Redmi; not reproduced on the box.
+## Reviewer note #9 (Grok Bot, 2026-10-19 14:55 MYT) - stairs / drop-off (see research/07-stairs-dropoff-detection.md)
+- BUG (safety): RelativeDepthEvidence.kt POSSIBLE_DROP fires when the middle band is NEARER than the lower band; that is a rising obstacle, not a drop. Box replay gave no hazard on all 40 images incl. every stair-down photo. Replace it.
+- Slice STAIR-0 (HOLD-only, after Depth v0 MiDaS wiring): A) floor-line-break rule from report 07 §6; B) gravity tilt gate pitch 15-45 deg, roll <15 deg, else UNKNOWN; C) HOLD when cue in 2 of last 3 depth frames, hold >=3 s, release to UNKNOWN never CLEAR; D) final risk = max of all sources, one spoken cue per episode: «ممكن في درجة نازلة. أقيف.»; E) optional 150-class ADE20K stair pixels may raise HOLD; Top-31 models excluded.
+- Acceptance: JVM tests incl. inverted-case regression and "depth cue cannot be lowered"; clearance-word ban still passes; no INTERNET permission; Redmi latency per report 02; 10 flat-corridor walks counting false HOLDs; owner stair test only with a sighted helper, stop line 1 m from edge, nobody descends; KNOWN_ISSUES entry; nothing marked eyes-closed ready.
+- Expect low recall (box: 3/12 stair-down caught, 2/12 false on flat). Silence never means safe.
+- Next after STAIR-0: log-only ARCore probe (isDepthModeSupported RAW_DEPTH_ONLY, depth FPS, confidence). ARCore 1.57 is installed on the Redmi; depth support still unverified.
+
+## Reviewer note #10 (Grok Bot, 2026-10-19 16:15 MYT) - ARCore depth integration (see research/08-arcore-depth-integration.md)
+- ARCore and CameraX cannot share the camera. Use ONE FrameSource: in depth mode ARCore owns the back camera and its 640x480 CPU image feeds MOSAIC + EfficientDet. No Camera2 rewrite.
+- session.update() only on a thread with a GL context, after setCameraTextureName; use GLSurfaceView in Scene Lab. Copy image/depth with row+pixel strides, close on the GL thread, pass copies on (latest frame only). Treat only NEW depth images as fresh evidence.
+- Config: RAW_DEPTH_ONLY, horizontal planes, lighting estimate + instant placement off, back camera 30 fps, fixed focus.
+- Log: camera config, depth size, confidence histogram (drop <128), new-depth rate, tracking-failure reasons, 'VIO frequency low' count, thermal state.
+- Probe fixes: R1 don't create Session unless SUPPORTED_INSTALLED (not UNKNOWN_CHECKING); R2 log the camera config; R5 session off main thread; R6 no vibration (ui/ScreenTaps.kt) while ARCore runs.
+- Depth may only raise HOLD / POSSIBLE_OBSTACLE. Tracking loss, no depth, or floor not confirmed => UNKNOWN (HOLD while guiding). Never 'clear'.
+- Before any release build ships ARCore: show verbatim "This application runs on Google Play Services for AR (ARCore), which is provided by Google and governed by the Google Privacy Policy." and update privacy docs: TriGuide sends nothing; Google Play Services for AR may send usage/diagnostic data; camera images stay on the phone.
+- Run report 08 section 5 measurements (walls 1/2/3 m, flat-floor height spread, 10 cm board, 5 min full load, chest-mount walk, airplane mode) before STAIR-1. 8 cm drop is only ~6% depth change from 1.3 m height, so measure noise first.
+- docs/SURFACE_LAB_AND_DEPTH_2026-10-19.md is referenced by the roadmap but missing.

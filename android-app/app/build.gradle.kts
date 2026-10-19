@@ -12,8 +12,8 @@ android {
         applicationId = "com.triguide.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.9.1"
+        versionCode = 35
+        versionName = "0.9.22"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation(libs.androidx.camera.core)
@@ -74,6 +75,12 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.mediapipe.tasks.vision)
+
+    // Debug-only legacy Interpreter API avoids raising the app's Kotlin toolchain.
+    // This local diagnostic runtime never feeds navigation or TTS.
+    debugImplementation("org.tensorflow:tensorflow-lite:2.17.0")
+    // Capability check only; no ARCore camera session or cloud API in the product path.
+    debugImplementation("com.google.ar:core:1.57.0")
 
     testImplementation(libs.junit)
 }

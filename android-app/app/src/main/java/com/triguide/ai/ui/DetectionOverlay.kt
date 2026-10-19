@@ -7,14 +7,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.triguide.ai.domain.DetectionFrame
 import com.triguide.ai.domain.DetectionReports
 import java.util.Locale
 
+/**
+ * Debug boxes only. TalkBack stays quiet here so raw, changing labels are not announced;
+ * on-demand Describe remains the spoken snapshot path.
+ */
 @Composable
 fun DetectionOverlay(
     frame: DetectionFrame?,
@@ -24,14 +27,7 @@ fun DetectionOverlay(
     val active = frame?.takeIf { showBoxes && it.fromRealDetector }
     val textSizePx = with(LocalDensity.current) { 16.sp.toPx() }
     val strokePx = with(LocalDensity.current) { 3.dp.toPx() }
-    val description = when {
-        active == null -> "No detection boxes."
-        active.objects.isEmpty() -> "No objects above the confidence threshold."
-        else -> "Detected " + active.objects.joinToString { detected ->
-            "${detected.label} ${String.format(Locale.US, "%.2f", detected.confidence)}"
-        }
-    }
-    Canvas(modifier = modifier.semantics { contentDescription = description }) {
+    Canvas(modifier = modifier.clearAndSetSemantics { }) {
         val drawn = active ?: return@Canvas
         val native = drawContext.canvas.nativeCanvas
         val boxPaint = Paint().apply {

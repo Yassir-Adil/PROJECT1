@@ -2,7 +2,8 @@ package com.triguide.ai.domain
 
 /**
  * Builds a camera observation from a real detector frame.
- * Box centers are expressed in preview space. A mirrored front camera is flipped
+ * Box centers and bounds are expressed in the upright camera frame used by the preview.
+ * A mirrored front camera is flipped
  * so "left" matches the picture the user sees. No metric depth is attached.
  */
 object SceneObservations {
@@ -18,6 +19,7 @@ object SceneObservations {
                 realDetector = false,
                 metricDepthAvailable = false,
                 frameAgeMs = null,
+                sampleCompletedAtElapsedMs = null,
                 summary = "No real detection frame.",
             )
         }
@@ -28,6 +30,7 @@ object SceneObservations {
                 realDetector = true,
                 metricDepthAvailable = false,
                 frameAgeMs = null,
+                sampleCompletedAtElapsedMs = frame.completedAtElapsedMs,
                 contradictory = true,
                 summary = "Camera frame has no size.",
             )
@@ -35,21 +38,24 @@ object SceneObservations {
         val width = frame.imageWidth.toFloat()
         val height = frame.imageHeight.toFloat()
         val cues = frame.objects.map { detected ->
-            val rawCenter = (detected.left + detected.right) / 2f
-            val center = if (frame.mirrorHorizontally) {
-                frame.imageWidth.toFloat() - rawCenter
-            } else {
-                rawCenter
-            }
+            val rawLeft = detected.left / width
+            val rawRight = detected.right / width
+            val left = if (frame.mirrorHorizontally) 1f - rawRight else rawLeft
+            val right = if (frame.mirrorHorizontally) 1f - rawLeft else rawRight
+            val top = detected.top / height
+            val bottom = detected.bottom / height
             val boxWidth = (detected.right - detected.left).coerceAtLeast(0f)
             val boxHeight = (detected.bottom - detected.top).coerceAtLeast(0f)
-            val centerY = (detected.top + detected.bottom) / 2f
             DirectionalCue(
                 label = detected.label,
                 confidence = detected.confidence,
-                centerXNormalized = center / width,
+                centerXNormalized = (left + right) / 2f,
                 areaFraction = (boxWidth * boxHeight) / (width * height),
-                centerYNormalized = (centerY / height).coerceIn(0f, 1f),
+                centerYNormalized = (top + bottom) / 2f,
+                boxLeftNormalized = left,
+                boxRightNormalized = right,
+                boxTopNormalized = top,
+                boxBottomNormalized = bottom,
             )
         }
         val age = frame.completedAtElapsedMs?.let { completed ->
@@ -61,6 +67,7 @@ object SceneObservations {
             realDetector = true,
             metricDepthAvailable = false,
             frameAgeMs = age,
+            sampleCompletedAtElapsedMs = frame.completedAtElapsedMs,
             summary = "Camera boxes in preview space.",
         )
     }

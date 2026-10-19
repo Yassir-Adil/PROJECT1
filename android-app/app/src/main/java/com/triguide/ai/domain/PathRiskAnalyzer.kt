@@ -7,10 +7,10 @@ import java.util.Locale
  * Does not invent meters. Floor alone is never treated as safe.
  */
 enum class PathRiskLevel {
-    /** No confirmed obstacle in the corridor. Not a safety certificate. */
+    /** A separate, validated source positively observed walkable area. Not a safety certificate. */
     CLEAR_OBSERVED,
 
-    /** Weak or off-corridor evidence. Keep watching. Prefer silence. */
+    /** Weak evidence inside the corridor. Keep watching. Prefer silence. */
     POSSIBLE_OBSTACLE,
 
     /** Strong evidence of something in the walking corridor. */
@@ -21,8 +21,8 @@ enum class PathRiskLevel {
 }
 
 /**
- * COCO-style labels that are usually not navigation blockers when alone
- * (small desktop items, food, false floor glints). Still drawn on the overlay.
+ * COCO-style labels that may be irrelevant off the walking corridor.
+ * Even a small item on the apparent walking surface remains a possible obstacle.
  */
 object NavigationIgnoreLabels {
     private val ignored = setOf(
@@ -54,20 +54,15 @@ data class PathRiskResult(
 object PathRiskAnalyzer {
     /**
      * Horizontal band treated as the walking corridor (preview space).
-     * Far outer edges (outside this band) are off-path and stay silent.
+     * Outer thirds are off-path: a chair at the edge must not force HOLD.
+     * Overlap uses box extents when present (not center alone).
      */
-    const val CORRIDOR_LEFT = 0.10f
-    const val CORRIDOR_RIGHT = 0.90f
+    const val CORRIDOR_LEFT = 0.25f
+    const val CORRIDOR_RIGHT = 0.75f
 
-    /**
-     * Objects whose vertical center is above this are often decorations / distant;
-     * they still count if the box is large (person/furniture).
-     */
+    /** Real boxes use bottom-edge overlap with this risk band; legacy cues fall back
+     * to their center (retaining the existing large-object exceptions). */
     const val UPPER_SCENE_Y = 0.38f
-
-    /** Small ignored-class boxes in the lower third are treated as floor clutter. */
-    const val FLOOR_CLUTTER_Y = 0.62f
-    const val FLOOR_CLUTTER_AREA = 0.08f
 
     /** Minimum area for a non-person corridor hit to count as BLOCKED. */
     const val MIN_BLOCK_AREA = 0.025f
@@ -77,16 +72,19 @@ object PathRiskAnalyzer {
             cue.confidence.isFinite() &&
                 cue.confidence >= NavigationConfig.MIN_CUE_CONFIDENCE &&
                 cue.confidence <= 1f &&
+                cue.areaFraction.isFinite() &&
                 cue.areaFraction > 0f &&
+                cue.areaFraction <= 1f &&
                 cue.centerXNormalized in 0f..1f &&
-                cue.centerYNormalized in 0f..1f
+                cue.centerYNormalized in 0f..1f &&
+                hasValidOptionalBounds(cue)
         }
         if (usable.isEmpty()) {
             return PathRiskResult(
-                level = PathRiskLevel.CLEAR_OBSERVED,
+                level = PathRiskLevel.UNKNOWN,
                 corridorCues = emptyList(),
                 dominantInCorridor = null,
-                diagnostic = "diag:clear empty_detections corridor_empty",
+                diagnostic = "diag:unknown no_usable_detections",
             )
         }
         val pathRelevant = usable.filterNot { shouldDropFromPath(it) }
@@ -94,12 +92,12 @@ object PathRiskAnalyzer {
         if (inCorridor.isEmpty()) {
             val sideOnly = pathRelevant.filter { !inCorridor(it) }
             val diag = if (sideOnly.isEmpty()) {
-                "diag:clear only_ignored_or_clutter"
+                "diag:unknown only_ignored_or_clutter"
             } else {
-                "diag:clear off_corridor count=${sideOnly.size} labels=${sideOnly.joinToString(",") { it.label }}"
+                "diag:unknown off_corridor count=${sideOnly.size} labels=${sideOnly.joinToString(",") { it.label }}"
             }
             return PathRiskResult(
-                level = PathRiskLevel.CLEAR_OBSERVED,
+                level = PathRiskLevel.UNKNOWN,
                 corridorCues = emptyList(),
                 dominantInCorridor = null,
                 diagnostic = diag,
@@ -129,16 +127,41 @@ object PathRiskAnalyzer {
     }
 
     fun inCorridor(cue: DirectionalCue): Boolean {
+        if (!hasValidOptionalBounds(cue)) return false
+        val left = cue.boxLeftNormalized
+        val right = cue.boxRightNormalized
+        val bottom = cue.boxBottomNormalized
+        if (left != null && right != null && bottom != null) {
+            // A box can cross the walking band even when its center is outside it.
+            return left <= CORRIDOR_RIGHT &&
+                right >= CORRIDOR_LEFT &&
+                bottom >= UPPER_SCENE_Y
+        }
+        // Legacy/synthetic cues have no box extent; retain the conservative center rule.
         if (cue.centerXNormalized !in CORRIDOR_LEFT..CORRIDOR_RIGHT) return false
-        // Large furniture / people count even if centered higher in the frame.
         if (cue.areaFraction >= 0.12f) return true
         if (isPersonLike(cue.label) && cue.areaFraction >= 0.04f) return true
         return cue.centerYNormalized >= UPPER_SCENE_Y
     }
 
+    private fun hasValidOptionalBounds(cue: DirectionalCue): Boolean {
+        val left = cue.boxLeftNormalized
+        val right = cue.boxRightNormalized
+        val top = cue.boxTopNormalized
+        val bottom = cue.boxBottomNormalized
+        if (left == null && right == null && top == null && bottom == null) return true
+        if (left == null || right == null || top == null || bottom == null) return false
+        return left.isFinite() && right.isFinite() && top.isFinite() && bottom.isFinite() &&
+            left >= 0f && right <= 1f && top >= 0f && bottom <= 1f &&
+            left < right && top < bottom &&
+            cue.centerXNormalized in left..right &&
+            cue.centerYNormalized in top..bottom
+    }
+
     private fun shouldDropFromPath(cue: DirectionalCue): Boolean {
-        // Cups, books, false floor glints, and similar COCO clutter never block the corridor.
-        return NavigationIgnoreLabels.isIgnoredForPath(cue.label)
+        // Class names cannot make a lower-corridor box disappear. A cup or knife there
+        // may be a trip hazard even when its box is too small to count as BLOCKED.
+        return NavigationIgnoreLabels.isIgnoredForPath(cue.label) && !inCorridor(cue)
     }
 
     private fun isStrongBlocker(cue: DirectionalCue): Boolean {

@@ -41,6 +41,10 @@ research/upstream/GuideLens-Android-App/
 research/upstream/mediapipe-samples/
 research/upstream/OpenBot/
 
+# Phase 2 hash copies of candidate TFLite weights (not APK assets)
+research/model-candidates/*.tflite
+research/model-candidates/*.tflite.*
+
 # Generated logs
 outputs/logs/**
 !outputs/logs/.gitkeep
@@ -54,3 +58,14 @@ outputs/logs/**
 # Gradle output directories are ignored above. Keep the debug-build script.
 !scripts/build/
 !scripts/build/**
+
+# Private/local QA evidence: share only deliberately redacted docs, never captures.
+/outputs/reports/**
+!/outputs/reports/.gitkeep
+/test-data/**
+!/test-data/.gitkeep
+!/test-data/README.md
+!/test-data/scene-manifest.example.tsv
+# Educational weights and private test inputs must not enter Git by accident.
+/android-app/app/src/debug/assets/**
+/research/datasets/

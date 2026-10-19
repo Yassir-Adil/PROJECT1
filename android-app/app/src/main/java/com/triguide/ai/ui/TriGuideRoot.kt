@@ -10,7 +10,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,15 +27,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +51,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
@@ -52,19 +63,27 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.triguide.ai.BuildConfig
+import com.triguide.ai.R
 import com.triguide.ai.camera.CameraXSource
 import com.triguide.ai.domain.DiagnosticsReport
 import com.triguide.ai.domain.DiagnosticsSnapshot
@@ -79,17 +98,28 @@ import com.triguide.ai.domain.DetectionReports
 import com.triguide.ai.domain.DetectorStatusText
 import com.triguide.ai.domain.DetectorConfig
 import com.triguide.ai.domain.DetectorReadiness
+import com.triguide.ai.domain.AiVisionDiagnostic
+import com.triguide.ai.domain.AiVisionModeCopy
+import com.triguide.ai.domain.CameraActiveCue
+import com.triguide.ai.domain.FloorSegmenterModelContract
 import com.triguide.ai.domain.FloorSegmentationStatus
 import com.triguide.ai.domain.GuidanceScenarios
 import com.triguide.ai.domain.GuidanceSession
 import com.triguide.ai.domain.IllustrativePath
+import com.triguide.ai.domain.LiveVisionGesture
+import com.triguide.ai.domain.LiveVisionGestureDetector
+import com.triguide.ai.domain.LiveVisionStatus
 import com.triguide.ai.domain.MockHardwareController
 import com.triguide.ai.domain.navigationCueForSpeech
+import com.triguide.ai.domain.NavigationConfig
 import com.triguide.ai.domain.NavigationDecisions
+import com.triguide.ai.domain.PerceptionMode
+import com.triguide.ai.domain.PathRiskAnalyzer
 import com.triguide.ai.domain.PerformanceMonitor
-import com.triguide.ai.domain.SceneBriefScheduler
+import com.triguide.ai.domain.ResolvedVoiceLanguage
 import com.triguide.ai.domain.SceneDescription
 import com.triguide.ai.domain.SceneLine
+import com.triguide.ai.domain.SceneObservation
 import com.triguide.ai.domain.SceneObservations
 import com.triguide.ai.domain.SpeechDirective
 import com.triguide.ai.domain.SteeringCommand
@@ -105,9 +135,12 @@ import com.triguide.ai.memory.LocalGuidanceMemory
 import com.triguide.ai.memory.PersonConsentStore
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
+import com.triguide.ai.vision.FloorSegmenterCameraAdapter
 import com.triguide.ai.vision.MediaPipeObjectDetectorEngine
 import com.triguide.ai.voice.AndroidVoiceSpeaker
+import com.triguide.ai.voice.SoftOpenLaneBeeper
 import com.triguide.ai.voice.VoiceSettingsStore
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -115,7 +148,7 @@ import kotlin.math.roundToInt
 
 private const val TAP_LOG = "TriGuideTap"
 
-private enum class Screen {
+internal enum class Screen {
     LiveVision,
     More,
     Simulator,
@@ -124,13 +157,13 @@ private enum class Screen {
     Settings,
 }
 
-private data class CameraPrompt(val serial: Int = 0, val fromGesture: Boolean = false)
+internal data class CameraPrompt(val serial: Int = 0, val fromGesture: Boolean = false)
 
 /**
  * Held as one object so key-event collection does not close over a stale screen value.
  * Cold start stays on Live Vision with epoch 0. Later starts increment the epoch.
  */
-private class LiveNavState {
+internal class LiveNavState {
     var screen by mutableStateOf(Screen.LiveVision)
     var running by mutableStateOf(true)
     var epoch by mutableIntStateOf(0)
@@ -147,9 +180,27 @@ private class LiveNavState {
         running = false
     }
 
+    /** Returning from tools must not silently restart a stopped camera/session. */
+    fun returnToLive() {
+        screen = Screen.LiveVision
+    }
+
     fun showMore() {
         screen = Screen.More
         running = false
+    }
+
+    companion object {
+        /** Restoring UI state is never an authorization to restart camera/guidance. */
+        fun restored(screenName: String?, epoch: Int): LiveNavState = LiveNavState().apply {
+            screen = Screen.entries.firstOrNull { it.name == screenName } ?: Screen.LiveVision
+            running = false
+            this.epoch = epoch.coerceAtLeast(0)
+        }
+        val Saver = listSaver<LiveNavState, Any>(
+            save = { listOf(it.screen.name, it.epoch) },
+            restore = { restored(it.getOrNull(0) as? String, it.getOrNull(1) as? Int ?: 0) },
+        )
     }
 }
 
@@ -171,6 +222,8 @@ private enum class RobotDriveMode(val label: String, val description: String) {
 private class AppServices(context: android.content.Context) {
     val performance = PerformanceMonitor()
     val detection = MediaPipeObjectDetectorEngine(context, performance)
+    /** Diagnostic-only; Phase 1 has no floor model and never feeds navigation/TTS. */
+    val floorSegmenter = FloorSegmenterCameraAdapter(context)
     val guidance = GuidanceSession()
     val robot = SimulatedTricycleController()
     val hardware = MockHardwareController()
@@ -181,22 +234,36 @@ private class AppServices(context: android.content.Context) {
     private val memoryDirectory = java.io.File(context.filesDir, "guidance-memory")
     val memory = LocalGuidanceMemory(memoryDirectory)
     val people = PersonConsentStore(memoryDirectory)
-    val sceneBriefs = SceneBriefScheduler()
 
     init {
         memory.startSession(android.os.SystemClock.elapsedRealtime())
     }
+
+    /** Single CameraX analysis fan-out: detector then diagnostic segmenter slot. */
+    fun onAnalysisFrame(image: androidx.camera.core.ImageProxy, frontCamera: Boolean) {
+        detection.analyze(image, frontCamera)
+        floorSegmenter.offerAnalysisFrame(image, frontCamera)
+    }
 }
 
 @Composable
-fun TriGuideRoot() {
+fun TriGuideRoot(startPaused: Boolean = false) {
     val context = LocalContext.current
     val services = remember { AppServices(context.applicationContext) }
     val sessionSpeech = remember { SessionSpeechTracker() }
-    val nav = remember { LiveNavState() }
+    val nav = rememberSaveable(saver = LiveNavState.Saver) {
+        LiveNavState().apply { if (startPaused) pause() }
+    }
+    val sceneLab = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        services.camera.stop()
+        services.robot.setCommand(SteeringCommand(0.0, 0.0))
+        nav.showMore()
+        Log.i(TAP_LOG, "scene lab returned; guidance remains paused")
+    }
     val scope = rememberCoroutineScope()
     fun speakPaused() {
-        scope.launch {
+        // Start the interrupting paused cue in this callback when TTS is ready.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
             speakWhenReady(
                 speaker = services.speaker,
                 settings = services.voiceSettings::current,
@@ -206,7 +273,7 @@ fun TriGuideRoot() {
         }
     }
     BackHandler(enabled = nav.screen != Screen.LiveVision) {
-        nav.start(fromGesture = false)
+        nav.returnToLive()
     }
     DisposableEffect(services) {
         onDispose {
@@ -231,6 +298,8 @@ fun TriGuideRoot() {
                     sessionSpeech = sessionSpeech,
                     onMore = {
                         val wasRunning = nav.running
+                        services.robot.setCommand(SteeringCommand(0.0, 0.0))
+                        services.camera.stop()
                         nav.showMore()
                         if (wasRunning) speakPaused()
                     },
@@ -239,16 +308,32 @@ fun TriGuideRoot() {
                         confirmPulse(context)
                         nav.start(fromGesture = true)
                     },
+                    onEmergencyStop = {
+                        if (nav.running) {
+                            // STOP wins immediately over analysis UX and soft tones.
+                            nav.pause()
+                            services.robot.setCommand(SteeringCommand(0.0, 0.0))
+                            services.guidance.markIdle("Guidance paused. The virtual robot is stopped.")
+                            services.camera.stop()
+                            Log.i(TAP_LOG, "emergency stop activated")
+                            successPulse(context)
+                            speakPaused()
+                        }
+                    },
                 )
                 Screen.More -> MoreScreen(
                     services = services,
                     onLiveGuidance = { nav.start(fromGesture = false) },
                     onNavigate = { nav.screen = it },
+                    onSceneLab = {
+                        nav.showMore()
+                        com.triguide.ai.diagnostics.SceneLabLauncher.intent(context)?.let(sceneLab::launch)
+                    },
                 )
-                Screen.Simulator -> SimulatorScreen(services, onBack = { nav.start(fromGesture = false) })
-                Screen.Scenarios -> ScenariosScreen(onBack = { nav.start(fromGesture = false) })
-                Screen.Diagnostics -> DiagnosticsScreen(services, onBack = { nav.start(fromGesture = false) })
-                Screen.Settings -> SettingsScreen(services, onBack = { nav.start(fromGesture = false) })
+                Screen.Simulator -> SimulatorScreen(services, onBack = nav::returnToLive)
+                Screen.Scenarios -> ScenariosScreen(onBack = nav::returnToLive)
+                Screen.Diagnostics -> DiagnosticsScreen(services, onBack = nav::returnToLive)
+                Screen.Settings -> SettingsScreen(services, onBack = nav::returnToLive)
             }
         }
     }
@@ -259,7 +344,9 @@ private fun MoreScreen(
     services: AppServices,
     onLiveGuidance: () -> Unit,
     onNavigate: (Screen) -> Unit,
+    onSceneLab: () -> Unit,
 ) {
+    val context = LocalContext.current
     val readiness by services.detection.readiness.collectAsStateWithLifecycle()
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
@@ -289,6 +376,14 @@ private fun MoreScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
+        if (com.triguide.ai.diagnostics.SceneLabLauncher.available) {
+            item {
+                NavButton("فحص الجدار والأرضية · 60 ثانية", "افتح فحصاً محلياً تجريبياً مع مربعات الأشياء. ليس توجيهاً للمشي.", primary = false) {
+                    // More already paused guidance and unbound the main camera. Returning stays paused.
+                    onSceneLab()
+                }
+            }
+        }
         item { StatusLine("Mode", "Research and Simulation") }
         item { StatusLine("Detection", detectionLine) }
         item { StatusLine("Decision", decision.action.userLabel) }
@@ -296,6 +391,7 @@ private fun MoreScreen(
         item { StatusLine("Reason", decision.reason) }
         item { StatusLine("Front wheel", "${formatWheelDegrees(robot.steeringRadians)} degrees") }
         item { StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}") }
+        item { StatusLine("AI Vision overlay", AiVisionModeCopy.LEGEND) }
         item { StatusLine("Voice", "${voiceSettings.summary()}. $voiceStatus") }
         item { StatusLine("Virtual robot", "Kinematic simulator ready. Speed ${formatSpeedMps(robot.linearSpeedMps)} m/s.") }
         item { StatusLine("Physical hardware", services.hardware.connectionLabel) }
@@ -315,6 +411,27 @@ private fun MoreScreen(
     }
 }
 
+/** A stopped, failed, or old camera result must never become a new spoken scene. */
+internal fun canDescribeFreshCameraScene(
+    running: Boolean,
+    permissionGranted: Boolean,
+    cameraState: String,
+    readiness: DetectorReadiness,
+    inferenceError: String?,
+    scene: SceneObservation,
+): Boolean {
+    val age = scene.frameAgeMs ?: return false
+    return running &&
+        permissionGranted &&
+        cameraState == "Streaming" &&
+        readiness == DetectorReadiness.READY &&
+        inferenceError.isNullOrBlank() &&
+        scene.mode == PerceptionMode.CAMERA_2D &&
+        scene.realDetector &&
+        !scene.contradictory &&
+        age >= 0L && age < NavigationConfig.STALE_FRAME_MS
+}
+
 @Composable
 private fun CameraScreen(
     services: AppServices,
@@ -324,6 +441,7 @@ private fun CameraScreen(
     sessionSpeech: SessionSpeechTracker,
     onMore: () -> Unit,
     onRestartGuidance: () -> Unit,
+    onEmergencyStop: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -366,6 +484,7 @@ private fun CameraScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val tapDetector = remember { TripleTapDetector() }
+    val swipeDetector = remember { LiveVisionGestureDetector() }
     val activity = context as? android.app.Activity
     val permissionAction = CameraPermissionPrompt.action(
         requestAttempted = requestAttempted,
@@ -376,12 +495,6 @@ private fun CameraScreen(
     val detail by services.detection.statusDetail.collectAsStateWithLifecycle()
     val frame by services.detection.latestFrame.collectAsStateWithLifecycle()
     val inferenceError by services.detection.inferenceError.collectAsStateWithLifecycle()
-    val fps by services.performance.framesPerSecond.collectAsStateWithLifecycle()
-    val frames by services.performance.framesSeen.collectAsStateWithLifecycle()
-    val inferenceFps by services.performance.inferenceFramesPerSecond.collectAsStateWithLifecycle()
-    val lastLatency by services.performance.lastInferenceLatencyMs.collectAsStateWithLifecycle()
-    val averageLatency by services.performance.averageInferenceLatencyMs.collectAsStateWithLifecycle()
-    val inferences by services.performance.inferencesCompleted.collectAsStateWithLifecycle()
     val observation = DetectionReports.observation(
         readiness = readiness,
         detail = detail,
@@ -391,10 +504,56 @@ private fun CameraScreen(
     )
     val detectorFailed = readiness == DetectorReadiness.MODEL_MISSING || readiness == DetectorReadiness.LOAD_FAILED
     val showBoxes = readiness == DetectorReadiness.READY && frame?.fromRealDetector == true
+    // Default on so the owner can see the green open-lane strip without hunting the toggle.
+    var aiVisionMode by remember { mutableStateOf(true) }
     val decision by services.guidance.decision.collectAsStateWithLifecycle()
-    val robotState by services.robot.state.collectAsStateWithLifecycle()
-    val lastVoice by services.voiceGate.lastSpokenText.collectAsStateWithLifecycle()
-    val applied = SteeringCommand(robotState.linearSpeedMps, robotState.steeringRadians)
+    val overlayScene = SceneObservations.fromCamera(
+        readiness = readiness,
+        frame = frame,
+        nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+    )
+    val livePathRisk = remember(overlayScene.cues) { PathRiskAnalyzer.analyze(overlayScene.cues) }
+    val aiVisionModel = AiVisionDiagnostic.build(
+        enabled = aiVisionMode,
+        pathRisk = livePathRisk,
+        cues = overlayScene.cues,
+    )
+    val softTone = remember { SoftOpenLaneBeeper() }
+    DisposableEffect(Unit) {
+        onDispose { softTone.release() }
+    }
+    var cameraActiveTonePlayed by remember { mutableStateOf(false) }
+    val streaming = cameraState == "Streaming"
+    // One soft non-speech tick when the analysis stream is genuinely ready.
+    // Not a safety signal. Detector-empty corridor never drives a repeating beep.
+    LaunchedEffect(streaming, running) {
+        if (!streaming || !running) {
+            cameraActiveTonePlayed = false
+            softTone.release()
+            return@LaunchedEffect
+        }
+        if (
+            CameraActiveCue.shouldPlayStartupTone(
+                cameraStreaming = streaming,
+                guidanceRunning = running,
+                alreadyPlayedForThisBind = cameraActiveTonePlayed,
+                emergencyActive = !running,
+            )
+        ) {
+            softTone.playCameraActiveOnce()
+            cameraActiveTonePlayed = true
+        }
+    }
+    val priority = LiveVisionStatus.priority(
+        running = running,
+        permissionGranted = granted,
+        cameraState = cameraState,
+        readiness = readiness,
+        detail = detail,
+        inferenceError = inferenceError,
+        action = decision.action,
+        pathRisk = decision.pathRisk,
+    )
     val cameraPhase = when {
         !granted -> CameraLifecyclePhase.PERMISSION_REQUIRED
         !running -> CameraLifecyclePhase.IDLE
@@ -455,6 +614,10 @@ private fun CameraScreen(
                     return@LaunchedEffect
                 }
                 if (services.speaker.ready.value) {
+                    // A confirmed hazard may already have spoken; do not add a second open line.
+                    if (sessionSpeech.startupLineDelivered) {
+                        return@LaunchedEffect
+                    }
                     val lines = sessionSpeech.guidanceStartLines()
                     val accepted = speakLinesInOrder(
                         speaker = services.speaker,
@@ -477,253 +640,360 @@ private fun CameraScreen(
         }
     }
 
+    fun runDescribe() {
+        val scene = SceneObservations.fromCamera(
+            readiness = readiness,
+            frame = frame,
+            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+        )
+        if (!canDescribeFreshCameraScene(
+                running = running,
+                permissionGranted = granted,
+                cameraState = cameraState,
+                readiness = readiness,
+                inferenceError = inferenceError,
+                scene = scene,
+            )
+        ) {
+            val unavailable = if (!running) {
+                SceneLine("Guidance paused. Restart to describe.", "التوجيه متوقف. أعد تشغيله للوصف.")
+            } else {
+                SceneLine("Live picture unavailable. Try again later.", "الصورة الحية غير متاحة الآن. حاول لاحقاً.")
+            }
+            describeFrame(services, unavailable.english, unavailable)
+            return
+        }
+        val line = SceneDescription.fromCues(scene.cues, services.people.recognize()?.name)
+        services.memory.noteSummary(line.english, android.os.SystemClock.elapsedRealtime())
+        describeFrame(services, line.english, line)
+    }
+
+    fun speakStatusNow() {
+        val settings = services.voiceSettings.current().sanitized()
+        if (!settings.speechEnabled) return
+        val language = services.speaker.resolve(settings.language)
+        val text = LiveVisionStatus.spokenStatus(priority, language)
+        services.speaker.speak(
+            SpeechDirective.Speak(
+                text = text,
+                interrupt = true,
+                speechRate = settings.speechRate,
+                kind = VoiceAlertKind.SESSION_NOTICE,
+                language = language,
+            ),
+        ) {}
+    }
+
+    fun handleGesture(gesture: LiveVisionGesture) {
+        successPulse(context)
+        when (gesture) {
+            LiveVisionGesture.DESCRIBE -> runDescribe()
+            LiveVisionGesture.OPEN_MORE -> onMore()
+            LiveVisionGesture.SPEAK_STATUS -> speakStatusNow()
+            LiveVisionGesture.RESTART_GUIDANCE -> onRestartGuidance()
+        }
+    }
+
+    val lensShape = RoundedCornerShape(32.dp)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .observeScreenTaps {
-                val mark = tapDetector.onTap(android.os.SystemClock.elapsedRealtime())
-                if (mark.completed) {
-                    onRestartGuidance()
-                } else {
-                    Log.i(TAP_LOG, "tap count=${mark.countInGroup}")
-                }
-            }
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
-        Text(
-            text = "Live Vision",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .pointerInput(onMore) {
-                    detectTapGestures(onLongPress = { onMore() })
-                }
-                .semantics {
-                    contentDescription = "Live Vision. ${GuidanceSpeech.GESTURE_DESCRIPTION}"
-                },
-        )
-        Text(
-            text = GuidanceSpeech.disclaimer.english,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 14.sp,
-            modifier = Modifier.semantics { contentDescription = GuidanceSpeech.disclaimer.english },
-        )
-        Text(
-            text = GuidanceSpeech.GESTURE_ON_SCREEN,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 14.sp,
-            modifier = Modifier.semantics { contentDescription = GuidanceSpeech.GESTURE_DESCRIPTION },
-        )
-        Text(
-            DetectorStatusText.line(readiness, detail),
-            color = if (detectorFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            modifier = Modifier.semantics {
-                contentDescription = DetectorStatusText.line(readiness, detail)
-            },
-        )
-        when {
-            !running -> {
-                Text(
-                    text = "Guidance paused. Leave this screen with Back to start the camera and voice cues again.",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 18.sp,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Guidance paused. Use the phone Back control to return to live guidance."
-                    },
-                )
-            }
-            !granted -> {
-                val openSettings = permissionAction == CameraPermissionAction.OpenAppSettings
-                Text(
-                    if (openSettings) {
-                        "Camera permission is off, and Android will not ask again from this screen. Open Settings and allow Camera for TriGuide. Nothing is uploaded."
-                    } else {
-                        "Camera permission is required to show a live preview. Nothing is uploaded."
-                    },
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 18.sp,
-                )
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = {
-                        if (openSettings) {
-                            openAppSettings(context)
-                        } else {
-                            launcher.launch(Manifest.permission.CAMERA)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .semantics {
-                            contentDescription = if (openSettings) {
-                                "Open app settings to allow the camera"
-                            } else {
-                                "Grant camera permission"
-                            }
-                        },
-                ) {
-                    Text(
-                        if (openSettings) "Open app settings" else "Grant camera permission",
-                        fontSize = 18.sp,
-                    )
-                }
-            }
-            else -> {
-                val previewView = remember {
-                    PreviewView(context).apply {
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
-                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                    }
-                }
-                DisposableEffect(previewView) {
-                    onDispose { services.camera.stop() }
-                }
-                LaunchedEffect(previewView, epoch) {
-                    services.camera.stop()
-                    cameraState = "Starting camera"
-                    services.camera.start(
-                        context = context,
-                        lifecycleOwner = context as LifecycleOwner,
-                        previewView = previewView,
-                        onFrameTimestampNs = services.performance::onFrame,
-                        onAnalysisFrame = services.detection::analyze,
-                        onResult = { result ->
-                            cameraState = when (result) {
-                                CameraStartResult.Streaming -> "Streaming"
-                                is CameraStartResult.Unavailable -> result.reason
-                                is CameraStartResult.Failed -> "Failed: ${result.reason}"
-                            }
-                        },
-                    )
-                }
-                Text(
-                    "Camera: $cameraState. ${performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences)}",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                )
-                inferenceError?.let { message ->
-                    val stale = if (showBoxes) {
-                        " Last successful boxes are still shown."
-                    } else {
-                        " No boxes are shown for this error."
-                    }
-                    Text(
-                        "Inference error: $message.$stale",
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                DecisionHeadline(decision = decision, applied = applied)
-                Text(
-                    text = "Source: ${decision.perceptionLabel}. Hold and Unknown stop the virtual robot. Depth is not measured.",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Source ${decision.perceptionLabel}. Hold and Unknown stop the virtual robot. Depth is not measured."
-                    },
-                )
-                VoiceCueLine(lastVoice)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp),
-                ) {
-                    AndroidView(
-                        factory = { previewView },
-                        update = { view ->
-                            val guidance = decision.spokenCue
-                            view.contentDescription = when (readiness) {
-                                DetectorReadiness.READY ->
-                                    "Live camera preview. ${observation.summary} $guidance"
-                                DetectorReadiness.LOADING ->
-                                    "Live camera preview. Detection model is loading. No boxes yet. $guidance"
-                                DetectorReadiness.MODEL_MISSING ->
-                                    "Live camera preview. Detection model is missing. No boxes. $guidance"
-                                DetectorReadiness.LOAD_FAILED ->
-                                    "Live camera preview. Detection model failed to load. No boxes. $guidance"
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    DetectionOverlay(
-                        frame = frame,
-                        showBoxes = showBoxes,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    if (cameraState == "Starting camera" || readiness == DetectorReadiness.LOADING) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .semantics { contentDescription = "Camera or detection model is starting" },
-                        )
-                    }
-                    if (cameraState.startsWith("Failed") || cameraState.startsWith("No camera") || detectorFailed) {
-                        Text(
-                            if (detectorFailed) observation.summary else cameraState,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(16.dp),
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 18.sp,
-                        )
-                    }
-                }
-                Text(
-                    text = observation.summary,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    modifier = Modifier.semantics { contentDescription = observation.summary },
-                )
-                Text(
-                    text = "Point the rear camera at a chair or a person. A box is drawn only when the model reports that object.",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Point the rear camera at a chair or a person. A box is drawn only when the model reports that object."
-                    },
-                )
-                Button(
-                    onClick = {
-                        val scene = SceneObservations.fromCamera(
-                            readiness = readiness,
-                            frame = frame,
-                            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
-                        )
-                        val line = if (scene.realDetector && scene.mode == com.triguide.ai.domain.PerceptionMode.CAMERA_2D) {
-                            SceneDescription.fromCues(scene.cues, services.people.recognize()?.name)
-                        } else {
-                            SceneDescription.waiting()
-                        }
-                        services.memory.noteSummary(line.english, android.os.SystemClock.elapsedRealtime())
-                        describeFrame(services, line.english, line)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .semantics {
-                            contentDescription = "Describe this frame from the latest detector boxes. This is not a clearance."
-                        },
-                ) {
-                    Text("Describe this frame", fontSize = 18.sp)
-                }
-            }
-        }
-        Button(
-            onClick = onMore,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 56.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                )
+                Text(
+                    text = "TriGuide",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Text(
+                text = LiveVisionStatus.SAFETY_LINE,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = priority.label,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (priority.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = LiveVisionStatus.TIP_LINE_ONE,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = LiveVisionStatus.TIP_LINE_TWO,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .observeScreenTaps {
+                    val mark = tapDetector.onTap(android.os.SystemClock.elapsedRealtime())
+                    if (mark.completed) {
+                        successPulse(context)
+                        onRestartGuidance()
+                    } else {
+                        confirmPulse(context)
+                        Log.i(TAP_LOG, "tap count=${mark.countInGroup}")
+                    }
+                }
+                .observeLiveVisionSwipes { direction ->
+                    val mark = swipeDetector.onSwipe(direction, android.os.SystemClock.elapsedRealtime())
+                    if (mark.completed && mark.gesture != null) {
+                        Log.i(TAP_LOG, "gesture=${mark.gesture}")
+                        handleGesture(mark.gesture)
+                    } else if (mark.countInGroup > 0) {
+                        confirmPulse(context)
+                        Log.i(TAP_LOG, "swipe $direction count=${mark.countInGroup}")
+                    }
+                }
                 .semantics {
-                    contentDescription = "More. Simulator, settings, and diagnostics."
+                    contentDescription = LiveVisionStatus.PREVIEW_DESCRIPTION
+                    customActions = listOf(
+                        CustomAccessibilityAction("Describe this frame") {
+                            runDescribe()
+                            true
+                        },
+                        CustomAccessibilityAction("Open More") {
+                            onMore()
+                            true
+                        },
+                        CustomAccessibilityAction("Speak status") {
+                            speakStatusNow()
+                            true
+                        },
+                        CustomAccessibilityAction("Restart guidance") {
+                            onRestartGuidance()
+                            true
+                        },
+                        CustomAccessibilityAction("Emergency stop") {
+                            onEmergencyStop()
+                            true
+                        },
+                    )
                 },
         ) {
-            Text("More", fontSize = 18.sp)
+            when {
+                !running -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "Guidance paused",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            text = "Triple-tap or swipe left three times to restart.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.semantics {
+                                contentDescription =
+                                    "Guidance paused. Triple-tap or swipe left three times to restart."
+                            },
+                        )
+                    }
+                }
+                !granted -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        val openSettings = permissionAction == CameraPermissionAction.OpenAppSettings
+                        Text(
+                            if (openSettings) {
+                                "Android will not ask again from this screen. Open Settings and allow Camera for TriGuide. Nothing is uploaded."
+                            } else {
+                                "Allow the camera to show a live preview. Nothing is uploaded."
+                            },
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Button(
+                            onClick = {
+                                if (openSettings) {
+                                    openAppSettings(context)
+                                } else {
+                                    launcher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 56.dp)
+                                .semantics {
+                                    contentDescription = if (openSettings) {
+                                        "Open app settings to allow the camera"
+                                    } else {
+                                        "Grant camera permission"
+                                    }
+                                },
+                        ) {
+                            Text(
+                                if (openSettings) "Open app settings" else "Grant camera permission",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    val previewView = remember {
+                        PreviewView(context).apply {
+                            scaleType = PreviewView.ScaleType.FILL_CENTER
+                            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        }
+                    }
+                    DisposableEffect(previewView) {
+                        onDispose { services.camera.stop() }
+                    }
+                    LaunchedEffect(previewView, epoch) {
+                        services.camera.stop()
+                        cameraState = "Starting camera"
+                        services.camera.start(
+                            context = context,
+                            lifecycleOwner = context as LifecycleOwner,
+                            previewView = previewView,
+                            onFrameTimestampNs = services.performance::onFrame,
+                            onAnalysisFrame = services::onAnalysisFrame,
+                            onResult = { result ->
+                                cameraState = when (result) {
+                                    CameraStartResult.Streaming -> "Streaming"
+                                    is CameraStartResult.Unavailable -> result.reason
+                                    is CameraStartResult.Failed -> "Failed: ${result.reason}"
+                                }
+                            },
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(lensShape)
+                            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, lensShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), lensShape)
+                            .background(MaterialTheme.colorScheme.surface),
+                    ) {
+                        AndroidView(
+                            factory = { previewView },
+                            update = { view -> view.contentDescription = null },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        if (aiVisionMode) {
+                            AiVisionRiskOverlay(
+                                model = aiVisionModel,
+                                frame = frame,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            DetectionOverlay(
+                                frame = frame,
+                                showBoxes = showBoxes,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                        TextButton(
+                            onClick = { aiVisionMode = !aiVisionMode },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .semantics {
+                                    contentDescription = AiVisionModeCopy.TOGGLE_DESCRIPTION
+                                },
+                            colors = ButtonDefaults.textButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                        ) {
+                            Text(
+                                text = if (aiVisionMode) {
+                                    "${AiVisionModeCopy.TOGGLE_LABEL} on"
+                                } else {
+                                    "${AiVisionModeCopy.TOGGLE_LABEL} off"
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        if (cameraState == "Starting camera" || readiness == DetectorReadiness.LOADING) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .semantics { contentDescription = "Camera or detection model is starting" },
+                            )
+                        }
+                        if (cameraState.startsWith("Failed") || cameraState.startsWith("No camera") || detectorFailed) {
+                            Text(
+                                if (detectorFailed) observation.summary else cameraState,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(16.dp),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                    }
+                }
+            }
+
+            val cameraStartupFailed =
+                granted && running &&
+                    (cameraState.startsWith("Failed") || cameraState.startsWith("No camera"))
+            if (cameraStartupFailed) {
+                Text(
+                    text = "Camera failed · ←←← or triple-tap to retry",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.94f))
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .semantics {
+                            contentDescription =
+                                "Camera failed. Swipe left three times or triple-tap to retry. Wait for streaming before assuming recovery."
+                        },
+                )
+            }
+        }
+
+        if (running) {
+            Spacer(Modifier.height(8.dp))
+            EmergencyStopBar(onConfirmedStop = onEmergencyStop)
         }
     }
 
@@ -773,7 +1043,11 @@ private fun AssistCameraDrive(
                 }
                 val cameraCue = cameraGate.cueForTransition(phase)
                 if (cameraCue != null) {
-                    android.util.Log.i("TriGuideVoice", "camera phase=${phase.name} (UI/log; tick does not spam)")
+                    android.util.Log.i(
+                        "TriGuideVoice",
+                        "camera phase=${phase.name} speech=${cameraCue.kind} (once per episode/recovery)",
+                    )
+                    announce(services, cameraCue, now)
                 }
                 val candidate = if (canNavigate) {
                     VoiceCues.fromDecision(decision)
@@ -787,16 +1061,14 @@ private fun AssistCameraDrive(
                     suppressNavigationUntilMs = sessionSpeech.suppressNavigationUntilMs,
                 )
                 val spoke = announce(services, cue, now)
+                if (spoke &&
+                    cue?.kind == VoiceAlertKind.OBSTACLE_DETECTED &&
+                    !sessionSpeech.startupLineDelivered
+                ) {
+                    sessionSpeech.markStartupSkippedForHazard(now)
+                }
                 if (scene.realDetector) {
                     services.memory.note(scene.cues, now)
-                    val brief = services.sceneBriefs.nextCue(
-                        cues = scene.cues,
-                        nowElapsedMs = now,
-                        navigationSpokeThisTick = spoke,
-                    )
-                    if (brief != null && now >= sessionSpeech.suppressNavigationUntilMs) {
-                        announce(services, brief, now)
-                    }
                 }
                 val key = "${decision.action.name}:${decision.reason}"
                 if (key != logged) {
@@ -1086,6 +1358,7 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ScreenHeader(title = "Diagnostics", onBack = onBack)
+        val evidenceDump = services.guidance.evidenceRecorder.formatLatest(10)
         val report = diagnosticsText(
             granted = granted,
             detection = DetectorStatusText.line(readiness, detail),
@@ -1099,7 +1372,7 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
             performance = performanceLine(fps, frames, inferenceFps, lastLatency, averageLatency, inferences),
             hardware = services.hardware.connectionLabel,
             memory = "${services.memory.summaryLine()} ${services.people.statusLine()}",
-        )
+        ) + "\n\n" + evidenceDump
         Button(
             onClick = {
                 Log.i("TriGuideDiag", report)
@@ -1129,6 +1402,34 @@ private fun DiagnosticsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Metric depth used", smoothed.metricDepthUsed.toString())
         StatusLine("Vision sample", smoothed.basedOnRealVision.toString())
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
+        StatusLine("Floor segmenter seam", services.floorSegmenter.diagnosticSummaryLine())
+        StatusLine(
+            "Segmenter class map",
+            "${FloorSegmenterModelContract.classMappingStatus}. ${FloorSegmenterModelContract.MAPPING_NOTE}",
+        )
+        StatusLine("Corridor band", "${PathRiskAnalyzer.CORRIDOR_LEFT}–${PathRiskAnalyzer.CORRIDOR_RIGHT} (normalized x)")
+        SectionLabel("AI Vision (research overlay)")
+        Text(
+            text = AiVisionModeCopy.LEGEND,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = AiVisionModeCopy.LEGEND },
+        )
+        StatusLine("AI Vision risk (live decision)", smoothed.pathRisk.name)
+        SectionLabel("AI Evidence Recorder")
+        Text(
+            text = evidenceDump,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription =
+                        "Text-only decision evidence. No camera frames are stored here."
+                },
+        )
         SectionLabel("Voice")
         StatusLine("Voice guidance", voiceSettings.summary())
         StatusLine("Voice engine", voiceStatus)
@@ -1181,7 +1482,8 @@ private fun SettingsScreen(services: AppServices, onBack: () -> Unit) {
         StatusLine("Floor segmentation", "${FloorSegmentationStatus.STATE}. ${FloorSegmentationStatus.DETAIL}")
         StatusLine("Cloud camera upload", "Off. This build does not request internet access.")
         StatusLine("Fingerprint", GuidanceSpeech.GESTURE_DESCRIPTION)
-        StatusLine("TalkBack", "Buttons, the camera preview, and detection boxes have spoken labels. Voice cues are separate from TalkBack. The app opens on Live Vision and starts guidance by itself. Triple-tap on Live Vision restarts guidance. A single tap still activates the control under your finger.")
+        StatusLine("TalkBack", "Buttons and the camera preview have spoken labels. Detection boxes are visual debug only and are not announced. Voice cues are separate from TalkBack. The app opens on Live Vision and starts guidance by itself. Triple-tap on Live Vision restarts guidance. Full gesture help is on this Settings screen. A single tap still activates the control under your finger.")
+        StatusLine("Gestures", GuidanceSpeech.GESTURE_ON_SCREEN)
         StatusLine("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text(
             GuidanceSpeech.disclaimer.english,
@@ -1380,7 +1682,7 @@ private fun CameraInformedPreview(services: AppServices) {
             lifecycleOwner = context as LifecycleOwner,
             previewView = previewView,
             onFrameTimestampNs = services.performance::onFrame,
-            onAnalysisFrame = services.detection::analyze,
+            onAnalysisFrame = services::onAnalysisFrame,
             onResult = { },
         )
     }

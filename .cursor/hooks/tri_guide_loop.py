@@ -21,6 +21,7 @@ LAST_PAYLOAD_PATH = ROOT / ".cursor" / "hooks" / "last-payload.json"
 BUILDER_FOLLOWUP = (
     "TriGuide builder loop. Automatic continue. Do not wait for another user message. "
     "Read docs/AGENT_WORKFLOW.md, docs/DEVELOPMENT_PLAN.md, and the latest entry in docs/PROGRESS.md. "
+    "Also read docs/BRIDGE_FROM_GPT.md before choosing work. If it contains a non-placeholder CURSOR_TASK from Codex, execute that scoped task first, do not overwrite the task, and update docs/BRIDGE_TO_GPT.md with evidence or a blocker when done. "
     "Refresh .cursor/agent-lock.json with role builder, a UTC timestamp, and the files you will change. "
     "Keep the reviewer slot in .cursor/loop-state.json unchanged. "
     "Do the next unfinished master-plan item only. Phone-first. No physical robot. "

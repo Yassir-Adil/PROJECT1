@@ -1,0 +1,12 @@
+# Template only. No captured phone media is included in this checkout.
+# Keep this file local when adding personal-room evidence; do not upload faces/audio without consent.
+scene_id	category	ground_truth	consent	media_path	owner_visible	notes
+open-corridor	open_corridor	pending	required		unknown	Stationary camera; label only after capture
+chair-partial	obstacle_partial	pending	required		unknown	Chair crosses part of expected corridor
+closed-door-wall	obstacle_full	pending	required		unknown	Door or wall ahead; no walking
+mat-shadow	floor_appearance	pending	required		unknown	Mat, shadow, or reflective floor
+step-edge	drop_or_step	pending	required		unknown	Visible edge or drop; no walking
+low-light	lighting	pending	required		unknown	Low illumination scene
+motion-blur	camera_quality	pending	required		unknown	Controlled hand motion, no walking
+person-crossing	person	pending	required		unknown	Person crosses or stands away from corridor
+branching-view	possible_branch	pending	required		unknown	Two visible directions; never use as route proof

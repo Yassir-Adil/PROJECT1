@@ -1,5 +1,66 @@
 # Architecture
 
+## Engineering audit / local evidence boundary — 2026-10-19
+
+Current logical architecture, five ranked weaknesses, storage/evaluation/test
+assessments and staged plan: `docs/ENGINEERING_AUDIT_2026-10-19.md`.
+`scripts/test/verify-local.ps1` builds/checks without installing or controlling
+the phone. `apk-policy.json` pins packaging, not navigational authority/licensing.
+Static debug probes now require separately supplied app-private
+`files/diagnostic-inputs/scene.jpg`; no room image belongs in APK assets.
+Personal reports/test data are ignored, with explicit tracked-template exceptions.
+
+## 0.9.22 surface lab and lifecycle boundary — 2026-10-19
+
+More exposes a bounded debug-only lab through variant-specific SceneLabLauncher;
+release has no intent/control. The same CameraX fan-out reuses EfficientDet and
+MOSAIC. DiagnosticSurfaces removes model letterboxing into a 64x64 source grid;
+DiagnosticSurfaceOverlay reuses preview center-crop/mirror geometry. Region
+display is capped at 4/s, expires since completion, and never creates navigation
+evidence. Explicit descriptions can mention predicted wall/floor/rug with height/
+step uncertainty; no periodic surface voice. Default benchmark remains silent.
+
+LiveVisionStatus receives actual path risk instead of inferring blockage from
+HOLD alone. Navigation thresholds/actions are unchanged. LiveNavState has a
+saveable, always-paused restore; Main starts paused on restoration. Actual lab
+entry uses ActivityResult and returns to paused More. Back does not restart.
+
+Debug ARCore 1.57.0 activity checks support without resume/frame acquisition;
+phone confirms AUTOMATIC/raw. ARCore and CameraX are not concurrent camera owners.
+No live depth, geometry, step detection or positive walkability is implemented.
+These current boundaries supersede older no-semantic-description experiment
+notes below. Verification: `docs/SURFACE_LAB_AND_DEPTH_2026-10-19.md`.
+
+## Debug-only combined observation preview — 2026-10-19
+
+The live experiment can explicitly enable `triguide.diagnostic.objects=true`.
+It reuses the same CameraXSource, passes a copied frame to the existing MediaPipe
+detector, and runs MOSAIC separately. `CombinedDiagnosticScreen` reuses
+`TriGuideTheme`/`DetectionOverlay`; `DiagnosticObjectPresentation` rejects stale,
+invalid and stopped result display. A periodic expiry tick triggers evaluation,
+but current monotonic time is read at render so fresh frames are not future-dated.
+`DiagnosticObjectCompanion` reuses offline narration/settings/voice gate solely
+for an explicit Describe request. Stop hides boxes/shuts voice down before native
+cleanup. No path-evidence fusion, steering or network connection exists.
+Current explicit surface-lab narration is described above.
+Default diagnostics remain detector-free/silent; release model assets are
+unchanged. This is not a synchronized multimodal navigation pipeline. See
+`docs/COMBINED_VISION_PREVIEW_2026-10-19.md` for the bounded phone checks/limits.
+
+## Debug-only live segmentation experiment — 2026-10-19
+
+`LiveSegmenterDiagnosticActivity` reuses `CameraXSource` -> official
+`ImageProxy.toBitmap` -> cropped/upright bitmap -> shared `DiagnosticSegmenter`
+-> existing INT32 decoder. `DiagnosticFrameGate` admits one work item with no
+application queue, caps cadence and invalidates old-session/receipt-aged output.
+Static and live probes share hash pins, RGB packing, tensors and reusable buffers.
+The camera source alone closes ImageProxy; the worker serializes Interpreter
+teardown. Statistics omit unverified capture-to-callback age. These classes and
+activity exist only in src/debug, protected by DUMP, and have no route to
+production evidence fusion, guidance, recording, or network. Default mode is
+silent; the optional object/surface Describe path is described above. See
+`docs/LIVE_SEGMENTER_DIAGNOSTIC_2026-10-19.md` for measured boundaries.
+
 Android project: `android-app/`.
 
 | Module | Role |
@@ -22,7 +83,10 @@ Package `com.triguide.ai`.
 | `GuidanceSession` | Separate smoothers for the camera and the synthetic map. Publishes the decision that is currently applied |
 | `SteeringCommand` | Speed (m/s) and front-wheel angle (radians). Positive angle is left |
 | `SyntheticObstacleWorld` | Authored obstacles: left barrel (1.0 m, 0.20 m), right crate (2.6 m, −0.40 m) |
-| `Floor segmentation` | `NOT_STARTED`. Disabled. DeepLab-v3 was inspected and has no floor class, so it is not loaded. No mask is drawn |
+| `Floor segmentation` | Diagnostic seam only (`FloorSegmenterCameraAdapter` / `FloorMaskEvidence` / `EvidenceFusionGate`). Class mapping **UNMAPPED**; no weights in APK. Never authorizes live CLEAR or TTS movement. See `docs/RESEARCH_SIM_BRIDGE.md` |
+| `AI Vision overlay` | Research PathRisk colors. Green strip only if fused positive evidence (disabled live). Caption: observed candidate — not a safety signal |
+| `PerceptionEvidenceStats` | Local reason-code counters (stale/out-of-order/voice-suppressed). No pixels |
+| `CameraActiveCue` | One soft non-speech tone when Streaming+running; STOP/pause suppresses |
 | `RobotState` | Pose of the rear-axle midpoint plus the applied command |
 | `VirtualRobotController` | `SimulatedTricycleController` steps `TricycleKinematics` |
 | `FutureHardwareController` | `MockHardwareController` — `isMock = true`, `dispatch` returns `accepted = false` |
@@ -34,7 +98,7 @@ Package `com.triguide.ai`.
 
 ## Virtual chassis
 
-Bicycle model of a tricycle: two fixed rear wheels (track width ignored) and one steered front wheel. Wheelbase default 0.35 m. Explicit Euler integration. Positive steering increases heading while moving forward (left, counter-clockwise from +x). Screen drawing flips the heading so the arrow matches that math frame.
+Bicycle-model approximation of a tricycle: two fixed rear wheels (track width ignored) and one steered front wheel. Wheelbase default 0.35 m. Constant-speed/steering commands follow an exactly integrated 2D circular arc; this is still kinematics, not rigid-body physics. There is no slip, inertia, collision, or sensor model. Positive steering increases heading while moving forward (left, counter-clockwise from +x). Screen drawing flips the heading so the arrow matches that math frame.
 
 ## Screens
 

@@ -111,6 +111,9 @@ class CameraXSource : CameraSource {
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
+        // Sole close owner: ImageProxy closes exactly once via use{}. Downstream
+        // analyzers (detector, diagnostic segmenter) must copy pixels before return
+        // and must not call image.close().
         analysis.setAnalyzer(executor) { image ->
             image.use {
                 onFrameTimestampNs(it.imageInfo.timestamp)

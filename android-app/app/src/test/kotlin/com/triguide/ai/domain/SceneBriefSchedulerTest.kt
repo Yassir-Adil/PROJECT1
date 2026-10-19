@@ -39,7 +39,7 @@ class SceneBriefSchedulerTest {
         )
         val cue = scheduler.nextCue(cues, nowElapsedMs = 1_050L, navigationSpokeThisTick = false)
         assertTrue(cue != null)
-        assertTrue(cue!!.english.contains("Reported:"))
+        assertTrue(cue!!.english.startsWith("Ahead:"))
         assertTrue(cue.kind == VoiceAlertKind.SCENE_BRIEF)
         assertNull(scheduler.nextCue(cues, nowElapsedMs = 2_000L, navigationSpokeThisTick = false))
     }

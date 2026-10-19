@@ -236,6 +236,10 @@ class MediaPipeObjectDetectorEngine(
         val latencyMs = meta?.let { (SystemClock.elapsedRealtime() - it.startedElapsedMs).toDouble() }
         if (latencyMs != null && latencyMs.isFinite() && latencyMs >= 0.0) {
             performance.onInferenceCompleted(latencyMs)
+            Log.i(
+                PERF_TAG,
+                "inference latencyMs=${String.format(Locale.US, "%.1f", latencyMs)}",
+            )
         }
         val returned = result.detections().mapNotNull { detection ->
             val category = detection.categories().firstOrNull() ?: return@mapNotNull null
@@ -370,6 +374,7 @@ class MediaPipeObjectDetectorEngine(
 
     companion object {
         private const val TAG = "TriGuideDetect"
+        private const val PERF_TAG = "TriGuidePerf"
         private const val EMPTY_LOG_INTERVAL_MS = 2_000L
         private const val HIT_LOG_INTERVAL_MS = 700L
 

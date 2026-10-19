@@ -11,9 +11,12 @@ data class SpokenLine(
 )
 
 object GuidanceSpeech {
-    /** Short hold after the one startup question so it is not stepped on. Obstacles still interrupt. */
-    const val FIRST_INTRO_SUPPRESS_MS = 2_500L
-    const val RESTART_SUPPRESS_MS = 2_000L
+    /**
+     * Short hold after the one-time open status so it is not stepped on by non-critical cues.
+     * Obstacles still interrupt immediately (see [navigationCueForSpeech]).
+     */
+    const val FIRST_INTRO_SUPPRESS_MS = 800L
+    const val RESTART_SUPPRESS_MS = 800L
 
     /** Shown on screen / in docs only — not spoken on open (owner UX 2026-10-18). */
     val disclaimer = SpokenLine(
@@ -22,17 +25,21 @@ object GuidanceSpeech {
         arabic = "وضع البحث والمحاكاة. تراي جايد ليست أداة تنقل معتمدة، ولا تغني عن العصا أو المرافق أو حكمك الشخصي.",
     )
 
-    /** The only automatic spoken line on a normal open. */
+    /**
+     * Optional rhetorical prompt kept for on-demand / future use.
+     * Not the automatic open line — a real hazard should be able to lead.
+     */
     val whatsAhead = SpokenLine(
         id = "whats-ahead",
         english = "What's ahead?",
         arabic = "قدامك في شنو؟",
     )
 
+    /** One-time open status when speech is on and no session line has run yet. */
     val guidanceOn = SpokenLine(
         id = "guidance-on",
-        english = "Camera started. Guidance on.",
-        arabic = "بدأت الكاميرا. التوجيه يعمل.",
+        english = "Guidance on.",
+        arabic = "التوجيه يعمل.",
     )
 
     /** On-screen / log only — not spoken on open. */
@@ -76,19 +83,30 @@ class SessionSpeechTracker {
     /** True after the one open-line has been accepted (or speech is off). */
     var startupLineDelivered: Boolean = false
 
-    /** Navigation cues wait until this time so the open question is not stepped on. */
+    /** Non-critical navigation cues wait until this time so the open status is not stepped on. */
     var suppressNavigationUntilMs: Long = 0L
 
-    /** Exactly one short open line. Disclaimer / gesture stay off the speaker. */
+    /**
+     * Exactly one short open status. A confirmed hazard may still speak first/only via the
+     * navigation gate (critical cues are not held back). Disclaimer / gesture stay off the speaker.
+     */
     fun guidanceStartLines(): List<SpokenLine> {
-        return listOf(GuidanceSpeech.whatsAhead)
+        return listOf(GuidanceSpeech.guidanceOn)
+    }
+
+    /**
+     * When a hazard is already confirmed at open, skip the status line so the warning can be alone.
+     */
+    fun markStartupSkippedForHazard(nowElapsedMs: Long) {
+        startupLineDelivered = true
+        suppressNavigationUntilMs = nowElapsedMs
     }
 
     fun suppressAfter(lines: List<SpokenLine>, nowElapsedMs: Long) {
-        val hold = if (lines.any { it.id == GuidanceSpeech.whatsAhead.id }) {
-            GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS
+        val hold = if (lines.isEmpty()) {
+            0L
         } else {
-            GuidanceSpeech.RESTART_SUPPRESS_MS
+            GuidanceSpeech.FIRST_INTRO_SUPPRESS_MS
         }
         suppressNavigationUntilMs = nowElapsedMs + hold
     }
@@ -107,25 +125,43 @@ enum class CameraLifecyclePhase {
 }
 
 /**
- * Emits a camera cue only when the phase newly enters FAILED or PERMISSION_REQUIRED.
- * STARTING / STREAMING / IDLE never produce a voice cue here.
+ * Emits a camera cue once per unavailable episode, and once on meaningful recovery.
+ * STARTING / IDLE never speak and do not end an unavailable episode. Only STREAMING
+ * clears the latch (one "Camera ready"). Clean startup STREAMING stays silent.
  */
 class CameraSpeechGate {
-    private var lastAnnounced: CameraLifecyclePhase? = null
+    private var unavailableEpisodeActive: Boolean = false
+    private var unavailableAnnounced: Boolean = false
 
     fun reset() {
-        lastAnnounced = null
+        unavailableEpisodeActive = false
+        unavailableAnnounced = false
     }
 
     fun cueForTransition(phase: CameraLifecyclePhase): VoiceCue? {
-        if (phase == lastAnnounced) return null
-        lastAnnounced = phase
         return when (phase) {
-            CameraLifecyclePhase.PERMISSION_REQUIRED -> VoiceCues.cameraUnavailable()
-            CameraLifecyclePhase.FAILED -> VoiceCues.cameraUnavailable()
+            CameraLifecyclePhase.PERMISSION_REQUIRED,
+            CameraLifecyclePhase.FAILED,
+            -> {
+                unavailableEpisodeActive = true
+                if (unavailableAnnounced) {
+                    null
+                } else {
+                    unavailableAnnounced = true
+                    VoiceCues.cameraUnavailable()
+                }
+            }
+            CameraLifecyclePhase.STREAMING -> {
+                if (!unavailableEpisodeActive) {
+                    null
+                } else {
+                    unavailableEpisodeActive = false
+                    unavailableAnnounced = false
+                    VoiceCues.cameraRestored()
+                }
+            }
             CameraLifecyclePhase.IDLE,
             CameraLifecyclePhase.STARTING,
-            CameraLifecyclePhase.STREAMING,
             -> null
         }
     }

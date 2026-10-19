@@ -2,6 +2,63 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Engineering foundation / owner mandate — 2026-10-19
+
+Current source-grounded audit and ranked options: `docs/ENGINEERING_AUDIT_2026-10-19.md`.
+This checkpoint supersedes historical checkboxes below, not the fail-closed policy.
+
+- A1/A2 this round: one offline-default local gate (tests, Lint, builds and actual
+  APK policy), and private evidence excluded from Git/APK without deleting it.
+- Next pair: isolated official Raw Depth/confidence measurement, and bounded,
+  atomic local storage/error handling. No geometry-to-guidance switch until
+  measured confidence/alignment/ground-reference gates pass.
+- Defer Room/DataStore migration, broad UI rewrite, new AI models/training and
+  hardware purchase absent evidence. Existing free capabilities first.
+- Do not auto-publish/push, upload private scenes or expand sensitive permissions.
+  Report implementation, desktop checks and phone/safety evidence separately.
+
+## Current checkpoint — 2026-10-19, 0.9.22/35
+
+- Installed verified debug update retained on Redmi via USB. More offers a
+  bounded surface observation lab; main navigation remains fail-closed.
+- 339 app/10 sim tests and builds pass. Actual lab entry/Describe/Stop/More/Back
+  stays paused; silent regression passes. Surface labels are not walkability.
+- Runtime confirms ARCore AUTOMATIC/raw support, but no depth frame/height was
+  measured. Next: reuse the official Raw Depth example in an isolated timed
+  probe, verify confidence/alignment/physical-reference error before integration.
+- Keep Depth Anything V2 Small/ready Android inference as fallback. Sensors and
+  paid/cloud options only after free measured options fail the required gate.
+- Roadmap: `docs/WALL_RUG_DEPTH_ROADMAP_2026-10-19.md`; actual evidence/limits:
+  `docs/SURFACE_LAB_AND_DEPTH_2026-10-19.md`. Older checkpoints below are history.
+
+## Architecture correction initiative — 2026-10-18
+
+**Current checkpoint:** The R0 fail-closed camera contract and distinct-frame
+temporal voting are included in the installed Redmi 0.9.14/27 build. Cursor
+independently reviewed the 0.9.12 box-extent correction and 0.9.13 diagnostic
+floor-mask seam. A 0.9.13 STOP → More → Back auto-restart defect was found on
+the phone and fixed/phone-regression-tested in 0.9.14. The historical
+phase-status table below is not a claim of current phone safety validation.
+Positive walkable-area evidence and junction detection are still unimplemented.
+See `docs/PROGRESS.md` and
+`docs/PHONE_TEST_CHECKPOINT_2026-10-18.md` for current evidence.
+
+The original video and source review showed camera guidance inferring a direction
+from 2D detector boxes, while an empty detector result could become
+`CLEAR_OBSERVED` and `STRAIGHT`. R0 removed those live-camera outputs; obtaining
+positive path evidence remains the active architecture priority.
+
+- [x] Record the root diagnosis, target boundaries, open-source choices, and migration sequence in `docs/ROOT_ARCHITECTURE_REDESIGN.md`.
+- [x] Codex R0 implementation: empty/ignored/off-corridor detector-only results remain `UNKNOWN`; any camera-box-only route stays stopped (`HOLD`) instead of steering around an obstacle without positive walkable-area evidence. Desktop tests passed; current Redmi verification is pending.
+- [x] Codex research: Sailens Android + SightBuddy selected as complementary architecture/interaction references, not as “most popular” projects or code to merge wholesale. ARCore depth is an optional experiment; no segmentation model selected. See `docs/ROOT_ARCHITECTURE_REDESIGN.md`.
+- [x] Codex simulator review: keep the small on-phone `:sim-core`; Webots is a better high-fidelity desktop reference but not an Android drop-in. Replaced explicit-Euler pose stepping with exact constant-curvature arc integration; the current 10 sim tests passed.
+- [x] Cursor: review R0 camera-evidence and exact-arc simulator changes through `docs/BRIDGE_FROM_GPT.md`; the subsequent 0.9.12 geometry review found no High/Medium source defect.
+- [ ] Codex: benchmark current perception and legally usable candidate walkable-area models for the actual Redmi before recommending a model swap.
+- [ ] Cursor R1: separate frame adaptation and temporal scene state from Compose; preserve `:sim-core` and current camera/output adapters.
+- [ ] Cursor R2: add branch candidates only from persistent walkable-area evidence and keep on-demand description independent from guidance.
+
+Current phase details below are retained as history. Do not treat completion of an old checkbox as evidence that a camera-only path has been validated.
+
 ## Execution status — 2026-10-18
 
 The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tricycle. The older headings below keep the longer roadmap.
@@ -11,7 +68,7 @@ The prompt’s Phase 1 is the installable shell. Its Phase 2 is the virtual tric
 | Environment audit | PASS_WITH_WARNINGS | `docs/ENVIRONMENT_AUDIT.md` |
 | Foundation choice | Option B | `docs/DECISIONS.md` |
 | Installable debug APK + CameraX shell | PASS (build), launch-only on emulator | `docs/TEST_RESULTS.md` |
-| Tricycle kinematics + JVM tests | PASS | 9/9 in `:sim-core:test` |
+| Tricycle kinematics + JVM tests | BASELINE PASS; current exact-arc change unverified | Prior recorded run: 9/9 in `:sim-core:test`; current source/test assertions not run |
 | Redmi install | PASS_WITH_WARNINGS | `55aqpfqkvw9xbafe` is `device`. 0.7.0 is installed. Live Vision drew real boxes. See `docs/TEST_RESULTS.md` |
 | Real obstacle detection | PASS_WITH_WARNINGS | EfficientDet-Lite0 on the Redmi. Boxes use the viewport crop. Score floor 0.35. A counted accuracy pass is still open |
 | Floor segmentation | NOT_STARTED | Disabled in 0.7.0. DeepLab-v3 has no floor class and is not bundled. No floor mask is drawn |

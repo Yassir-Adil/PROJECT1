@@ -1,5 +1,16 @@
 # Device compatibility
 
+## Latest transport check — 2026-10-19
+
+Known Redmi USB serial `55aqpfqkvw9xbafe` is authorized, with Windows ADB/USB
+interfaces OK. Read-only shell and installed-APK pull comparison favored cable:
+**2.118 s USB versus 3.646 s paired Wi-Fi** for the same 88,732,901-byte file.
+Prefer explicit USB targeting while healthy; retain paired Wi-Fi as fallback.
+Both file copies match original **0.9.21/34**. No phone settings or app changed.
+Earlier instructions/checkpoints below are historical, not current failure
+evidence; long-run reliability remains unverified. Full method and limits:
+`docs/REDMI_USB_TRANSPORT_CHECK_2026-10-19.md`.
+
 | Item | Value |
 | --- | --- |
 | minSdk | 26 (Android 8.0) |

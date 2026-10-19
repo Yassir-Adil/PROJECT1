@@ -1,5 +1,187 @@
 # Decision Log
 
+## 2026-10-19 — Local engineering gate and private-fixture boundary
+
+Keep the current modular monolith and model runtimes. Reuse JUnit/unittest,
+Android Lint, AAPT2 and Git for one offline-default verification command rather
+than add a CI service, manifest-decoding dependency or framework migration.
+Packaging pins are a QA allowlist, not license clearance or walkability evidence.
+Personal captures/reports and educational debug weights stay ignored. Static
+diagnostics accept a separately supplied app-private fixture, never a private
+room image bundled in APK assets. Preserve old evidence; do not publish it.
+Actual results, five ranked weaknesses and staged migration/measurement gates:
+`docs/ENGINEERING_AUDIT_2026-10-19.md`. Raw Depth/storage resilience remain next,
+not completed. Original 0.9.22/35 retained after temporary static phone QA.
+
+## 2026-10-19 — Free phone depth before replacement models or hardware
+
+Runtime confirms ARCore AUTOMATIC/raw support. Next: an isolated official Raw
+Depth/confidence experiment without competing CameraX/ARCore camera owners.
+Support alone is not accuracy. Depth Anything V2 Small/ready Android ONNX is a
+measured fallback; hardware/paid APIs come last. Sources and acceptance gates:
+`docs/WALL_RUG_DEPTH_ROADMAP_2026-10-19.md`.
+
+0.9.22 debug exposes a bounded wall/floor/rug lab in More and allows explicit
+cautious semantic descriptions, superseding the older no-semantic-speech
+experiment boundary. Never infer flatness from rug or authorize movement.
+Preserve old boxes/theme. Differentiate possible/unknown from blockage without
+weakening risk thresholds. Restore pauses; lab return is an activity result.
+Empty object labels do not negate a predicted wall.
+
+339/10 tests and product entry/Describe/Stop/Back/silent phone checks support
+retaining verified 0.9.22/35. Original backup and failed QA artifacts retained.
+Evidence and limits: `docs/SURFACE_LAB_AND_DEPTH_2026-10-19.md`.
+
+## 2026-10-19 — Prefer the recovered USB transport, retain wireless fallback
+
+The known Redmi is again authorized over cable, with Windows ADB/USB interfaces
+OK. Current read-only command and same-APK pull measurements favor USB (2.118 s
+versus Wi-Fi 3.646 s for the 88.7-MB pull). Target USB serial explicitly while
+healthy. Do not alter phone wireless settings, restart global ADB, or treat a
+transport improvement as faster inference. Intermittent USB root cause remains
+unproven. Evidence: `docs/REDMI_USB_TRANSPORT_CHECK_2026-10-19.md`.
+
+## 2026-10-19 — Complementary objects/segmentation, not replacement or guidance
+
+The silent segmentation benchmark is not the main product UI. Reuse the existing
+EfficientDet detector, yellow named boxes and charcoal/sand theme in an explicit
+debug opt-in; keep the default performance run detector-free and silent. Reuse
+the existing offline narrator/settings only for a user-requested object snapshot.
+Do not narrate segmentation percentages or convert either source into movement.
+
+One CameraX stream feeds both observation paths; lifecycle stop invalidates
+display/voice before native cleanup. Read current monotonic time on rendering,
+not a cached expiry tick that could predate a fresh result. The final candidate
+passes 320 app/10 sim tests, Redmi combined/Describe/Stop/silent checks, and exact
+original APK restoration. Heard audio, sustained combined load and navigation
+safety are separate open gates. See `docs/COMBINED_VISION_PREVIEW_2026-10-19.md`.
+
+## 2026-10-19 — Measure live stages before production integration
+
+Keep the CameraX/MOSAIC experiment in debug only and reuse the existing camera
+source and official toBitmap conversion. Share hash pins/preprocessing with the
+static probe; raw RGB byte packing uses reusable arrays and one bulk buffer copy.
+Measured prepare p50 fell 56.81 -> 8.00 ms, while result throughput did not rise
+in uncontrolled live runs. Never substitute static inference FPS or callback
+latency for capture-to-user guidance timing. Sensor timestamp epoch is unverified.
+
+Session tickets and a 250-ms analyzer-receipt age budget invalidate results on
+pause/stop before native cleanup. This diagnostic guard is not production path
+evidence; no navigation connection was added. 311 app/10 unchanged sim tests,
+live/pause/static regression runs and exact original restoration support this
+bounded step. Full evidence: `docs/LIVE_SEGMENTER_DIAGNOSTIC_2026-10-19.md`.
+
+## 2026-10-19 — Use paired wireless ADB when USB is unavailable
+
+Modern wireless pairing and a full backup/install/static-test/restore cycle
+worked on the known Redmi with USB absent. Prefer its current advertised TLS
+connect endpoint over repeated USB troubleshooting. If the ordinary server
+does not discover it, a temporary fresh ADB discovery server on a checked-free
+local port can discover only the known serial's service; stop that temporary
+server afterward and leave the existing server untouched. Do not use legacy
+unencrypted TCP/5555 or alter firewall/security settings as a shortcut.
+
+The corrected MOSAIC raw-input/INT32 diagnostic completed 1000 NNAPI inferences
+at 17.06 ms p50 and 21.14 ms p90. This closes the post-fix static phone gate,
+not the live camera, depth/step, confidence, or movement gates. Original
+0.9.21/34 APK bytes were restored exactly. See
+`docs/REDMI_WIRELESS_AND_POSTFIX_PROBE_2026-10-19.md`.
+
+## 2026-10-19 — Prefer MOSAIC for the next measured diagnostic pipeline
+
+**Evidence:** All three pinned models completed evaluation on the same 2,000
+public ADE20K validation pairs. MOSAIC leads Top31 mIoU (58.81%), wall IoU
+(73.86%), and floor IoU (77.43%). Float DeepLab reaches 55.25% mIoU and UINT8
+DeepLab 54.84%. These reference-derived host results complement the earlier
+Redmi static NNAPI measurements; they do not establish live-camera behavior.
+
+**Decision:** Carry MOSAIC into the next controlled NNAPI camera diagnostic
+benchmark when Redmi reconnects. Preserve independent hazard evidence: MOSAIC
+predicts floor on 19.45% of labeled stair pixels, compared with 15.21% for
+float DeepLab. A higher mean IoU does not settle that critical failure.
+Do not fabricate confidence from an argmax map or use it alone to clear a path.
+
+**Implementation:** Debug-only output decoding now accepts the actual INT32
+class maps rather than hypothetical 31-channel logits. Default UINT8 input
+copies raw RGB as the upstream evaluator does; the old requantized encoding
+remains selectable for historical comparison. The owner-provided static probe
+keeps its historical centered canvas, documented separately from reference
+dataset geometry. No production guidance behavior was changed.
+
+**Verification:** 291 app / 10 sim-core tests and 10 evaluator tests pass.
+Two Cursor CLI reviews were independently adjudicated. Data, metrics, archive
+integrity, source links, APK hashes, and device boundary are recorded in
+`docs/ADE20K_OFFLINE_EVALUATION_2026-10-19.md`.
+
+## 2026-10-19 — Keep segmentation models diagnostic-only after Redmi benchmark
+
+**Decision:** Keep DeepLab uint8 and MOSAIC R4 out of live navigation, speech,
+`CLEAR`, turn advice, and release assets. Use MOSAIC R4 NNAPI only as the next
+candidate for a controlled end-to-end camera benchmark; do not interpret a
+floor category as free space or safe traversal.
+
+**Evidence:** On one static still, MOSAIC CPU median p50 was 359.80 ms, while
+NNAPI p50 was 17.39 ms in a 1,000-inference run and all 100 graph nodes were
+delegated. This establishes repeatable static inference throughput on this
+Redmi, not semantic accuracy, live-camera throughput, or safe navigation.
+DeepLab uint8 was about 1.8× slower than its float sibling in this harness.
+
+**Consequences:** Diagnostic assets remain debug-only and local pending data/
+weight redistribution review. The original 0.9.21 phone APK was restored and
+hash-verified. Positive labeled walkable-area evidence and end-to-end latency,
+thermal, memory, and failure gates remain mandatory before any behavior change.
+The debug-only output validator accepts the official evaluation range 0..31
+(0 ignored/background, 1..31 Top-31 classes). Diagnostic summaries use the
+upstream ADE20K Top-31 names, but no Redmi scene accuracy is established and a
+`floor` label is not evidence of traversability.
+
+## 2026-10-19 — AI Vision Mode as PathRisk research overlay (0.9.18)
+
+**Decision:** Milestone B does **not** bundle MediaPipe DeepLab VOC, SelfieMulticlass, ADE20K, or SegFormer. PHASE2 shows no rights-cleared indoor floor taxonomy ready for APK. Ship a Live Vision **AI Vision** toggle that paints the existing detector corridor band and PathRisk colors only (green=UNKNOWN/off-path diagnostic, yellow=POSSIBLE, red=BLOCKED). Green must never mean walkable floor or spoken clearance.
+
+**Why:** Owner asked for segmentation diagnostic progress without wiring CLEAR to navigation/TTS. Overlay + Diagnostics seam visibility advances diagnosis now; real masks wait on rights + Redmi bench.
+
+**Consequences:** Version **0.9.18** / versionCode **31**. Floor segmenter stays NO_MODEL / UNMAPPED. Milestone C depth not started.
+
+## 2026-10-19 — Narrow walking corridor + Evidence Recorder (0.9.17)
+
+- PathRisk corridor band changed from x **0.10–0.90** to **0.25–0.75**. Far-edge furniture/people are off-path (`UNKNOWN`) unless their box overlaps the band. Goal: fewer false STOP from side clutter; center blockers still HOLD.
+- Added text-only `DecisionEvidenceRecorder` (no frame capture) for QA and Diagnostics share.
+- Roadmap success metric: correct direction / fewer critical errors, not detection count (`docs/OWNER_ROADMAP_EXECUTION.md`).
+
+## 2026-10-18 — Returning from tools is not a restart (0.9.14)
+
+- A real Redmi test exposed STOP → More → Android Back silently calling
+  `LiveNavState.start()`, which re-enabled camera/guidance without a restart
+  gesture. Screen navigation and session start are now separate operations.
+- System Back and tool-page Back always return to paused Live Vision. The
+  explicit `Live guidance` button in More still says it starts the camera;
+  triple-left/triple-tap remain intentional restart shortcuts. This favors a
+  safe extra restart gesture over an implicit camera restart after STOP.
+
+## 2026-10-18 — Keep floor-model status neutral until phone evidence exists
+
+- The app's Diagnostics text now says no floor model is bundled or validated on this phone. It no longer singles out SegFormer-B0 as the candidate under evaluation; that wording implied a model choice the project has not made.
+- A detector-box-free view is not an observed open path. A future floor-like mask is diagnostic evidence only until model licensing, labeled Redmi clips, obstacle/drop-off failures, and on-phone performance are reviewed. It must not feed Live Vision walk/turn speech or virtual motion in this slice.
+
+## 2026-10-18 — Owner supersedes 0.9.7 three-second STOP and button layout
+
+- The normal Live Vision screen has one tappable in-app control: immediate STOP. Describe/More/status/restart use the established gestures plus TalkBack custom actions. Camera-permission recovery remains a necessary exception. The compact brand/status header is restored because the current source lacked the header claimed in an older progress entry. Design contract: `docs/STOP_ONLY_MAIN_SCREEN_SPEC_2026-10-18.md`.
+- Safety outranks an accidental-stop concern: STOP is 64 dp and acts on touch-down/TalkBack, with restart separate. This explicitly reverses the older 0.9.7 decision below.
+- Current camera object boxes cannot authorize walking, turns, or junction choices. Movement vocabulary stays out of live guidance until a positive-evidence pipeline is benchmarked. Explicit Describe remains available; automatic box-derived scene briefs are disabled to reduce chatter and false-label amplification.
+
+## 2026-10-18 — Emergency stop hold + developer bottom chrome (0.9.7)
+
+- Bottom **Describe** / **More** stay pressable but show icon + short developer truth lines (boxes ≠ clearance; tools/diagnostics). Gesture swipes remain as alternate eyes-free paths.
+- Emergency control is a thin full-width red bar requiring a **continuous 3-second hold** (progress fill). Short taps do nothing — chosen to avoid accidental stop while walking with the phone.
+- Trust for eyes-closed navigation is deferred to a researched roadmap (`docs/GUIDANCE_TRUST_IMPROVEMENT_PLAN.md`): Phase C monocular depth (LiteRT MiDaS-small) before any claim that walls are detected. Copy polish alone is not accepted as a fix.
+
+## 2026-10-18 — Calm default Live Vision, detailed Diagnostics
+
+- The phone-first safety screen uses the existing Jetpack Compose / Material 3 stack, not a new UI dependency. Default hierarchy is short research warning → plain truthful status → preview → on-demand Describe → secondary More. Technical model/FPS/latency/wheel/observation text remains in Diagnostics; the full disclaimer and gesture help remain in Settings.
+- Raw detector box names are visual debug data, not automatic TalkBack narration, because live Redmi samples contained incorrect labels. A user-requested Describe snapshot remains possible and must preserve uncertainty. No status claims a detector-only clear path.
+- This is a UI contract, not proof of visual or accessibility quality. The 139-test candidate stays uninstalled until a clean Redmi check after charging (`docs/PHONE_TEST_CHECKPOINT_2026-10-18.md`).
+
 ## 2026-10-18 — Bootstrap without overwriting
 
 - Repo was empty; created docs + agent rules only (no Android app code yet).
@@ -207,6 +389,35 @@
 - Version 0.8.1 (`versionCode` 11). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed. Paid TTS is not added.
 - `storeFace` still returns false. Confirm writes a name and `faceStored=0`.
 
+## 2026-10-18 — Eyes-free full-screen Live Vision (0.9.6)
+
+**Decision:** Default Live Vision is a full-screen camera “lens” with non-clickable status/hint overlays. Primary controls are three consecutive swipes (up Describe, down More, right speak status, left restart) plus the existing triple-tap restart. TalkBack receives matching `CustomAccessibilityAction`s because single-finger swipes conflict with the screen reader.
+
+**Why:** Blind users can miss or accidentally activate on-screen buttons. Gesture streaks with haptic ticks reduce false presses while keeping an emergency Retry button only when the camera fails.
+
+**Consequences:** Version 0.9.6 (`versionCode` 19). Visible buttons remain for camera permission and retry only.
+
+## 2026-10-18 — Describe humility for unstable COCO names (0.9.4)
+
+**Decision:** Describe-only narration never confidently names unstable COCO classes that misfire on indoor Redmi scenes (`toilet`, etc.). Person is named only at confidence ≥ 0.75; weaker person boxes are hedged («يبدو شخص»). Navigation / PathRisk still uses raw detector evidence and HOLD/UNKNOWN — this is not a global score-threshold raise.
+
+**Why:** Redmi captures showed round tables as `toilet` (~0.87) and furniture/packaging as `person` (~0.36–0.70). Naming those confidently in Describe misleads; changing the detector threshold from one scene was rejected in the Quality Plan.
+
+**Consequences:** Version 0.9.4 (`versionCode` 17). Overlay can still draw the wrong label; speech is more cautious.
+
+## 2026-10-18 — Describe speaks a short snapshot, not a box dump
+
+**Decision:** On-demand Describe (and the rare multi-object brief) uses `SceneDescription` to speak one short natural sentence from detector boxes and left/center/right zones. Known labels above confidence 0.55 may be named; weaker or unlisted COCO labels become «يبدو جسم» / “what looks like something”. Empty frames say nothing is obvious ahead. Spoken text never claims a clear or safe path.
+
+**Why**
+
+- Codex `CURSOR_TASK` after 0.9.1: the long technical Describe line was hard to listen to. The product still must not invent depth, floor, or clearance from 2D boxes.
+- Allowlist + confidence floor reduces confident misnames (e.g. cap→toilet) without a new model.
+
+**Consequences**
+
+- Version 0.9.2 (`versionCode` 15). Navigation loop unchanged. Floor stays `NOT_STARTED`.
+
 ## 2026-10-18 — A dominant side box is not cancelled by weaker boxes
 
 **Decision:** Steer from the dominant camera box when it sits outside the center band (centers 0.42 to 0.58). Dominance is the highest score times area. A box whose area is at least 1.5 times the next box is chosen instead when its score times area is still at least 70 percent of that leader. One opposite box, or one center box, blocks the turn only at that same 70 percent. Weaker boxes are not summed. An outer-third box (under 0.33 or over 0.67) is a slight turn. A box nearer the center band is a fuller turn. Center, empty, and similarly strong both-sides still hold. The spoken line for a winning side names that object only.
@@ -221,4 +432,19 @@
 
 - Version 0.8.2 (`versionCode` 12). Floor segmentation stays `NOT_STARTED`. `INTERNET` stays removed. Paid TTS is not added. No face work in this change.
 - The Redmi was not attached after this build, so the phone has not confirmed the new phrases.
+
+## 2026-10-18 — Keep the phone simulator lightweight; improve its kinematics
+
+**Decision:** Keep `:sim-core` as the in-app simulator. It is a 2D bicycle-model approximation used to visualize commands, not a claim of complete three-wheel robot dynamics. Replace explicit-Euler position updates with exact constant-curvature arc integration. Do not copy Webots into the APK.
+
+**Why**
+
+- Webots is the strongest open-source high-fidelity desktop simulation option found (Apache-2.0 core), but it is a standalone desktop application, not an Android/Kotlin library. Embedding its engine would be a major architecture and APK expansion unrelated to the phone demo's immediate need.
+- The current sim-core is small, pure Kotlin, and already has a separate test suite. Exact arc integration improves the mathematical model without adding dependencies.
+- If collision, wheel, camera, or sensor physics become necessary, use Webots as a separate desktop test harness and review individual assets/licenses; retain the phone simulator as the fast in-app visualization.
+
+**Consequences**
+
+- Source and test expectations were updated; `:sim-core:test` was not run for this change.
+- No physical robot behavior is validated by this simulator.
 

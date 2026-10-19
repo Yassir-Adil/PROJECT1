@@ -32,6 +32,8 @@ enum class PerceptionMode {
  * One detector box reduced to image position.
  * [centerXNormalized] is 0 at the left edge of the preview and 1 at the right edge.
  * [areaFraction] is box area divided by frame area. It is not a distance.
+ * Optional bounds are in the same mirrored, upright frame as the center. All four
+ * are present for real camera boxes; nulls preserve legacy/synthetic call sites.
  */
 data class DirectionalCue(
     val label: String,
@@ -40,6 +42,10 @@ data class DirectionalCue(
     val areaFraction: Float,
     /** 0 at the top of the preview, 1 at the bottom. Default mid-frame for older call sites. */
     val centerYNormalized: Float = 0.55f,
+    val boxLeftNormalized: Float? = null,
+    val boxRightNormalized: Float? = null,
+    val boxTopNormalized: Float? = null,
+    val boxBottomNormalized: Float? = null,
 )
 
 /**
@@ -59,6 +65,12 @@ data class SceneObservation(
     val realDetector: Boolean,
     val metricDepthAvailable: Boolean,
     val frameAgeMs: Long?,
+    /**
+     * Monotonic completion time of the successful camera inference that produced this sample.
+     * Camera temporal votes count distinct newer identities, not 50 ms UI-loop replays.
+     * Synthetic observations leave this null.
+     */
+    val sampleCompletedAtElapsedMs: Long? = null,
     val contradictory: Boolean = false,
     val knownObstacles: List<KnownObstacle> = emptyList(),
     /** Synthetic map only. True when [knownObstacles] is the full authored set for this pose. */
@@ -67,10 +79,13 @@ data class SceneObservation(
 )
 
 object FloorSegmentationStatus {
-    const val STATE = "NOT_STARTED"
+    const val STATE = "DIAGNOSTIC_SEAM"
     const val DETAIL =
-        "Disabled on device. MediaPipe DeepLab-v3 has no floor class. SegFormer-B0 ADE20K is under evaluation " +
-            "and is not bundled until a mobile ONNX/LiteRT path is proven. Floor alone is never treated as safe."
+        "Diagnostic segmentation seam present. No floor model is bundled or validated. " +
+            "Class mapping UNMAPPED. ADE20K / SegFormer weights are not in the APK. " +
+            "Object detections do not prove an open path. " +
+            "Mask output is diagnostic-only and is not connected to navigation or speech. " +
+            "Live AI Vision mode draws PathRisk corridor colors only (research overlay)."
 }
 
 object NavigationConfig {

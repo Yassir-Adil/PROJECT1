@@ -1,5 +1,6 @@
 package com.triguide.ai.sim
 
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tan
@@ -25,9 +26,10 @@ data class DriveCommand(
 )
 
 /**
- * Bicycle-model kinematics for a virtual three-wheel chassis:
+ * Constant-curvature bicycle-model kinematics for a virtual three-wheel chassis:
  * two fixed rear wheels (track width is ignored) and one steered front wheel.
- * Integration is explicit Euler. Not a physical robot.
+ * Each constant-speed/steering step is integrated along its exact 2D arc.
+ * This is not rigid-body physics: there is no slip, inertia, collision, or sensor model.
  */
 object TricycleKinematics {
     const val DEFAULT_WHEELBASE_METERS: Double = 0.35
@@ -59,9 +61,19 @@ object TricycleKinematics {
 
         val applied = clampCommand(command)
         val yawRate = applied.speedMetersPerSecond * tan(applied.steeringRadians) / wheelbaseMeters
-        val heading = pose.headingRadians + yawRate * dtSeconds
-        val x = pose.xMeters + applied.speedMetersPerSecond * cos(pose.headingRadians) * dtSeconds
-        val y = pose.yMeters + applied.speedMetersPerSecond * sin(pose.headingRadians) * dtSeconds
-        return PlanarPose(x, y, heading)
+        val headingChange = yawRate * dtSeconds
+        val halfHeadingChange = headingChange / 2.0
+        val arcScale = if (abs(halfHeadingChange) < 1e-6) {
+            1.0 - (halfHeadingChange * halfHeadingChange) / 6.0
+        } else {
+            sin(halfHeadingChange) / halfHeadingChange
+        }
+        val chordLength = applied.speedMetersPerSecond * dtSeconds * arcScale
+        val travelHeading = pose.headingRadians + halfHeadingChange
+        return PlanarPose(
+            xMeters = pose.xMeters + chordLength * cos(travelHeading),
+            yMeters = pose.yMeters + chordLength * sin(travelHeading),
+            headingRadians = pose.headingRadians + headingChange,
+        )
     }
 }
