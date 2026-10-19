@@ -7,8 +7,9 @@ reviewed source backup is approved, excluding private images/logs/datasets/debug
 weights. This supersedes the private-only restriction in historical text below.
 Initial local authentication failed (401). A later read of origin confirmed
 e0859e66707f4b1451fe4fc1ffdb580b7af91bf9 on the existing branch, and authenticated
-`git push --dry-run` now succeeds. The baseline backup is remote-verified; new
-in-progress improvements are not yet committed/pushed. Do not attribute an
+`git push --dry-run` succeeded. The final source improvement commit
+999bb71f75f5426a1c47da452461817b0c3c020e was pushed by Codex and separately
+remote-ref verified on the existing branch. Do not attribute an
 observed external push to a Cursor task that did not actually perform it.
 Baseline e0859e6 is also stored on the owner's Redmi as a verified 4,059,915-byte
 Git bundle at Download/TriGuideBackups/TriGuide-source-e0859e6-20261019.bundle.
@@ -49,7 +50,7 @@ backup. Existing private captures and educational weights remain excluded.
 | Gate / memory I/O integration | Codex + bounded Cursor I/O worker | RawDepthSampleGate; CoalescingMemoryWriter; minimal root wiring; tests | 16 + 5 tests GREEN |
 | QA / APK | Codex after Cursor shell rejection | full offline gate, new staged APK | accepted463 tests; installed/hash verified |
 | Independent integration review | separate Cursor reviewer | read-only source; own integration review document only | initial + follow-up complete, no blocker |
-| Backup final reviewed source | Codex, Cursor shell unavailable | exact approved Git paths/commit/push to existing public branch; no product edits | release for final scoped commit/push; verify remote ref |
+| Backup final reviewed source | Codex, Cursor shell unavailable | exact approved Git paths/commit/push to existing public branch; no product edits | 999bb71 pushed and exact remote ref verified; private media/weights excluded |
 
 Main Kotlin source roots are android-app/app/src/main/java/com/triguide/ai/;
 main tests use src/test/kotlin/com/triguide/ai/. Debug files use src/debug/java/

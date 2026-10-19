@@ -13,7 +13,8 @@ Installed0.9.23/36 hash-exact; original0.9.22 APK preserved. Redmi invalid-durat
 probe rejects/closes with0 frames; valid depth/UI/voice untested while screen
 locked. App force-stopped. No navigation change or safety claim.
 Full evidence/next pair: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
-Owner permits PUBLIC sanitized source backup; baseline e0859e6 remote-verified.
+Owner permits PUBLIC sanitized source backup; final source999bb71 pushed by
+Codex and separately exact-remote-ref verified. No APK/media/weight upload.
 Private scenes/logs/weights/APKs and unrelated owner-rule edit remain excluded.
 
 ### CODEX_RECORD — 2026-10-19 engineering audit and two foundational improvements

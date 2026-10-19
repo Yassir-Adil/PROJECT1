@@ -122,7 +122,11 @@ remain open; no blanket safety or security certification.
 
 The owner authorized a PUBLIC sanitized source backup, superseding private-only
 history. Baseline e0859e6 is remote-verified and also copied as a SHA-verified Git
-bundle to the owner's phone. Current final source is released for scoped commit
-and push after review; verify the exact remote branch HEAD, not merely CLI exit.
+bundle to the owner's phone. Current final source was committed by Codex at
+`999bb71f75f5426a1c47da452461817b0c3c020e` and pushed to the existing
+`cursor/phase0-project-foundation` branch. A separate `git ls-remote` confirmed
+that exact SHA on origin after push; this is an actual remote backup, not a
+pending Cursor task. This receipt is documentation only; the accepted APK/source
+fingerprint above did not change.
 Exclude private media, logs, datasets, APKs, weights and the unrelated dirty
 owner-request rule. Do not change repository visibility or force-push.

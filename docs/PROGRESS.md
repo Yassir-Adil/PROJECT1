@@ -14,7 +14,9 @@ Debug Raw Depth decoder/admission/lifecycle instrument is implemented, not
 navigation fusion. On Redmi, invalid-duration refusal closes with zero frames;
 valid depth and0.9.23 UI/voice remain untested because the phone screen locked.
 Full evidence/limits/next pair: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
-Baseline e0859e6 is remote-verified; owner now allows public sanitized backup.
+Final source999bb71 was committed/pushed by Codex and exact origin ref verified.
+Owner allows public sanitized source, not private images/logs/weights/APKs;
+unrelated owner-rule edit was preserved unstaged. No APK publicly uploaded.
 
 ## 2026-10-19 — Engineering audit + local verification / private-evidence boundary
 
