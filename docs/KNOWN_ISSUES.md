@@ -1,5 +1,18 @@
 # Known Issues
 
+## Current checkpoint — 2026-10-20
+
+0.9.23/36 is installed/hash-verified. Bounded atomic local stores and immediate
+RAM/deferred disk notes passed463 total tests after independent Cursor review.
+Raw Depth instrument passed only invalid-duration refusal on Redmi; valid frames,
+camera Stop/background, current UI/audio and metric/height accuracy await an
+unlocked phone and controlled scenes. No walking or CLEAR/turn approval.
+`docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md` supersedes the older storage/backup
+status below. Failed consent-disable persistence may not survive restart;
+explicit durable-clear UX is not exposed yet; best-effort notes are not a
+cross-file transaction or guaranteed cold-start history. Lint54/34 warnings.
+Baseline e0859e6 is now remote-verified; ENV-006 below is historical, not current.
+
 Current engineering audit and prioritized follow-ups:
 `docs/ENGINEERING_AUDIT_2026-10-19.md`. Local gate now covers Lint and actual APK
 policy. Private test image removed from the newly built debug APK, not from old
@@ -29,7 +42,7 @@ atomic writes, bounded validated reads/reboot-safe chronology and clear deletion
 | ENV-003 | Low | Restart Cursor/terminals so User PATH picks up `adb` / JDK17 | Open until restart |
 | ENV-004 | — | JDK 17 for Android | **Resolved** (user-local Temurin 17) |
 | ENV-005 | Info | winget/choco/scoop not on PATH; used direct downloads | Accepted |
-| ENV-006 | Low | GitHub not connected; no remote backups | Open |
+| ENV-006 | Low | GitHub source backup/authentication | Baseline e0859e6 verified on origin; public sanitized checkpoint push approved. Exact final ref receipt required. |
 | ENV-007 | — | No agents before bootstrap | Closed |
 | ENV-008 | Info | JDK 25 MSI still default `java` on some shells until PATH order settles | Monitor |
 | ENV-009 | Info | cmdline-tools XML version warning (v3 vs v4); packages still installed | Monitor |

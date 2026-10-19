@@ -2,6 +2,19 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current priority pair — 2026-10-20, 0.9.23/36
+
+Storage resilience and the isolated raw-depth instrument are implemented;
+463 tests and both APK builds pass, installed candidate hash verified.
+Evidence/remaining limits: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
+Next pair: actual bounded raw-depth/confidence/lifecycle measurements on unlocked
+Redmi, then held-out measured wall/flat-mat/raised-edge/step evaluation. Keep
+all geometry diagnostic until alignment/ground-reference/error gates pass.
+Ready components first; do not replace models, train or buy sensors to mask a
+camera/geometry/storage defect. Defer cloud, purchases and broad framework work.
+Owner now permits PUBLIC source backup, not private captures or public APKs.
+Use the local field-issue workflow rather than asking for a photo every minute.
+
 ## Engineering foundation / owner mandate — 2026-10-19
 
 Current source-grounded audit and ranked options: `docs/ENGINEERING_AUDIT_2026-10-19.md`.

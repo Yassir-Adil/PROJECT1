@@ -1,5 +1,15 @@
 # Bridge: External GPT → Cursor
 
+### CURSOR_TASK — 2026-10-19 tests-first parallel storage and raw-depth slices (LATEST)
+
+Supersedes the closed lifecycle review below. Read `docs/WORK_QUEUE.md`.
+Two CLI workers receive distinct S1 and D1 scopes, then return after tests only.
+Codex records RED and releases S2/D2. Do not self-advance, build, run ADB, edit
+shared UI/Gradle/manifest/policy, stage/commit or push during these tasks.
+Write only your distinct result file. Codex owns final source review and gate.
+Private GitHub backup is explicitly authorized, but **no push while origin is
+public** or write authentication is unavailable. Local baseline is e0859e6.
+
 ### CURSOR_TASK — 2026-10-19 live diagnostic lifecycle review (LATEST)
 
 **Closed:** CLI returned no result after roughly nine minutes and was stopped.

@@ -1,5 +1,27 @@
 # Decision Log
 
+## 2026-10-20 — Two measured increments and explicit public source backup
+
+Implement storage resilience and an isolated official-SDK Raw Depth instrument
+before replacing models/training/buying hardware. Tests were written first;
+missing-helper RED runs were recorded before implementation. Cursor workers had
+disjoint files, Codex reviewed/fixed integration, then84 focused JVM tests passed.
+Final full-gate and physical-device evidence must be recorded independently.
+The probe adopts the official sample lifecycle pattern with Apache attribution,
+not the whole sample project. Keep SDK terms distinct from sample code license.
+
+Use existing Java NIO and coroutines rather than a database/framework migration
+for bounded local notes. Keep a latest-only pending note queue to avoid fsync
+on each guidance/UI tick; never queue safety or speech events. Atomic replace
+is not a general power-loss guarantee. Retain explicit failure results where
+the UI claims person data was saved/deleted; broader durable-clear UX is pending.
+
+The owner explicitly allowed PROJECT1 to remain PUBLIC, superseding the prior
+private-only choice. Source-only backup excludes private media/logs/datasets and
+debug research weights. Baseline e0859e6 is remote-verified and has a verified
+off-device source bundle on Redmi. No blanket root-code license or public APK
+distribution is inferred from this source-backup approval.
+
 ## 2026-10-19 — Local engineering gate and private-fixture boundary
 
 Keep the current modular monolith and model runtimes. Reuse JUnit/unittest,

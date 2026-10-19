@@ -1,0 +1,128 @@
+# Shared execution queue — 2026-10-19
+
+## Current owner update — 2026-10-20
+
+The owner explicitly reversed the privacy choice: PROJECT1 may remain PUBLIC;
+reviewed source backup is approved, excluding private images/logs/datasets/debug
+weights. This supersedes the private-only restriction in historical text below.
+Initial local authentication failed (401). A later read of origin confirmed
+e0859e66707f4b1451fe4fc1ffdb580b7af91bf9 on the existing branch, and authenticated
+`git push --dry-run` now succeeds. The baseline backup is remote-verified; new
+in-progress improvements are not yet committed/pushed. Do not attribute an
+observed external push to a Cursor task that did not actually perform it.
+Baseline e0859e6 is also stored on the owner's Redmi as a verified 4,059,915-byte
+Git bundle at Download/TriGuideBackups/TriGuide-source-e0859e6-20261019.bundle.
+SHA256 e8eb8a3750760c70a8e379d05bd87b53739cd3a26f02cb46e9ba180e479367f6.
+S1/D1 and I/O tests have compile-RED evidence. Independent Cursor review found
+a RAM/disk conflation regression and reader-lock issue after the initial84-test
+focused pass. Seven new tests went RED before Codex split immediate RAM mutation
+from coalesced immutable disk snapshots. An existing regression caught startup
+overwriting an oversized legacy file; fixed without weakening the test.
+Final gate PASS:424 app +10 sim +19 policy +10 evaluation =463 tests; both
+builds, Lint (0 errors,54/34 warnings), APK policy pass. Follow-up source review
+has no remaining blocker. Exact evidence: STORAGE_AND_RAW_DEPTH_2026-10-20.md.
+Cursor QA shell commands were rejected, so that worker was canceled; Codex owns
+Gradle/build/install directly. Do not bypass Cursor's permission configuration.
+Redmi0.9.23/36 installed and pulled-hash verified; original0.9.22 APK preserved.
+Invalid-duration probe refuses/closes with zero frames. Screen locked again;
+valid depth, current UI/voice and geometry remain untested. App force-stopped.
+
+Read this, AGENTS.md and the newest bridge record before each task. Codex owns
+architecture, integration, phone access, policy files and final acceptance.
+Cursor workers own only their listed files. No broad refactor, reset/checkout,
+network permission, cloud upload, paid key, new model, CLEAR or turn. User has
+authorized a PUBLIC sanitized GitHub source backup in the current update above.
+Private-only statements in earlier records are superseded. Do not publish
+private captures/logs/weights or silently change the repository's visibility.
+
+Baseline saved: local commit e0859e6, verified Git bundle in ignored
+outputs/reports/cursor-20261019-next/. A local commit/bundle is not an off-device
+backup. Existing private captures and educational weights remain excluded.
+
+## Ownership and order
+
+| Task | Owner | Write scope | State |
+| --- | --- | --- | --- |
+| S1/S2 storage | Cursor storage worker + Codex review | memory helpers/stores and resilience tests; own result | 37 new tests GREEN |
+| D1/D2 decoder | Cursor depth worker + Codex review | debug RawDepthFrameStats and tests; own result | 20 tests GREEN |
+| D3 bounded ARCore probe | Cursor Android worker + Codex review | debug RawDepthDiagnosticActivity; own result | built; invalid-duration phone refusal PASS; valid depth pending unlock |
+| Gate / memory I/O integration | Codex + bounded Cursor I/O worker | RawDepthSampleGate; CoalescingMemoryWriter; minimal root wiring; tests | 16 + 5 tests GREEN |
+| QA / APK | Codex after Cursor shell rejection | full offline gate, new staged APK | accepted463 tests; installed/hash verified |
+| Independent integration review | separate Cursor reviewer | read-only source; own integration review document only | initial + follow-up complete, no blocker |
+| Backup final reviewed source | Codex, Cursor shell unavailable | exact approved Git paths/commit/push to existing public branch; no product edits | release for final scoped commit/push; verify remote ref |
+
+Main Kotlin source roots are android-app/app/src/main/java/com/triguide/ai/;
+main tests use src/test/kotlin/com/triguide/ai/. Debug files use src/debug/java/
+and src/testDebug/kotlin/com/triguide/ai/diagnostics/. Result files are separate;
+workers do not edit this queue, shared bridge, build files, other worker files,
+or existing dirty work. No worker builds/ADB/commits until explicitly released.
+Tests first: write the tests and return; Codex records RED before implementation.
+
+## S1 / S2 detailed storage contract
+
+Preserve public store constructors/APIs and legacy filenames, no model/UI change.
+Add tests first for: regular-file directory/unavailable storage cannot crash
+construction/startSession/note/noteSummary/clear/person settings or delete;
+oversized and malformed files are bounded/rejected without deleting originals;
+invalid confidence NaN/infinity/out-of-range, zones, negative times/counts and
+control-character labels are rejected/sanitized; max 40 object labels / 20
+confirmed names enforced on LOAD too; count increment saturates instead of
+overflow; old elapsedRealtime values never sort new-boot entries as older;
+consent remains off by default and face storage/recognition remain disabled.
+Failed durable person writes must never claim a name was saved. Disabling a
+privacy feature must disable it in memory even if persistence fails.
+
+Internal helper API expected by tests:
+`BoundedAtomicTextFile(file: File, maxBytes: Int = 65536,
+beforeReplace: (File) -> Unit = {})`, with `read(): String?`,
+`write(text: String): Boolean`, `delete(): Boolean`.
+Use existing platform same-directory atomic replacement (Android API26+ Java NIO
+or a testable platform adapter), fsync written content, preserve old bytes if
+staging/replace fails; no non-atomic overwrite fallback. Bounded UTF-8 reads,
+catch storage exceptions (not VM fatal errors), cleanup only helper-owned staged
+file. beforeReplace permits deterministic I/O interruption tests without mocks.
+Do not introduce Room/DataStore/Android mock-test dependencies. Document actual
+guarantees: atomic replacement is not power-loss proof of every filesystem.
+Prefer file/insertion order for persisted history; elapsed realtime is not UTC.
+Keep modifications to listed files. If minimal API additions are needed explain
+them first in your result. Do not claim Android physical I/O from JVM alone.
+
+## D1 / D2 exact diagnostic decoder contract
+
+Define `internal data class RawDepthSummary(val sampledPixels: Int,
+val validDepthPixels: Int, val confidentPixels: Int, val medianDepthMm: Int?,
+val p90DepthMm: Int?)` and `internal object RawDepthFrameStats` with:
+`summarize(width: Int, height: Int, depth: ByteBuffer, depthRowStride: Int,
+depthPixelStride: Int, confidence: ByteBuffer, confidenceRowStride: Int,
+confidencePixelStride: Int, confidenceThreshold: Int = 128): RawDepthSummary`.
+
+CPU-only debug Kotlin, no Android imports or frame ownership. Decode unsigned
+16-bit LITTLE_ENDIAN depth in millimetres; confidence unsigned 0..255. Zero depth
+is missing, not free space. Threshold is diagnostic only, never calibration or
+walkability. Counts cover every validated pixel (cap width*height at 1,048,576).
+Percentiles over nonzero depth pixels with confidence >= threshold only, nearest
+rank ceil(q*n)-1. Return null distances if none. Validate positive dimensions,
+threshold 0..255, adequate non-overlapping row/pixel strides and remaining bytes
+from each ByteBuffer's current position, including last row without final pad;
+overflow-safe Long arithmetic. Reject malformed input via IllegalArgumentException.
+Do not change input buffer positions, limits, byte order or underlying bytes.
+Tests: unsigned >32767 / confidence >127, nonzero offsets, padded rows/pixel
+stride, read-only/direct buffer, truncated last row, invalid/overflow dimensions,
+overlap stride, invalid thresholds, empty confidence, zero depth, null aggregate,
+percentile behavior and immutability. No arbitrary 13-bit depth masking.
+
+Primary source: https://developers.google.com/ar/develop/java/depth/raw-depth
+and SDK v1.57.0 official sample. No downloaded code/weights or new dependencies.
+Later D3 must explicitly close both Images, reject repeated/reprojected depth
+timestamps and misaligned confidence, stop onPause/timeout, keep ARCore sole
+camera owner, retain no RGB/depth files, and never issue movement instructions.
+
+## Evidence and completion
+
+Each result file records exact changed files, tests written, RED/GREEN evidence
+if actually run, unresolved risks and NEXT status. A written task is not proof
+Cursor ran it. Codex verifies CLI exit/result and reviews diffs before acceptance.
+One Gradle build at a time; other workers may write disjoint source concurrently,
+but final gate runs only on stable source. New user issue captures are opt-in
+local inputs, not automatic recordings or uploads. Human height/distance ground
+truth and hearing/TalkBack need the owner; no eyes-closed walking test.

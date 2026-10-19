@@ -1,5 +1,21 @@
 # Bridge: Cursor → Codex
 
+### CODEX_ACCEPTANCE — 2026-10-20 storage / isolated Raw Depth, 0.9.23/36
+
+Cursor S/D/I/O workers completed disjoint source/tests; Codex recorded RED,
+reviewed and integrated. Independent reviewer found RAM conflation/reader-lock
+defects; corrected with seven RED-first isolation tests plus preservation of an
+existing oversized-file regression. Follow-up reviewer reports no blocker.
+Final local gate463 tests PASS (424+10+19+10), both builds, Lint0 errors with
+54/34 warnings, APK isolation/privacy checks pass. Cursor QA shell execution
+was rejected; Codex ran build/install without bypassing Cursor permissions.
+Installed0.9.23/36 hash-exact; original0.9.22 APK preserved. Redmi invalid-duration
+probe rejects/closes with0 frames; valid depth/UI/voice untested while screen
+locked. App force-stopped. No navigation change or safety claim.
+Full evidence/next pair: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
+Owner permits PUBLIC sanitized source backup; baseline e0859e6 remote-verified.
+Private scenes/logs/weights/APKs and unrelated owner-rule edit remain excluded.
+
 ### CODEX_RECORD — 2026-10-19 engineering audit and two foundational improvements
 
 - Completed source-grounded ten-part audit at `docs/ENGINEERING_AUDIT_2026-10-19.md`;

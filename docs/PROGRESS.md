@@ -1,5 +1,21 @@
 # Progress Log
 
+## 2026-10-20 — 0.9.23/36: storage hardening + isolated Raw Depth
+
+Installed0.9.23/36 over USB and verified installed APK SHA against the gate;
+original0.9.22 APK preserved, no app-data clear. App left force-stopped.
+Final offline gate PASS:424 app +10 sim +19 policy +10 evaluation =463 tests,
+zero failures/errors/skips; debug/release builds and APK policy pass. Lint has
+0 errors,54/34 warnings. Atomic bounded stores, honest person persistence
+failure results and RAM/disk-isolated coalescing note writes are implemented.
+Cursor review caught integration issues; seven added RED-first tests and an
+existing oversized-file regression drove corrections before final acceptance.
+Debug Raw Depth decoder/admission/lifecycle instrument is implemented, not
+navigation fusion. On Redmi, invalid-duration refusal closes with zero frames;
+valid depth and0.9.23 UI/voice remain untested because the phone screen locked.
+Full evidence/limits/next pair: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
+Baseline e0859e6 is remote-verified; owner now allows public sanitized backup.
+
 ## 2026-10-19 — Engineering audit + local verification / private-evidence boundary
 
 Implemented two foundational improvements, not another perception feature:

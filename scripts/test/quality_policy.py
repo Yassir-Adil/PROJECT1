@@ -75,7 +75,12 @@ def audit_manifest(permissions, tree, variant, package):
     else:
         activities = [block for block in re.split(r"(?m)^\s*E: ", tree)
                       if block.startswith("activity ") and re.search(r"com\.triguide\.ai\.diagnostics\.\w*DiagnosticActivity", block)]
-        require(len(activities) == 3, "Expected exactly three protected debug activities")
+        expected = {f"{package}.diagnostics.{name}DiagnosticActivity"
+                    for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth")}
+        names = [re.search(r'com\.triguide\.ai\.diagnostics\.\w*DiagnosticActivity', block)[0]
+                 for block in activities]
+        require(len(names) == len(expected) and set(names) == expected,
+                "Debug diagnostic activity inventory differs from the reviewed allowlist")
         for block in activities:
             require(re.search(r':permission\([^)]*\)="android.permission.DUMP"', block),
                     "Debug activity is not DUMP protected")

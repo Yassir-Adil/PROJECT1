@@ -1,5 +1,17 @@
 # Open-source licenses
 
+## Debug Raw Depth probe adaptation — 2026-10-20
+
+`RawDepthDiagnosticActivity.kt` adapts the lifecycle/GL texture pattern from
+Google ARCore SDK v1.57.0's `raw_depth_java` sample, with the Apache-2.0
+attribution retained in the source. The upstream sample license and a record of
+modifications are included at `third_party/arcore-sample-LICENSE.txt` and
+`third_party/NOTICE.md`. Source and exact scope are linked there. This does not
+relicense the ARCore binary SDK, model weights, datasets or TriGuide original
+code. The isolated debug activity displays Google ARCore terms/privacy URLs;
+it does not enable cloud features or acquire/store RGB images. Real depth is
+diagnostic, not a navigation or metric-accuracy approval.
+
 ## Debug-only ARCore capability experiment — 2026-10-19
 
 Maven dependency `com.google.ar:core:1.57.0` is included in debug only, not release.

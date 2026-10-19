@@ -132,6 +132,7 @@ import com.triguide.ai.domain.VoiceCues
 import com.triguide.ai.domain.VoiceGateInput
 import com.triguide.ai.domain.VoiceGuidanceGate
 import com.triguide.ai.memory.LocalGuidanceMemory
+import com.triguide.ai.memory.CoalescingMemoryWriter
 import com.triguide.ai.memory.PersonConsentStore
 import com.triguide.ai.robot.SimulatedTricycleController
 import com.triguide.ai.sim.TricycleKinematics
@@ -232,7 +233,12 @@ private class AppServices(context: android.content.Context) {
     val voiceGate = VoiceGuidanceGate()
     val speaker = AndroidVoiceSpeaker(context)
     private val memoryDirectory = java.io.File(context.filesDir, "guidance-memory")
-    val memory = LocalGuidanceMemory(memoryDirectory)
+    // Best-effort notes only: never queue navigation/speech or block their UI thread on fsync.
+    val memoryWrites = CoalescingMemoryWriter()
+    val memory = LocalGuidanceMemory(memoryDirectory, scheduleWrite = { write ->
+        memoryWrites.offer(write)
+        Unit
+    })
     val people = PersonConsentStore(memoryDirectory)
 
     init {
@@ -277,6 +283,7 @@ fun TriGuideRoot(startPaused: Boolean = false) {
     }
     DisposableEffect(services) {
         onDispose {
+            services.memoryWrites.close()
             services.detection.close()
             services.speaker.close()
         }
@@ -664,7 +671,8 @@ private fun CameraScreen(
             return
         }
         val line = SceneDescription.fromCues(scene.cues, services.people.recognize()?.name)
-        services.memory.noteSummary(line.english, android.os.SystemClock.elapsedRealtime())
+        val notedAt = android.os.SystemClock.elapsedRealtime()
+        services.memory.noteSummary(line.english, notedAt)
         describeFrame(services, line.english, line)
     }
 

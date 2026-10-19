@@ -52,6 +52,9 @@ The install script stops if that phone is missing or not in the `device` state. 
 | `docs/SAFETY_LIMITATIONS.md` | What this build must not be used for |
 | `research/model-audit.md` | GuideLens ONNX files |
 | `docs/KNOWN_ISSUES.md` | Open blockers |
+| `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md` | 0.9.23 actual gate/install evidence and raw-depth limits |
+| `docs/FIELD_ISSUE_WORKFLOW.md` | Local user-reported scene failures and tests-first repair |
+| `docs/WORK_QUEUE.md` | Shared Codex/Cursor ownership and next bounded tasks |
 
 ## Local setup (high level)
 

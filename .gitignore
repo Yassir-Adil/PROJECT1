@@ -69,3 +69,6 @@ outputs/logs/**
 # Educational weights and private test inputs must not enter Git by accident.
 /android-app/app/src/debug/assets/**
 /research/datasets/
+
+# IDE-generated source/class mirrors are not a second source tree.
+/android-app/sim-core/bin/

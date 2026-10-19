@@ -2,6 +2,19 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 — 0.9.23 final gate and Redmi refusal test
+
+**PASS (engineering), physical depth/UI acceptance still pending.**
+`outputs/reports/quality-gate/20261019T172320780644Z/summary.json`:
+424 app +10 sim +19 policy +10 evaluation =463 tests, no failure/error/skip;
+both builds/Lint/APK policy pass,54 debug/34 release warnings, no errors.
+Source fingerprint, RED evidence, corrected integration failures, APK hashes
+and exact boundaries: `docs/STORAGE_AND_RAW_DEPTH_2026-10-20.md`.
+Redmi install reports0.9.23/36 and pulled APK hash matches the final gate.
+Invalid duration0 emits one FAIL/invalid_duration result with0 frames then
+CLOSED. Valid raw depth, main UI/voice/TalkBack, height accuracy and walking
+are not tested here. Phone locked; no bypass; app force-stopped.
+
 ## 2026-10-19 — Local engineering gate and private-input regression
 
 **Engineering gate: PASS, with documented Lint warnings.** Run:

@@ -1,5 +1,37 @@
 # Architecture
 
+## 0.9.23 storage / isolated Raw Depth boundary — 2026-10-20
+
+Local label/session/name stores reuse one bounded strict-UTF8 atomic-replace
+helper (same-directory staging + file fsync + atomic move, API26+). No unsafe
+truncate fallback; malformed input is rejected, load caps are enforced, counts
+saturate and chronology is file/insertion order rather than reboot-unsafe
+elapsed timestamps. Person save/delete failures do not claim durable success.
+Disabling consent takes effect in memory even when storage fails; a failed disk
+disable is not proof of durable revocation after restart. No faces are stored.
+
+RAM label/summary mutations run immediately under a short lock. Only best-effort
+disk persistence uses the existing coroutines runtime:
+one serial worker, one latest pending write, nonblocking offers, terminal close
+that drops pending work without joining synchronous in-flight disk work.
+Each job reads the latest immutable combined objects/session snapshot, so dropping
+pending disk jobs cannot drop RAM mutations or an earlier description. A separate
+disk lock prevents fsync from blocking ordinary RAM readers. `clearPersisted()`
+reports durable-clear failure and serializes with pending disk jobs; the legacy
+`clear(): Unit` API remains, and must not be used to announce durable success.
+Guidance and speech never enter that queue. Store loading, explicit durable clear
+and explicit person actions are not claimed entirely off the main thread.
+
+The debug-only DUMP-protected RawDepthDiagnosticActivity is an explicitly
+launched, bounded ARCore camera owner, never concurrent with CameraX. It acquires
+raw depth/confidence, closes every Image, samples at most10Hz, and feeds pure
+RawDepthFrameStats plus a terminal timestamp/age/tracking admission gate.
+Repeated/reprojected/out-of-order/misaligned/late data is rejected; missing
+depth is unknown. Stop/background drains renderer, pauses and closes Session.
+Only bounded aggregate metrics are logged; no RGB/depth files, new dependency,
+network permission, model or navigation authority. It is not exposed as a live
+guidance option. Full phone lifecycle/accuracy acceptance is separate from JVM.
+
 ## Engineering audit / local evidence boundary — 2026-10-19
 
 Current logical architecture, five ranked weaknesses, storage/evaluation/test

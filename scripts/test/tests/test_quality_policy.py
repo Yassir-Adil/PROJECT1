@@ -101,7 +101,7 @@ class QualityPolicyTest(unittest.TestCase):
         tree = "\n".join(f'''      E: activity (line=2)
         A: android:name(0x1)="com.triguide.ai.diagnostics.{name}DiagnosticActivity"
         A: android:permission(0x2)="android.permission.DUMP"
-''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability"))
+''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth"))
         audit_manifest(PERMISSIONS, tree, "debug", PACKAGE)
         with self.assertRaisesRegex(PolicyError, "DUMP protected"):
             audit_manifest(PERMISSIONS, tree.replace('android.permission.DUMP', 'other', 1), "debug", PACKAGE)
@@ -116,6 +116,14 @@ class QualityPolicyTest(unittest.TestCase):
         path.write_text(json.dumps(duplicate))
         with self.assertRaisesRegex(PolicyError, "Duplicate"):
             load_policy(path)
+
+    def test_unknown_dump_protected_activity_is_still_unreviewed(self):
+        tree = "\n".join(f'''      E: activity (line=2)
+        A: android:name(0x1)="com.triguide.ai.diagnostics.{name}DiagnosticActivity"
+        A: android:permission(0x2)="android.permission.DUMP"
+''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "Unexpected"))
+        with self.assertRaisesRegex(PolicyError, "inventory"):
+            audit_manifest(PERMISSIONS, tree, "debug", PACKAGE)
 
     def test_backup_protects_all_three_modes_and_rejects_missing_exclusion(self):
         folder = self.root / "android-app/app/src/main/res/xml"
