@@ -1,5 +1,16 @@
 # Open-source licenses
 
+## Reuse research and evaluation —2026-10-20
+
+Research source pins, separate code/weight/data terms and adoption gates:
+research/09-reuse-and-failure-focused-evaluation.md. No V2/V3/Guideline/Open3D
+code or weights, Hypersim/NYU/ScanNet data or new dependency is bundled this
+round. Existing ADE20K validation data is reused locally under noncommercial
+educational image terms; no images are published. Semantic evaluation retains
+ADE150 labels excluded by Top31 scoring. New original diagnostics use the
+existing ARCore public getAllTrackables/Plane APIs; SDK binary terms remain
+separate, and Google sample notices below remain unchanged.
+
 ## Debug camera background adaptation —2026-10-20
 
 DiagnosticCameraBackground.kt adapts the pinned Google ARCore SDK v1.57.0

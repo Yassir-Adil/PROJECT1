@@ -2,6 +2,19 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current pair complete —2026-10-20,0.9.29/42
+
+Reused existing ARCore inventory API and ADE20K/LiteRT evaluation.572-test full
+gate/builds/policy pass; installed/hash verified. Public256-image same-selection
+3-model run exposes stair→floor confusion49.18% MOSAIC vs24.64% float; pixel
+semantics only, not hazard/Redmi accuracy. No model/navigation switch. Independent
+Cursor review accepted with scoped limits; export coverage strengthened. USB lost
+after diagnostic launch, so no0.9.29 runtime/close claim. No owner photo needed.
+Ranked ready code/models/data and terms: research/09-reuse-and-failure-focused-evaluation.md.
+Next pair: controlled ground-reference/current-plane geometry and tiny public
+RGB-D/offline oracle. V2 Small Android demo is benchmark alternative; Guideline
+alignment/occupancy reference, not whole-app replacement. Details: REUSE_EVALUATION_2026-10-20.md.
+
 ## Completed pair —2026-10-20,0.9.28/41
 
 Reused SDK planes/ray hits and licensed Google OES preview pattern; no new model/

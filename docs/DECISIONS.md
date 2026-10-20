@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-10-20 — Reuse what answers the measured failure before another model
+
+Add bounded diagnostic SDK plane inventory and preserve ADE150 risk classes in
+existing public LiteRT evaluation, instead of replacing the app/model stack.
+Same256 pairs show MOSAIC57.10% mIoU yet49.18% stair-pixel floor confusion;
+float54.85% mIoU/24.64% confusion also insufficient. No semantic-to-CLEAR bypass.
+Research pins Guideline alignment/occupancy, V2 Small Android demo, Hypersim,
+Open3D and newer DA3; adoption conditional on terms/contracts/device evidence.
+No new dependencies/model/data/permissions/private upload. Final572-test gate
+pass, installed0.9.29 hash exact. USB lost after probe launch, runtime unverified.
+No fake measured wall/safe-rug result. Evidence: REUSE_EVALUATION_2026-10-20.md.
+
 ## 2026-10-20 — Reuse SDK geometry and make the diagnostic view observable
 
 Raw-depth sampling works but global coverage is sparse and uncalibrated. Current

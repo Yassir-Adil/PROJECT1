@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2026-10-20 — Reuse research, plane inventory and failure-focused evaluation,0.9.29/42
+
+Task list preceded bounded Cursor P/E tests-first work and independent R review.
+Codex executed real missing-helper RED, integrated/verified source, strengthened
+export coverage after review. Final offline572 tests/builds/policy pass, Lint0
+errors55/34 warnings. Public ADE20K256 same pairs×3 pretrained models=768 frame
+evaluations, no training/download/private upload. MOSAIC higher meanIoU/host speed
+but49.18% stair-pixel→floor vs24.64% float on this sample; no navigation change.
+Existing SDK inventory now separates known orientation planes from4ray misses.
+0.9.29/42 install/baseAPK hash verified.10s diagnostic launch ok, USB disconnected
+before log capture; runtime/close unverified. Waiting logcat cancelled; no host/
+device security changes. No owner action needed for remaining research/backup.
+Results/limits: REUSE_EVALUATION_2026-10-20.md. Primary/pinned reusable sources:
+research/09-reuse-and-failure-focused-evaluation.md.
+
 ## 2026-10-20 — SDK surface rays + visible camera,0.9.28/41 installed
 
 Task list preceded three bounded parallel Cursor S/B/R workers. Tests first,

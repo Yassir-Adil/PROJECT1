@@ -1,5 +1,15 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 reuse/inventory/evaluation,0.9.29/42
+
+P/E tests/source and R review complete, no active worker. Real RED before source;
+Codex strengthened export assertions after review, final572-test/build/policy
+gate PASS. Public256same pairs×3 models actual semantic inference, no training.
+Installed0.9.29 exact APK hash. USB disappeared after10s diagnostic launch, logs/
+close/inventory unverified. No new model/permission/main nav or private upload.
+Detailed dispositions/limits: REUSE_EVALUATION_2026-10-20.md. Research pins/ready
+code/datasets: research/09-reuse-and-failure-focused-evaluation.md.
+
 ### CODEX_RECORD —2026-10-20 surfaces+preview,0.9.28/41 installed
 
 S/B/R disjoint tasks complete. Codex RED before source;40 focused and539 full

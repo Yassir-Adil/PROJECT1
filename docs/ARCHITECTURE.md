@@ -1,5 +1,16 @@
 # Architecture
 
+## 0.9.29 diagnostic inventory and offline ADE150 evidence —2026-10-20
+
+ARCore GL/Frame owner unchanged.1Hz inventory maps up to256 session-known Plane
+objects lazily to primitive tracking/subsumption/orientation counts, separate
+from current polygon-filtered4ray observations. No SDK objects retained, no main
+guidance consumer; native enumeration not capped by primitive helper. Host-only
+LiteRT replay adds151×32 confusion and floor mismatch denominators without
+discarding GT>31. GT0/pad excluded from labelled precision. No height/hazard
+inference, model training, new runtime/network or camera owner. Detail/evidence:
+REUSE_EVALUATION_2026-10-20.md. Release excludes SDK diagnostic classes.
+
 ## 0.9.28 debug surface probes / camera preview —2026-10-20
 
 One existing ARCore Session owns all camera work. Optional horizontal+vertical

@@ -1,5 +1,15 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 reuse pair complete,0.9.29/42
+
+P/E/R workers all finished. Read WORK_QUEUE top and REUSE_EVALUATION_2026-10-20.md.
+Codex independently ran RED then572-test final gate/builds/policy; installed SHA
+exact. Public256same pairs×3 runs exposes unsafe semantic-only assumptions, no
+model/nav switch.10s phone probe launched but USB lost before logs; no runtime
+success claim. New source/terms research: research/09-reuse-and-failure-focused-evaluation.md.
+Next planned pair ground-reference/current-plane geometry + tiny public RGB-D
+oracle; no worker running or permission to silently expand/restart prior scopes.
+
 ### CURRENT_SCOPE —2026-10-20 surface/preview pair complete,0.9.28/41
 
 Read WORK_QUEUE top. S/B tests-first source and R review finished; no active

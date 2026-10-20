@@ -24,6 +24,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+if __package__:
+    from . import semantic_risk_metrics
+else:
+    import semantic_risk_metrics
+
 SIZE = 512
 CLASS_COUNT = 32
 STAIR_IDS = (54, 60, 97, 122)
@@ -151,11 +156,14 @@ def run(args) -> dict:
     interpreter.allocate_tensors()
     args.output_dir.mkdir(parents=True, exist_ok=False)
     total = np.zeros((CLASS_COUNT, CLASS_COUNT), np.int64)
+    full_total = np.zeros((semantic_risk_metrics.GT_CLASS_COUNT, CLASS_COUNT), np.int64)
     stair_predictions = np.zeros(CLASS_COUNT, np.int64)
     digest, latencies = hashlib.sha256(), []
     started = time.perf_counter()
     columns = ["scene_id", "image_sha256", "mask_sha256", "scored_pixels", "correct_pixels",
-               "inference_ms", "stair_gt_pixels", "stair_predicted_floor_pixels"]
+               "inference_ms", "stair_gt_pixels", "stair_predicted_floor_pixels",
+               "labeled_floor_prediction_pixels", "non_floor_as_floor_pixels",
+               "wall_gt_pixels", "wall_predicted_floor_pixels", "rug_gt_pixels", "rug_predicted_floor_pixels"]
     with (args.output_dir / "frames.tsv").open("x", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, columns, delimiter="\t")
         writer.writeheader()
@@ -175,11 +183,16 @@ def run(args) -> dict:
             prediction = interpreter.get_tensor(output_info["index"])[0]
             current = confusion(prediction, target)
             total += current
+            full_current = semantic_risk_metrics.full_confusion(prediction, target)
+            full_total += full_current
             latencies.append(elapsed)
             stairs = np.isin(target, STAIR_IDS)
             stair_predictions += np.bincount(prediction[stairs], minlength=CLASS_COUNT)
             writer.writerow(dict(zip(columns, [image.stem, image_hash, mask_hash, int(current.sum()),
-                int(np.trace(current)), round(elapsed, 4), int(stairs.sum()), int(np.count_nonzero(prediction[stairs] == 4))])))
+                int(np.trace(current)), round(elapsed, 4), int(stairs.sum()), int(np.count_nonzero(prediction[stairs] == 4)),
+                int(full_current[1:, 4].sum()), int(full_current[1:, 4].sum() - full_current[4, 4]),
+                int(full_current[1].sum()), int(full_current[1, 4]),
+                int(full_current[29].sum()), int(full_current[29, 4])])))
             if (index + 1) % 32 == 0 or index == len(pairs) - 1:
                 stream.flush()
                 print(f"EVALUATED {index + 1}/{len(pairs)} {args.variant} elapsed_s={time.perf_counter() - started:.1f}", flush=True)
@@ -196,6 +209,10 @@ def run(args) -> dict:
         "recipe": "long_side_512_floor_dimensions_bilinear_align_corners_top_left_pad127_nearest_labels" if args.preprocessing == "reference" else "centered_pad128_half_pixel_bilinear_approximation_of_Android_probe",
         "decode": "Pillow_RGB_original_JPEG_no_extra_JPEG_encode; reference-derived_not_bit_identical_TensorFlow",
         "metrics": metrics(total), "confusion_gt_rows_prediction_columns": total.tolist(),
+        "semantic_risk_schema_version": 1,
+        "semantic_risk_script_sha256": hashlib.sha256(Path(semantic_risk_metrics.__file__).read_bytes()).hexdigest(),
+        "semantic_risk": semantic_risk_metrics.metrics(full_total),
+        "full_confusion_ade150_gt_rows_top31_prediction_columns": full_total.tolist(),
         "stairs_ground_truth_ids": STAIR_IDS, "stairs_pixel_count": int(stair_predictions.sum()),
         "stairs_predicted_ids": stair_predictions.tolist(),
         "stairs_predicted_floor_fraction": float(stair_predictions[4] / stair_predictions.sum()) if stair_predictions.sum() else None,
@@ -205,7 +222,10 @@ def run(args) -> dict:
         "threads": args.threads, "host": {"os": platform.system(), "machine": platform.machine()},
         "packages": {p: importlib.metadata.version(p) for p in ("ai-edge-litert", "numpy", "Pillow")},
         "limitations": ["Not Redmi or live camera performance", "No floor confidence or traversability measurement",
-                        "Top31 excludes stairs; stair diagnostics are scored separately from Top31 mIoU"],
+                        "Top31 excludes stairs; stair diagnostics are scored separately from Top31 mIoU",
+                        "ADE150 risk counts are resized semantic pixels, not calibrated hazards or movement authority",
+                        "Unlabeled GT0 includes preprocessing padding and is excluded from labeled floor precision",
+                        "Rug-to-floor confusion is not proof of a hazard or a safe flat rug"],
     }
     with (args.output_dir / "summary.json").open("x", encoding="utf-8") as stream:
         json.dump(report, stream, indent=2, allow_nan=False)

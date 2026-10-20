@@ -1,5 +1,18 @@
 # Known Issues
 
+## 0.9.29/42 —2026-10-20
+
+Global session-known plane orientation inventory implemented; visibility/floor/
+wall identity still unproven. Native getAllTrackables enumeration SDK-owned;
+helper inspects256,1Hz and logs truncation. UI compact, full buckets log-only.
+3-model256-image semantic replay exposes strong stair→floor confusion (MOSAIC
+49.18%,float24.64% stair pixels); neither model accepted for walking permission.
+Rug labels cannot resolve flat versus raised edges. Public RGB-D, calibration/
+ground-reference and one camera owner remain next gates, no sensor purchase.
+572 tests/builds/policy pass; installed/hash verified. USB lost after10s probe
+launch;0.9.29 runtime/inventory/close outcome unverified, no app failure inferred.
+No threshold/navigation change. REUSE_EVALUATION_2026-10-20.md records limits.
+
 ## 0.9.28/41 installed —2026-10-20
 
 Live debug camera+markers confirmed by owner. SDK upward-plane ray adapter

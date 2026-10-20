@@ -1,5 +1,33 @@
 # Shared execution queue — 2026-10-19
 
+## Completed pair — 2026-10-20, reuse research and failure-focused evaluation
+
+FINAL:0.9.29/42 installed/hash verified.572 full tests/builds/APK policy PASS;
+Lint0errors55/34warnings.16 focused inventory tests,27 evaluation tests. Three
+public256-image runs=768 evaluations; same digest. MOSAIC stair→floor49.18% vs
+float24.64% on this subset, not a safety/Redmi accuracy claim. R accepted with
+limits; exporter assertions strengthened then full gate rerun. Phone10s launch
+ok but USB vanished before logs; runtime/close unverified. All workers finished.
+No owner action needed for research/backup. Scope below is execution history.
+Evidence/next pair: REUSE_EVALUATION_2026-10-20.md and research/09-reuse-and-failure-focused-evaluation.md.
+
+Baseline 5b4986a /0.9.28,539 tests. Preserve dirty owner-request-voice-ux rule.
+Owner requests researched reusable improvements, not more unmeasured models.
+
+| Scope | Owner / exclusive files | Acceptance |
+| --- | --- | --- |
+| P: bounded SDK plane inventory | Cursor P: SurfaceInventoryPolicy.kt; SurfaceInventoryPolicyTest.kt; docs/CURSOR_INVENTORY_2026-10-20.md | Tests first; wait for Codex RED before implementation. No SDK/UI/build/ADB/Git. |
+| E: failure-focused semantic evaluation | Cursor E: research/semantic_risk_metrics.py; research/tests/test_semantic_risk_metrics.py; docs/CURSOR_RISK_METRICS_2026-10-20.md | Tests first; wait for Codex RED. No model/data/build/network changes. |
+| Source research, integration, independent review | Codex: primary web sources, SDK adapter/activity, existing evaluator, shared docs, final QA/backup | Separate code/weights/data terms, measured tests; never navigation authorization. |
+
+P reports available orientation-only planes versus ray misses. E preserves all
+ADE150 ground-truth classes for false-floor diagnostics rather than hiding stairs
+outside Top31. Rugs are reported separately, NOT automatically hazards or safe.
+Workers cannot run shell/Gradle/ADB/Git, access private outputs, edit other files,
+or bypass tool approvals. No model, permission, cloud, training, CLEAR/turn change.
+Codex researches ready SDK/Project Guideline/indoor datasets and selects measured
+next steps; no fabricated wall/floor detection or safety acceptance.
+
 ## Active pair —2026-10-20, SDK surfaces and visible camera
 
 FINAL:0.9.28/41 installed/hash verified,539 full tests PASS (500+10+19+10),

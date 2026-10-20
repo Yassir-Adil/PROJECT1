@@ -1,11 +1,17 @@
 import importlib.util
+import csv
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
+from PIL import Image
 
-spec = importlib.util.spec_from_file_location("evaluation", Path(__file__).parents[1] / "evaluate_ade20k_segmenter.py")
+spec = importlib.util.spec_from_file_location("research.evaluate_ade20k_segmenter", Path(__file__).parents[1] / "evaluate_ade20k_segmenter.py")
 evaluation = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(evaluation)
 
@@ -53,6 +59,74 @@ def litert_resize_oracle(values, height, width, nearest):
 
 
 class EvaluationContractTest(unittest.TestCase):
+    def test_export_keeps_excluded_stairs_and_rug_counts_without_changing_top31_score(self):
+        class InterpreterFixture:
+            def __init__(self, **kwargs):
+                pass
+
+            def get_input_details(self):
+                return [{"shape": np.array([1, 512, 512, 3]), "dtype": np.uint8,
+                         "index": 0, "quantization": (.007843137718737125, 128)}]
+
+            def get_output_details(self):
+                return [{"shape": np.array([1, 512, 512]), "dtype": np.int32, "index": 1}]
+
+            def get_tensor_details(self):
+                return [{"index": 2, "shape": np.array([1, 512, 512, 32])}]
+
+            def _get_ops_details(self):
+                return [{"op_name": "ARG_MAX", "inputs": [2]}]
+
+            def allocate_tensors(self):
+                pass
+
+            def set_tensor(self, index, value):
+                pass
+
+            def invoke(self):
+                pass
+
+            def get_tensor(self, index):
+                return np.full((1, 512, 512), 4, np.int32)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for folder in ("images/validation", "annotations/validation", "models"):
+                (root / folder).mkdir(parents=True)
+            Image.fromarray(np.zeros((2, 3, 3), np.uint8)).save(root / "images/validation/ADE_val_00000001.jpg")
+            Image.fromarray(np.array([[0, 4, 1], [54, 29, 4]], np.uint8)).save(root / "annotations/validation/ADE_val_00000001.png")
+            (root / "models/fixture.tflite").write_bytes(b"synthetic interpreter fixture, not a model")
+            args = SimpleNamespace(variant="uint8", model_dir=root / "models", data_root=root,
+                                   limit=1, threads=1, output_dir=root / "report",
+                                   preprocessing="reference", uint8_input="reference")
+            pin = ("fixture.tflite", hashlib.sha256((root / "models/fixture.tflite").read_bytes()).hexdigest())
+            with patch("ai_edge_litert.interpreter.Interpreter", InterpreterFixture), patch.dict(evaluation.MODEL_FILES, {"uint8": pin}):
+                report = evaluation.run(args)
+                with self.assertRaises(FileExistsError):
+                    evaluation.run(args)
+            stored = json.loads((args.output_dir / "summary.json").read_text())
+            self.assertEqual(report["semantic_risk"], stored["semantic_risk"])
+            counts = stored["semantic_risk"]["per_gt"]
+            self.assertGreater(counts[54]["predicted_floor_pixels"], 0)
+            self.assertGreater(counts[29]["predicted_floor_pixels"], 0)
+            self.assertEqual(1., stored["stairs_predicted_floor_fraction"])
+            self.assertEqual(151, len(stored["full_confusion_ade150_gt_rows_top31_prediction_columns"]))
+            self.assertEqual(64, len(stored["semantic_risk_script_sha256"]))
+            self.assertIs(stored["semantic_risk"]["diagnostic_only"], True)
+            self.assertEqual(1, stored["semantic_risk_schema_version"])
+            self.assertGreater(stored["semantic_risk"]["unlabeled_as_floor_pixels"], 0)
+            self.assertEqual(1., stored["semantic_risk"]["non_floor_as_floor_fraction"] +
+                             stored["semantic_risk"]["floor_precision_labeled"])
+            with (args.output_dir / "frames.tsv").open(newline="", encoding="utf-8") as stream:
+                row = next(csv.DictReader(stream, delimiter="\t"))
+            self.assertEqual(counts[29]["pixels"], int(row["rug_gt_pixels"]))
+            self.assertEqual(counts[29]["predicted_floor_pixels"], int(row["rug_predicted_floor_pixels"]))
+            self.assertGreater(int(row["wall_gt_pixels"]), 0)
+            self.assertEqual(counts[1]["pixels"], int(row["wall_gt_pixels"]))
+            self.assertEqual(counts[1]["predicted_floor_pixels"], int(row["wall_predicted_floor_pixels"]))
+            self.assertEqual(stored["metrics"]["scored_pixels"],
+                             counts[1]["pixels"] + counts[4]["pixels"] + counts[29]["pixels"])
+
     def test_background_and_outside_top31_are_ignored_but_missing_prediction_is_not(self):
         gt = np.array([[0, 4, 4, 54, 31]])
         pred = np.array([[4, 4, 0, 4, 31]], dtype=np.int32)

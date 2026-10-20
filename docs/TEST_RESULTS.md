@@ -2,6 +2,17 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.29 inventory/evaluation:572-test gate PASS; phone runtime NOT VERIFIED
+
+Separate missing-helper RED before implementation.16 focused inventory JVM and
+27 Python evaluation tests pass incl synthetic exporter wall/rug/stair/GT0 checks.
+Final full gate516+10+19+27=572,0 failure/error/skip, both builds/APK policy pass;
+Lint0 errors55/34 warnings unchanged.256 public pairs×3 actual model runs with
+same digest, separate ADE150 risk counts and Top31 mIoU. No hazard/safety pass.
+Installed0.9.29/42 exact APK SHA.10s probe launch ok; USB vanished before logs,
+so no inventory/depth/close/accuracy outcome. Log wait cancelled. Evidence and
+source/APK/report hashes: REUSE_EVALUATION_2026-10-20.md.
+
 ## 2026-10-20 —0.9.28 surfaces / camera: engineering PASS, wall accuracy NOT VERIFIED
 
 Separate missing-helper compile RED for surface and background before source.

@@ -105,6 +105,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var surfaceProbeSamples = 0
     private var verticalSurfaceSamples = 0
     private var upwardSurfaceSamples = 0
+    private var inventoryVerticalSamples = 0
+    private var inventoryUpwardSamples = 0
+    private var inventoryTruncatedSamples = 0
     private val sessionUpdateMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
     private val surfaceProbeMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
 
@@ -458,6 +461,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val started = SystemClock.elapsedRealtimeNanos()
         if (started - lastSurfaceProbeElapsedNs < UI_LOG_MIN_INTERVAL_NS) return
         lastSurfaceProbeElapsedNs = started
+        val active = session ?: return
+        val inventory = ArCoreSurfaceProbe.inventory(active, frame)
         val observations = ArCoreSurfaceProbe.sample(frame, viewportWidth, viewportHeight)
         val latencyMs = (SystemClock.elapsedRealtimeNanos() - started) / NS_PER_MS
         if (stopping.get()) return
@@ -465,19 +470,29 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             surfaceProbeSamples++
             if (observations.any { it.reading.kind == SurfaceKind.VERTICAL_SURFACE }) verticalSurfaceSamples++
             if (observations.any { it.reading.kind == SurfaceKind.HORIZONTAL_UPWARD }) upwardSurfaceSamples++
+            if (inventory.trackingVertical > 0) inventoryVerticalSamples++
+            if (inventory.trackingUpward > 0) inventoryUpwardSamples++
+            if (inventory.truncated) inventoryTruncatedSamples++
             if (surfaceProbeMs.size >= MAX_LATENCY_SAMPLES) surfaceProbeMs.removeAt(0)
             surfaceProbeMs += latencyMs
         }
         val logReadings = observations.joinToString(" ") {
             "${it.ray.name}=${it.reading.kind}:${it.reading.distanceMeters ?: "null"}:${it.reading.reason}"
         }
+        Log.i(TAG, "SURFACE_INVENTORY frame_ts_ns=${frame.timestamp} status=${inventory.status} " +
+            "inspected=${inventory.inspected} truncated=${inventory.truncated} " +
+            "tracking_vertical=${inventory.trackingVertical} tracking_upward=${inventory.trackingUpward} " +
+            "tracking_downward=${inventory.trackingDownward} paused=${inventory.paused} " +
+            "stopped=${inventory.stopped} subsumed=${inventory.subsumed} unknown_kind=${inventory.unknownKind} " +
+            "scope=session_known_not_visibility semantics=orientation_only navigation=none")
         Log.i(TAG, "SURFACE_SAMPLE frame_ts_ns=${frame.timestamp} viewport=${viewportWidth}x$viewportHeight " +
             "$logReadings processing_ms=${format(latencyMs)} coordinate_space=VIEW_PIXELS " +
             "distance_kind=sdk_hit_ray_m semantics=orientation_only no_floor_or_wall_confirmation=true " +
             "metric_accuracy=unverified navigation=none no_image_storage=true")
         val description = observations.joinToString(" | ") {
             "${it.ray.name}: ${it.reading.kind} ${it.reading.distanceMeters?.let { m -> "~${format(m.toDouble())}m" } ?: "—"}"
-        } + "\nSDK estimates only; upward may be a table. تقديرات أسطح فقط، لا إذن للمشي."
+        } + "\nKnown SDK planes: V=${inventory.trackingVertical} U=${inventory.trackingUpward}" +
+            " (${inventory.status}); not visibility or floor proof. لا إذن للمشي."
         runOnUiThread { if (!stopping.get()) surfaceStatusView.text = description }
     }
 
@@ -880,6 +895,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             surfaceLine = "camera_preview=$cameraPreviewEnabled background_draws=$backgroundDraws " +
                 "surface_probe=$surfaceProbingEnabled surface_probe_samples=$surfaceProbeSamples " +
                 "surface_samples_with_vertical=$verticalSurfaceSamples surface_samples_with_upward=$upwardSurfaceSamples " +
+                "inventory_samples_with_vertical=$inventoryVerticalSamples inventory_samples_with_upward=$inventoryUpwardSamples " +
+                "inventory_truncated_samples=$inventoryTruncatedSamples inventory_scope=session_known_not_visibility " +
                 percentiles("session_update", sessionUpdateMs) + " " + percentiles("surface_probe", surfaceProbeMs)
             status = when {
                 this.failed -> "FAIL"
