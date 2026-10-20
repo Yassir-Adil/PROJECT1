@@ -1,5 +1,16 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 actual0.9.35 COMPLETE, unresolved attribution
+
+Owner-ready20.18s AUTOMATIC+semantic finished/closed, stopped; exactinstalled
+hash rechecked.1rawadmit/1freshsemantic/0groundcandidate, groundreason
+too_few_geometry_samples/support1. Owner reports colours visible; publish1/
+Canvas0/submitted0 remains unresolved.239.72ms n=1, no causal speed/accuracy
+claim. Last811fullgate unchanged, no executable edits or active workers. Next
+host/source priorities rendering attribution/expiry timing and sparse-support
+cadence evaluation without changing geometric or navigation gates.
+PHONE_SEMANTIC_0935_2026-10-20.md. Earlier pending records are historical.
+
 ### CODEX_RECORD —2026-10-20 final0.9.35 installed / camera pending
 
 Hreason annotations preserveallthresholds; Rcounter paint-boundary ambiguity and

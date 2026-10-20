@@ -1,5 +1,17 @@
 # Semantic canvas / ground-reason diagnostics0.9.34 —2026-10-20
 
+## Actual0.9.35 phone result — supersedes pending camera notes below
+
+Owner-ready20.18s COMPLETE+CLOSED, installedhash rechecked, app stopped.
+1rawadmit/1freshsemantic/0groundcandidate; exactground reason
+too_few_geometry_samples/support1. Owner reports colouredcells seen, while
+publish1/Canvas0/submitted0: preserve both, visibility attribution unresolved.
+239.72ms processing n=1 leaves ~10.28ms before originalreceipt expiry, plausible
+missed draw but no exact draw-rejection measurement.3geometryinvalidations;
+fixedline layout not proven oldvisualrootcause. No executable changes/new gate
+this turn. PHONE_SEMANTIC_0935_2026-10-20.md has full measurement/limits/next pair.
+Older camera-pending wording below describes historical checkpoints only.
+
 ## Follow-up0.9.35/48 — stable diagnostic text height
 
 Codex found an additional concrete source-level layout risk after the810-test

@@ -1,5 +1,16 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 actual0.9.35 measured, no active assignment
+
+Owner-ready20.18s complete/closed/stopped, installedhash rechecked.1rawadmit/
+1freshsemantic/0groundcandidate, reason too_few_geometry_samples/support1.
+Owner saw colours but publish1/Canvas0/submitted0 unresolved; do not call fixed.
+No active Cursor jobs; prior tasks below are history, not restart instructions.
+Next proposed scopes rendering attribution/expiry timing and sparse-support
+diagnostic cadence, tests-first and explicit nonoverlap before implementation.
+No gate/lifetime/model/navigation changes authorized by a positive visual report.
+PHONE_SEMANTIC_0935_2026-10-20.md and latest WORK_QUEUE are authoritative.
+
 ### CURRENT_SCOPE —2026-10-20 source0.9.35 complete, deviceconfirmation pending
 
 AllH/Rscopesclosed;113focused +layoutsourceRED/GREEN,811fullgate/build/policy

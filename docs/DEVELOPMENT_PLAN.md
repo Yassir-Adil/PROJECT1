@@ -2,14 +2,21 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
-## Final checkpoint0.9.35/48 — next step requires fresh stationary scene
+## Actual0.9.35/48 checkpoint — phone complete, two measured follow-ups
 
-811tests/build/policyPASS; reason/Canvas instrumentation and fixed-line status
-layout independently reviewed, installed/basehashverified, stopped/noPID.
-No035camera yet. Lastactual033 ownerconfirmeduprightimage butnotcolouredcells,
-13fresh/0stale/0groundcandidate. Next ONLY useful device gate: lit floor-visible
-20s capture of precisegroundreason, UIpublish/submitted/freshCanvas counts and
-geometryinvalidations, with ownercolourfeedback. Do not weaken uncertainty gates.
+Owner-ready20.18s AUTOMATIC+semantics COMPLETE+CLOSED; installedhash rechecked,
+stopped/noPID.1rawadmit/1freshsemantic/0groundcandidate; exactgroundreason
+too_few_geometry_samples/support1. Owner reports colours visible, but UIpublish1/
+Canvas0/submitted0: rendering attribution remains unresolved, not a passed fix.
+239.72ms localreceipt result leaves ~10.28ms before250ms expiry; n=1 cannot prove
+a performance regression. No executable changes this turn; last811gate remains.
+
+Next priority1: distinguish semantic vs other colours, record UI/first-draw
+rejection timing and cold-start budget without extending stale masks. Priority2:
+host low-support/public-fixture evaluation and diagnostic-only semantic cadence
+independent of sparse depth, while ground fusion retains same-frame raw gates.
+Both are planned, not implemented. No repeat owner probe before useful changes.
+Details: PHONE_SEMANTIC_0935_2026-10-20.md. Older checkpoints below are history.
 
 ## Current0.9.33 device result /0.9.34 diagnostic follow-up
 

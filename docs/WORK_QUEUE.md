@@ -1,6 +1,18 @@
 # Shared execution queue — 2026-10-19
 
-## DESKTOP COMPLETE / DEVICE PENDING —2026-10-20 display/rejection diagnostics
+## DEVICE COMPLETE / FOLLOW-UPS PLANNED —2026-10-20 0.9.35
+
+Actual owner-ready20.18s COMPLETE+CLOSED/stopped; installedhash rechecked.
+1rawadmit/1freshsemantic/0groundcandidate, too_few_geometry_samples/support1.
+Owner saw colouredcells but publish1/Canvas0/submitted0: attribution unresolved.
+No active worker/phone test. Next1 rendering attribution/UI expiry timing,
+next2 low-support fixture replay and diagnostic2D cadence assessment, retaining
+same-frame geometric admission. Do not implement relaxed safety/lifetime gates.
+Last811full engineering gate unchanged; this turn records actual measurements.
+PHONE_SEMANTIC_0935_2026-10-20.md. Preserve two unrelated ownerfiles.
+Following checkpoints/scopes are history, not active jobs or current pending.
+
+## Historical desktop checkpoint —2026-10-20 display/rejection diagnostics
 
 FINAL0.9.35/48:113focused JVM +source-layoutRED/GREEN,811fulltests/build/policy
 PASS; Lint0errors45/14warnings. Narrow Rfinal no High/Medium, all H/R jobsfinished.

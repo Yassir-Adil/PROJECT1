@@ -2,6 +2,18 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.35 actual phone COMPLETE; semantic visibility UNRESOLVED
+
+Exactinstalled48/baseAPKhash rechecked.20.18sAUTOMATIC+semantics finished by
+duration, all3closuremarkers observed, stopped/noPID.563distinctcamera frames,
+1rawadmit/1freshsemantic/0stale/0reference. reason=too_few_geometry_samples,
+support1/all64unknown. Owner saw colours, but publish1/Canvas0/submitted0; do not
+mark semantic-overlay rendering fixed.239.72ms n=1, 3geometryinvalidations.
+No new executable edits/test run; previous811gate remains checked, not rerun.
+Ground/wall/rug accuracy and navigation safety NOT established. Full aggregate
+record/hash/limits: PHONE_SEMANTIC_0935_2026-10-20.md. Older pending entries are
+historical checkpoint states superseded by this actual run.
+
 ## 2026-10-20 —0.9.35/48 final engineering PASS, camera NOT_STARTED
 
 Gate20261020T102847617148Z PASS:694app+10sim+21policy+86eval=811,0fail/error/skip,

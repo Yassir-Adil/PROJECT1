@@ -1,13 +1,17 @@
 # Known Issues
 
-## Current0.9.35 installed — physical overlay/rejection confirmation pending
+## Current0.9.35 measured — sparse support and visibility attribution unresolved
 
-Fixed-height diagnostic status panes prevent content-driven viewport reflow by
-API/source contract; not proved rootcause of033missingcolours. New counters and
-reasonfield can distinguish UIpublication/Canvas/expiry and ground count/span/
-area/height.811engineeringtests PASS, Rsourceaccepted; no035camera yet. Do not
-mark visibility/flooridentity/heightaccuracy solved. Phone stopped, fresh owner
-stationary scene needed. SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md.
+Actual20.18s run1rawadmit/1freshsemantic/0groundcandidate.96depth_not_new and
+46empty rejects, not 143independent observations. Exactground rejection now
+too_few_geometry_samples/support1. Owner reports colours visible, while counters
+publish1/Canvas0/submitted0; cannot certify semantic rendering fixed. Processing
+239.72ms leaves ~10.28ms of250ms lifetime before UI delivery, a hypothesis not a
+measured draw-rejection cause.3geometryinvalidations, startup sampledviewport
+changes, no proven semanticreflow loop. Fixed-height status panes not proved old
+rootcause. Previous811gate PASS; no executable edits this turn. App stopped,
+no owner action needed; useful host/source diagnostics before another camera
+request. PHONE_SEMANTIC_0935_2026-10-20.md. Older entries below are history.
 
 ## 0.9.33 device result — coloured overlay NOT visually confirmed
 

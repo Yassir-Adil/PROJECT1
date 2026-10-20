@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-10-20 — Preserve conflicting visibility evidence and sparse support
+
+0.9.35 physical20.18s completed/closed. Owner reports colouredcells, telemetry
+reports publish1/Canvas0/submitted0. Record both, do not treat human observation
+as a counter override or dismiss it. The one239.72ms result leaves ~10.28ms of
+originalreceipt freshness; timing hypothesis requires better attribution, not
+longer stale live masks. Ground refused with1support vs6minimum: correct
+uncertainty, not grounds to suppress STOP or rug alerts. Prioritize source/host
+rendering attribution and sparse-depth/diagnostic cadence evaluation next; do
+not repeat uninstrumented owner tests or swap models by assumption. No code or
+permission change this turn. PHONE_SEMANTIC_0935_2026-10-20.md.
+
 ## 2026-10-20 — Observe missing colours/rejection, do not hide uncertainty
 
 0.9.33 actual13fresh/0stale, owner uprightpreviewyes but coloursnotseen. Treat

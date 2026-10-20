@@ -1,5 +1,18 @@
 # Progress Log
 
+## 2026-10-20 — Actual0.9.35 stationary phone probe complete
+
+Owner-ready20.18s AUTOMATIC+semantic COMPLETE, all3closuremarkers, stopped/noPID;
+installed48/0.9.35 basehash independently rechecked.563distinct/534tracking,
+143rawpairs but1admit (96depth_not_new/46empty),1fresh/0stale/0groundcandidate.
+Ground reason now observable: too_few_geometry_samples/support1; all64heights
+unknown. Owner saw colours, yet UIpublish1/Canvas0/submitted0; keep discrepancy
+unresolved, no visibility/accuracy pass. Result239.72ms n=1, not stable latency.
+3geometryinvalidations; no proven old reflow root cause. No code edits/new gate;
+811previous fullgate remains. Report PHONE_SEMANTIC_0935_2026-10-20.md. Owner can
+put phone down; next rendering/cadence improvements are host/source work first.
+Earlier entries below describe the state at their checkpoint, not current state.
+
 ## 2026-10-20 — Final0.9.35/48 source/build/install, camera pending
 
 Actual0.9.33 phone13fresh/0stale/0reference, owner uprightyes/coloursnotseen.
