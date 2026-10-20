@@ -1,5 +1,18 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE — 2026-10-20 D_16 and timestamp review complete
+
+Historical tasks below are closed/superseded. Current source is0.9.26/39,
+installed/hash verified;467-test gate passed. Cursor format/telemetry source
+review and timing-contract research are complete; no worker is running.
+Read WORK_QUEUE before new work. Next bounded task is tests-first same-Frame
+provenance and clock-domain design, not a tolerance or automatic gate relaxation.
+Codex owns source integration, builds, ADB and Git; worker tasks must have
+explicit non-overlapping files. No further phone action is pending from owner.
+The owner explicitly allows PUBLIC sanitized source backup; the private-only
+restriction in historical tasks below is superseded. Never upload private raw
+logs/images/weights/APKs or infer that a review result is a measured phone pass.
+
 ### CURSOR_TASK — 2026-10-19 tests-first parallel storage and raw-depth slices (LATEST)
 
 Supersedes the closed lifecycle review below. Read `docs/WORK_QUEUE.md`.

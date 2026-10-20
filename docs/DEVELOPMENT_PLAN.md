@@ -2,6 +2,20 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current next gate —2026-10-20,0.9.26/39
+
+Corrected a device-exposed D_16 format guard, added bounded tracking/rejection
+telemetry, and passed467 tests plus builds/policy. Installed/hash verified.
+Lit view reached537/566 tracking frames and146 validated image pairs. Final
+20.18s probe has46 pairs,40 insufficient-pixel rejects,6 timing rejects and0
+accepted. SDK image timestamp equality is not a documented guarantee found by
+review; clock compatibility remains unresolved. Next: tests-first same-Frame
+provenance/clock-domain design, independent review, then diagnostic admission
+evaluation. Do not invent a tolerance or weaken confidence to get success.
+After actual accepted depth, require measured wall/mat/step error before any
+navigation integration. No CLEAR/turn/purchases or new owner photo needed now.
+Evidence and remaining limits: `docs/RAW_DEPTH_D16_FIX_2026-10-20.md`.
+
 ## Current priority pair — 2026-10-20, 0.9.23/36
 
 Storage resilience and the isolated raw-depth instrument are implemented;

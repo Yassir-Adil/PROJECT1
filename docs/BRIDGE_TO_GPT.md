@@ -1,5 +1,21 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20,0.9.26 strict format fix and diagnostic telemetry
+
+Real0.9.23 probe exposed incorrect DEPTH16 guard for raw D_16=48. Four new
+tests went RED before helper/wiring correction. Cursor independently reviewed
+format fix and subsequent trackingFailureReason telemetry, source accepted.
+Final offline gate467 tests PASS, builds/policy/Lint0 errors (55/34 warnings).
+Installed0.9.26/39 SHA verified. Owner-adjusted lit0.9.25 run reached537/566
+tracking frames and146 validated pairs. Final0.9.26 full20.18s:194/551 tracking,
+46 validated pairs,40 empty/confidence and6 timing rejects,0 accepted; CLOSED.
+Logged depth-minus-confidence -67.484ms is arithmetic, not proof of shared clocks.
+Cursor timing research completed and Codex checked primary contracts: same-Frame
+pixel correspondence documented, exact image timestamp equality not guaranteed
+in reviewed text. No gate change; pairing provenance/clock design is next.
+No accepted distance, accuracy or walking proof. Owner action not needed now.
+No model/permission/threshold/nav change. Evidence: RAW_DEPTH_D16_FIX_2026-10-20.md.
+
 ### CODEX_ACCEPTANCE — 2026-10-20 storage / isolated Raw Depth, 0.9.23/36
 
 Cursor S/D/I/O workers completed disjoint source/tests; Codex recorded RED,

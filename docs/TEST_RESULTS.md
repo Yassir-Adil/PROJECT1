@@ -2,6 +2,22 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.26/39 format regression and bounded diagnostic telemetry
+
+New physical RED:0.9.23 depth.format48 rejected by wrong guard after TRACKING.
+Four new tests written before helper implementation; compile RED recorded.
+Final gate `outputs/reports/quality-gate/20261020T011729486962Z/summary.json`:
+428 app +10 sim +19 policy +10 evaluation =467, no failure/error/skip;
+debug/release/APK policy PASS, Lint0 errors/fatal with55/34 warnings.
+Installed0.9.26 hash matches gate. Lit0.9.25 run:537/566 tracking,146 validated
+pairs,90 timing/56 insufficient-pixel rejects. Final0.9.26 full20.18s run:
+194/551 tracking,46 validated pairs,6 timing/40 insufficient-pixel rejects;
+0 accepted, NO_DEPTH then CLOSED. Logged -67.484ms depth/confidence numeric
+difference does not establish a shared clock or useful aligned coverage.
+No accepted-depth accuracy pass; valid-depth Stop/background/UI/audio unverified.
+Contracts, hashes, intermediate evidence and unchanged admission-policy limits:
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md`.
+
 ## 2026-10-20 — Real timed Raw Depth attempts: INTERRUPTED
 
 Requested20s twice; observed15.49s (426 distinct, all nontracking) and0.76s

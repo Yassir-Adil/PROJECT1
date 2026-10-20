@@ -1,5 +1,19 @@
 # Architecture
 
+## 0.9.26 debug Raw Depth contract correction —2026-10-20
+
+The acquired raw16-bit image is HardwareBuffer.D_16, not packed DEPTH16.
+RawDepthImageFormat provides a strict tested boundary before plane use. Decoder,
+confidence Y8 validation and timestamp/age/tracking gates are unchanged.
+Nontracking distinct frames now contribute SDK state/failure-reason counters,
+with1Hz log/UI telemetry and stop guards; they still never acquire depth. No
+navigation/speech coupling. Rejected pairs expose primitive timestamps/counts
+at most1Hz, without changing admission. Exact image-timestamp equality is an
+application policy, not a guarantee found in SDK docs; cross-source clock
+comparability and typed same-Frame provenance need review before gate revision.
+Runtime evidence and unresolved geometry:
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md`.
+
 ## 0.9.23 storage / isolated Raw Depth boundary — 2026-10-20
 
 Local label/session/name stores reuse one bounded strict-UTF8 atomic-replace

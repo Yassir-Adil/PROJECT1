@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": "com.triguide.ai",
-  "minimum_jvm_tests": {"app": 424, "sim": 10},
+  "minimum_jvm_tests": {"app": 428, "sim": 10},
   "minimum_python_tests": {"policy": 19, "evaluation": 10},
   "models": [
     {

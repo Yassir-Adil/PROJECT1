@@ -422,7 +422,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         }
         if (!isNewDistinctFrame) return
         // Do not acquire depth while not TRACKING (startup NotTracking must not become fatal).
-        if (!tracking) return
+        if (!tracking) {
+            maybeReportTracking(
+                state = frame.camera.trackingState.name,
+                reason = frame.camera.trackingFailureReason.name,
+                nowElapsedNs = SystemClock.elapsedRealtimeNanos(),
+            )
+            return
+        }
 
         val nowElapsed = SystemClock.elapsedRealtimeNanos()
         if (nowElapsed - lastSampleAdmissionElapsedNs < SAMPLE_MIN_INTERVAL_NS) {
@@ -472,9 +479,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         receivedElapsedNs: Long,
     ) {
         if (stopping.get()) return
-        if (depth.format != ImageFormat.DEPTH16) {
-            throw IllegalStateException("unexpected_depth_format_${depth.format}")
-        }
+        RawDepthImageFormat.requireRaw16BitDepth(depth.format)
         if (confidence.format != ImageFormat.Y8) {
             throw IllegalStateException("unexpected_confidence_format_${confidence.format}")
         }
@@ -544,6 +549,19 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         )
         if (gateResult != "accepted") {
             synchronized(statsLock) { countRejection(gateResult) }
+            // Preserve the rejection; expose primitive metadata to diagnose alignment,
+            // never pixels or an assumed timestamp tolerance.
+            if (!stopping.get() && completedElapsedNs - lastSampleLogElapsedNs >= UI_LOG_MIN_INTERVAL_NS) {
+                lastSampleLogElapsedNs = completedElapsedNs
+                Log.i(
+                    TAG,
+                    "RAW_DEPTH_REJECT reason=$gateResult camera_ts_ns=$cameraTimestampNs " +
+                        "depth_ts_ns=$depthTs confidence_ts_ns=$confidenceTs " +
+                        "depth_minus_confidence_ns=${depthTs - confidenceTs} " +
+                        "valid_pixels=${summary.validDepthPixels} confident_pixels=${summary.confidentPixels} " +
+                        "navigation=none metric_accuracy=unverified no_image_storage=true",
+                )
+            }
             return
         }
         if (stopping.get()) return
@@ -601,6 +619,26 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 "admission_cap_hz=$SAMPLE_CAP_HZ not_full_camera_fps=true " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
         )
+    }
+
+    /** Direct SDK diagnostics only; never infer a remedy or acquire depth while paused. */
+    private fun maybeReportTracking(state: String, reason: String, nowElapsedNs: Long) {
+        if (stopping.get()) return
+        synchronized(statsLock) { countRejection("tracking_${state}_$reason") }
+        if (nowElapsedNs - lastSampleLogElapsedNs < UI_LOG_MIN_INTERVAL_NS) return
+        lastSampleLogElapsedNs = nowElapsedNs
+        if (stopping.get()) return
+        Log.i(TAG, "RAW_DEPTH_TRACKING state=$state failure_reason=$reason navigation=none")
+        if (nowElapsedNs - lastUiElapsedNs < UI_LOG_MIN_INTERVAL_NS) return
+        lastUiElapsedNs = nowElapsedNs
+        runOnUiThread {
+            if (!stopping.get()) {
+                updateStatus(
+                    "Tracking $state / SDK reason $reason. No depth admitted. " +
+                        "التتبّع $state، السبب $reason. لا توجد قراءة عمق مقبولة. لا تمشِ.",
+                )
+            }
+        }
     }
 
     private fun maybeUpdateUi(nowElapsedNs: Long) {

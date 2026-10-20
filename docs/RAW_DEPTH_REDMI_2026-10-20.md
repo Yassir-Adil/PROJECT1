@@ -1,5 +1,9 @@
 # Redmi Raw Depth follow-up — 2026-10-20
 
+Later controlled test exposed a source format bug;0.9.25 fixes it and reports
+explicit SDK INSUFFICIENT_LIGHT in a full-duration run. See
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md`; the interrupted attempts below are history.
+
 ## Result: interrupted, not a depth/accuracy pass
 
 The owner unlocked the phone. Codex recovered an offline USB transport with a

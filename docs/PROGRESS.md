@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-10-20 — Runtime format fix and bounded timing diagnosis,0.9.26/39
+
+Controlled phone test reached TRACKING and exposed a real guard bug:
+ARCore returned D_16=48, but the activity expected packed ImageFormat.DEPTH16.
+Four RED-first regression tests drove a strict corrected guard; no13-bit mask,
+threshold relaxation or new model. Added direct SDK tracking-reason telemetry
+after a full0.9.24 run produced no tracking. Both changes independently reviewed.
+Final0.9.26 offline gate:467 tests PASS, both builds, APK policy, Lint0 errors
+with55/34 warnings. Installed version/hash verified, no app-data clear.
+Early0.9.25 run reported LIGHT504/NONE57; after owner-adjusted lit view,
+537/566 frames tracked and146 pairs passed format/decoder checks. Final0.9.26
+run completed20.18s:194/551 tracking,46 pairs,40 insufficient-pixel and6 timing
+rejects,0 accepted, then CLOSED. Rejection log exposes -67.484ms numeric depth/
+confidence difference, not clock compatibility or valid distance. Cursor
+timing-contract research complete; same-Frame correspondence is documented,
+exact image timestamp equality was not found as a guarantee. Gate unchanged.
+Next is provenance/clock design and tests, not another owner photo or walking.
+Full evidence: `docs/RAW_DEPTH_D16_FIX_2026-10-20.md`.
+
 ## 2026-10-20 — Unlocked-phone Raw Depth attempts
 
 Two actual20s probes ended early on pause:15.49s/426 nontracking camera frames,

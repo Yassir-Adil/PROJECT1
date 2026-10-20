@@ -1,5 +1,37 @@
 # Shared execution queue — 2026-10-19
 
+## Final0.9.26 checkpoint —2026-10-20
+
+Strict D_16 guard corrected and four RED-first tests pass. Direct SDK tracking
+reason telemetry added after a full0.9.24 NO_DEPTH run; no gate/threshold change.
+Final0.9.26/39:467 tests/builds/APK policy PASS, Lint0 errors with55/34 warnings,
+installed hash verified. Lit view reached537/566 tracking and146 validated pairs.
+Last20.18s:194/551 tracking,46 pairs,40 insufficient-pixel and6 timing rejects,
+0 accepted; CLOSED. Timestamp numeric difference -67.484ms does not prove clocks
+compatible. SDK pixel correspondence documented; exact image timestamp equality
+not guaranteed in reviewed text. Current gate unchanged.
+Cursor format+telemetry review and primary timing research complete; no worker
+remains active. Codex checked contracts/phone evidence. No source
+overlap with unrelated owner-rule edit, which must remain preserved unstaged.
+Next: tests-first typed same-Frame acquisition provenance and clock-domain review,
+then diagnostic admission evaluation; no invented tolerance. Accepted depth and
+calibrated geometry remain unverified. No owner action or new image upload is
+currently needed. No purchases/model/safety changes.
+Evidence: RAW_DEPTH_D16_FIX_2026-10-20.md. Earlier candidate notes below are history.
+
+## Active correction — 2026-10-20, Raw Depth format guard
+
+Owner coordinated a no-input foreground probe. On installed0.9.23 it reached
+TRACKING and actual depth acquisition, then failed `unexpected_depth_format_48`.
+Official ARCore returns HardwareBuffer.D_16 (48); the activity incorrectly
+required the unrelated packed ImageFormat.DEPTH16. This is a confirmed source
+bug, superseding speculation from the earlier interrupted runs.
+Codex wrote four regression tests and recorded compile RED before adding the
+strict format helper and wiring. Candidate0.9.24/37 is in the full offline gate.
+Cursor owns ONLY the read-only format review document, with a follow-up after
+the helper landed. Codex alone owns source, Gradle, install and phone tests.
+No model, confidence threshold, image lifetime, navigation or permission change.
+
 ## Phone follow-up — 2026-10-20
 
 Owner unlocked Redmi. Two actual20s probes were interrupted on pause at15.49s

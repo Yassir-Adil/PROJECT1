@@ -1,5 +1,20 @@
 # Known Issues
 
+## Latest0.9.26/39 checkpoint —2026-10-20
+
+Wrong raw-depth format guard fixed with four regression tests. Final467-test gate
+passes and installed SHA matches. Lit owner-adjusted view reached537/566 tracking
+frames and146 format-valid pairs; format fix exercised. Final20.18s run:46 pairs,
+40 insufficient-pixel rejects,6 timing rejects,0 accepted, then CLOSED. One
+depth-minus-confidence delta is -67.484ms; shared clocks and confidence timestamp
+semantics are unproven. Exact equality is current app policy, not a documented
+SDK guarantee found by primary review. Next: typed same-Frame provenance and
+clock-domain design/tests before revising admission. No numeric tolerance.
+Global privacy-switch status remains not conclusively exposed by HyperOS tools;
+the earlier LIGHT enum is not a hardware diagnosis. No model/hardware swap or
+threshold relaxation is justified. No owner action is currently needed.
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md` supersedes the earlier status below.
+
 Latest phone follow-up: `docs/RAW_DEPTH_REDMI_2026-10-20.md`. Unlock resolved,
 but two timed probes were interrupted before20s with0 accepted depth. First
 had426 camera frames but no tracking; second logs successful close on pause.

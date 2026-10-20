@@ -1,5 +1,31 @@
 # Decision Log
 
+## 2026-10-20 — Diagnose timing without inventing clock compatibility
+
+After the owner corrected the view,0.9.25 acquired146 D_16/Y8 pairs with537/566
+tracking frames, proving the format fix is exercised.0.9.26 exposes rejection
+timestamps at most1Hz; full20.18s run has46 pairs,40 insufficient-pixel rejects,
+6 timestamp rejects and0 accepted. One pair differs by67.484ms numerically;
+no shared-clock, age, alignment, coverage or accuracy claim follows from that.
+Cursor researched primary contracts; Codex verified and condensed duplicates
+while keeping the full worker stream local. Corresponding same-Frame pixels
+are documented, exact image timestamp equality is not a found SDK guarantee.
+Keep the gate unchanged pending tests-first acquisition provenance and explicit
+clock-domain review. Do not swap models, buy hardware or invent a tolerance.
+467-test final gate, source/APK hashes and phone results are recorded in
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md`; no owner action is currently required.
+
+## 2026-10-20 — Fix the measured API contract, expose SDK cause, keep safety gates
+
+Real TRACKING exposed `unexpected_depth_format_48`, a predicate bug in the
+diagnostic tool, not proof of unusable phone depth. Use the official full-UINT16
+D_16 contract and keep packed DEPTH16 rejected. Four tests first, independent
+review,467-test gate and real-phone re-probes. Later full-time nontracking runs
+required direct SDK trackingFailureReason telemetry, not a model/SDK/hardware
+swap or looser confidence. SDK INSUFFICIENT_LIGHT is an observation, not measured
+ambient light or proof global privacy is off. No setting/permission bypass.
+`docs/RAW_DEPTH_D16_FIX_2026-10-20.md` records actual results and next gates.
+
 ## 2026-10-20 — Interrupted phone probes do not justify lowering safety gates
 
 Keep terminal pause/Stop behavior. Two physical attempts ended before their20s
