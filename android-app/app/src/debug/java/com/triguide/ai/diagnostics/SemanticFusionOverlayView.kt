@@ -9,13 +9,13 @@ import android.view.View
 internal class SemanticFusionOverlayView(context: Context,
     private val stats: SemanticOverlayStats,
     private val trace: SemanticDisplayTrace,
-    private val displayDecision: (SemanticFusionResult, Long) -> SemanticDisplayDecision) : View(context) {
+    private val displayDecision: (SemanticObservation, Long) -> SemanticDisplayDecision) : View(context) {
     private val painter = SemanticGridPainter()
-    private var result: SemanticFusionResult? = null
+    private var result: SemanticObservation? = null
     private var cells: List<SemanticPaintCell> = emptyList()
     private var expiry: Runnable? = null
     init { importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO; isClickable = false; isFocusable = false }
-    fun show(value: SemanticFusionResult?) {
+    fun show(value: SemanticObservation?) {
         cancelExpiry()
         if (value == null) { stats.clear(); result = null; cells = emptyList() }
         else {
@@ -30,7 +30,7 @@ internal class SemanticFusionOverlayView(context: Context,
                 stats.clear(); result = null; cells = emptyList(); invalidate(); return
             }
             result = value
-            cells = SemanticPaintGrid.fromDepth(value.cells)
+            cells = value.paintCells
         }
         invalidate()
         if (value != null) {

@@ -18,12 +18,8 @@ import kotlin.math.ceil
 /** Ephemeral primitives only. No Frame/Image/Session/Pose is sent to the worker. */
 internal data class SemanticFusionPoint(val imageU: Double, val imageV: Double,
     val worldX: Double? = null, val worldY: Double? = null, val worldZ: Double? = null)
-internal data class SemanticFusionResult(val revision: Long, val receivedNs: Long,
-    val frameTimestampNs: Long, val cells: List<SemanticDepthCell>, val ground: SemanticGroundReading,
-    val unmappedCells: Int, val completedElapsedNs: Long = receivedNs)
-
 /** Opt-in diagnostic on the EXISTING ARCore owner. No camera owner, guidance or speech. */
-internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: (SemanticFusionResult?) -> Unit) {
+internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: (SemanticObservation?) -> Unit) {
     private val worker = Executors.newSingleThreadExecutor()
     private val stopped = AtomicBoolean(false)
     private val ready = AtomicBoolean(false)
@@ -38,6 +34,8 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
     private val prepareMs = ArrayList<Double>(60)
     private val inferenceMs = ArrayList<Double>(60)
     private var completed = 0
+    private var fusedCompleted = 0
+    private var rgbOnlyCompleted = 0
     private var candidateFrames = 0
     private var geometryInvalidations = 0
 
@@ -69,14 +67,24 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
         onResult(null)
     }
 
-    fun canDisplay(result: SemanticFusionResult, nowNs: Long): Boolean =
+    fun canDisplay(result: SemanticObservation, nowNs: Long): Boolean =
         publication.canPublish(result.revision, result.receivedNs, nowNs)
 
-    fun displayDecision(result: SemanticFusionResult, nowNs: Long): SemanticDisplayDecision =
+    fun displayDecision(result: SemanticObservation, nowNs: Long): SemanticDisplayDecision =
         publication.decision(result.revision, result.receivedNs, nowNs)
 
     /** Only called inside the already-admitted live raw-depth/confidence scope on GL. */
     fun capture(frame: Frame, depth: Image, confidence: Image) {
+        captureImage(frame) { CapturedSamples.Fused(samplePoints(frame,depth,confidence)) }
+    }
+
+    /** Called after the current raw opportunity. No depth points, no ground evaluation. */
+    fun captureRgbOnly(frame: Frame) {
+        captureImage(frame) { CapturedSamples.Rgb(sampleRgbPoints(frame)) }
+    }
+
+    /** Shared one-inflight/cadence gate prevents a second CPU acquisition for this same frame. */
+    private fun captureImage(frame: Frame, sample: () -> CapturedSamples) {
         if (stopped.get() || !ready.get()) return
         val received = SystemClock.elapsedRealtimeNanos()
         val frameStamp = frame.timestamp
@@ -96,11 +104,11 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                     Coordinates2d.VIEW_NORMALIZED, axes)
                 val quarterTurns = SemanticImageOrientation.fromViewAxes(axes)
                     ?: error("unknown_cpu_to_view_orientation")
-                val points = samplePoints(frame, depth, confidence)
+                val samples = sample()
                 Captured(image.width, image.height, image.planes.mapIndexed { index, plane ->
                     copyPlane(plane, if (index == 0) image.width else (image.width + 1) / 2,
                         if (index == 0) image.height else (image.height + 1) / 2)
-                }, points, quarterTurns)
+                }, samples, quarterTurns)
             } // native CPU image closed BEFORE worker is queued, including conversion/inference errors
             val copiedNs = SystemClock.elapsedRealtimeNanos()
             synchronized(lock) { if (captureMs.size < 60) captureMs += (copiedNs - received) / 1_000_000.0 }
@@ -128,7 +136,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                     val inferredNs = SystemClock.elapsedRealtimeNanos()
                     val map = active.decode()
                     var unmapped = 0
-                    val cells = captured.points.mapIndexed { index, p ->
+                    val cells = (captured.samples as? CapturedSamples.Fused)?.points?.mapIndexed { index, p ->
                         val oriented = SemanticImageOrientation.pixel(captured.width, captured.height,
                             p.imageU, p.imageV, captured.quarterTurns)
                         val modelIndex = oriented?.let { SemanticFusionMapping.modelIndex(it.width, it.height,
@@ -137,7 +145,10 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                         SemanticDepthCell(index % GRID, index / GRID, modelIndex?.let { map[it] } ?: 0,
                             p.worldX, p.worldY, p.worldZ)
                     }
-                    val reading = SemanticGroundDiagnostic.evaluate(cells)
+                    val reading = cells?.let { SemanticGroundDiagnostic.evaluate(it) }
+                    val rgbGrid = (captured.samples as? CapturedSamples.Rgb)?.let {
+                        SemanticRgbGrid.decode(captured.width,captured.height,captured.quarterTurns,it.points,map)
+                    }
                     val ended = SystemClock.elapsedRealtimeNanos()
                     val outcome = gate.complete(ticket, ended)
                     count(outcome)
@@ -149,9 +160,18 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                         }
                     }
                     if (outcome != "accepted" || !publication.canPublish(revision, received, ended)) return@execute
-                    val result = SemanticFusionResult(revision, received, frameStamp, cells, reading, unmapped, ended)
-                    synchronized(lock) { completed++; if (reading.referenceYMeters != null) candidateFrames++ }
-                    Log.i(TAG, "SEMANTIC_FUSION_SAMPLE status=${reading.status} reason=${reading.reason} support=${reading.supportCount} " +
+                    val result: SemanticObservation = if (cells != null && reading != null) {
+                        SemanticFusionResult(revision,received,frameStamp,cells,reading,unmapped,ended)
+                    } else {
+                        val decoded = requireNotNull(rgbGrid)
+                        Semantic2DObservation(revision,received,frameStamp,ended,decoded.cells,decoded.unmappedCells)
+                    }
+                    synchronized(lock) {
+                        completed++
+                        if (result is SemanticFusionResult) fusedCompleted++ else rgbOnlyCompleted++
+                        if (reading?.referenceYMeters != null) candidateFrames++
+                    }
+                    if (cells != null && reading != null) Log.i(TAG, "SEMANTIC_FUSION_SAMPLE status=${reading.status} reason=${reading.reason} support=${reading.supportCount} " +
                         "cpu_upright_quarter_turns=${captured.quarterTurns} " +
                         "wall_cells=${cells.count { it.label == 1 }} floor_cells=${cells.count { it.label == 4 }} " +
                         "rug_cells=${cells.count { it.label == 29 }} raw_points=${cells.count { it.worldY != null }} " +
@@ -161,6 +181,12 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                         "receipt_to_result_ms=${(ended - received) / 1_000_000.0} " +
                         "sensor_age=unknown ground_identity=unverified temporal_confirmation=none " +
                         "grid=8x8 navigation=none no_image_storage=true no_coordinates_logged=true")
+                    else Log.i(TAG, "SEMANTIC_2D_SAMPLE source=rgb_only geometry=unknown " +
+                        "wall_cells=${result.paintCells.count { it.label == 1 }} " +
+                        "floor_cells=${result.paintCells.count { it.label == 4 }} " +
+                        "rug_cells=${result.paintCells.count { it.label == 29 }} unmapped_cells=${result.unmappedCells} " +
+                        "cpu_upright_quarter_turns=${captured.quarterTurns} receipt_to_result_ms=${(ended-received)/1_000_000.0} " +
+                        "sensor_age=unknown labels=argmax_not_confidence navigation=none no_image_storage=true")
                     onResult(result) // Activity marshals to main and rechecks revision AND receipt age
                 } catch (error: Exception) {
                     gate.complete(ticket, SystemClock.elapsedRealtimeNanos())
@@ -175,6 +201,15 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
             gate.complete(ticket, SystemClock.elapsedRealtimeNanos()); count("capture_failed")
             Log.e(TAG, "SEMANTIC_FUSION_FAILED capture", error)
         }
+    }
+
+    private fun sampleRgbPoints(frame: Frame): List<Pair<Double,Double>> {
+        val view = FloatArray(GRID*GRID*2) { i ->
+            if (i%2 == 0) ((i/2%GRID)+.5f)/GRID else ((i/2/GRID)+.5f)/GRID
+        }
+        val image = FloatArray(view.size) { Float.NaN }
+        frame.transformCoordinates2d(Coordinates2d.VIEW_NORMALIZED,view,Coordinates2d.IMAGE_NORMALIZED,image)
+        return (0 until GRID*GRID).map { image[2*it].toDouble() to image[2*it+1].toDouble() }
     }
 
     /** Transform only the current Frame; NaN sentinel prevents an unchanged SDK output becoming valid. */
@@ -245,6 +280,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
         }
         val fps = if (sessionSeconds.isFinite() && sessionSeconds > 0) (completed / sessionSeconds).toString() else "unavailable"
         "semantic_enabled=true semantic_completed=$completed semantic_candidate_frames=$candidateFrames " +
+            "semantic_fused_completed=$fusedCompleted semantic_rgb_only_completed=$rgbOnlyCompleted " +
             "semantic_geometry_invalidations=$geometryInvalidations " +
             "semantic_outcomes=${reasons.entries.joinToString(",") { "${it.key}:${it.value}" }.ifEmpty { "none" }} " +
             "semantic_accepted_per_session_second=$fps not_camera_fps=true " +
@@ -253,7 +289,11 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
             "semantic_navigation=none semantic_temporal_confirmation=none"
     }
     private fun count(reason: String) { synchronized(lock) { reasons[reason] = (reasons[reason] ?: 0) + 1 } }
+    private sealed interface CapturedSamples {
+        data class Fused(val points: List<SemanticFusionPoint>) : CapturedSamples
+        data class Rgb(val points: List<Pair<Double,Double>>) : CapturedSamples
+    }
     private data class Captured(val width: Int, val height: Int, val planes: List<YuvRgbPlane>,
-        val points: List<SemanticFusionPoint>, val quarterTurns: Int)
+        val samples: CapturedSamples, val quarterTurns: Int)
     companion object { const val MAX_AGE_NS = 250_000_000L; private const val GRID = 8; private const val TAG = "TriGuideSemantic" }
 }

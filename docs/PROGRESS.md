@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-10-20 — Final0.9.37/50 desktop pair complete
+
+Final865gatePASS:726app+10sim+30policy+99eval,0fail/error/skip; bothAPKs/model/
+permissions/isolation/privacy policyPASS. Lint41debug/14release warn0errors,
+source238files hash rechecked/stagedAPKmatched. Rfinalnarrow no High/Medium,
+H/Rjobsfinished.27GTsupportcases executed onlyonexistingpublicfixture; no new
+data/model/training. TypedRGBfallbackdefaultOFF; raw/tracking/TTL/STOP unchanged.
+NewversionNOTinstalled/phone-tested; serial absent, ownerfreshready requested.
+SAFETY_GATES_2026-10-20.md /RGB_ONLY_AND_SUPPORT_2026-10-20.md. Older pending
+entries below are execution history, not current active jobs.
+
+## 2026-10-20 —0.9.37 typedRGB/support pair under final verification
+
+ActualmissingAPI/module/resource RED then typedRGB-only result, shared1Hz/250ms
+capture gate and explicit opt-in fallback after rawopportunity. Ground branch
+unchanged, no stale raw reuse or newcamera/model/net/nav.114focused/28policy/
+12supporttests PASS incl actualscale/hashfailures then fixes. Reused23file/3scene
+publicfixture for27GTstructural cases:13meetcount6 only,9noanchoredcomponent,
+11nosupport; not model/phoneconfidence or navigation. Host0.9604s; no download/
+training. Fullgate/sourceR running. Phone036 unchanged/stopped. New safetygate
+backlog explicit: no complete-safety/eyesclosedwalking claim. RGB_ONLY_AND_SUPPORT_2026-10-20.md.
+
 ## 2026-10-20 — Actual0.9.36 synthetic + live display accepted for this run
 
 USBinstalled49/basehashmatched. Owner-ready5s synthetic COMPLETE2draws/128cells,

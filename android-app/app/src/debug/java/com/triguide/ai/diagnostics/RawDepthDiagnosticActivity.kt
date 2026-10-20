@@ -70,6 +70,7 @@ import kotlin.math.ceil
 class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
     private val stopping = AtomicBoolean(false)
+    private val frameFailurePending = AtomicBoolean(false)
     private val resultLogged = AtomicBoolean(false)
     private val closedLogged = AtomicBoolean(false)
     private val frameInUseLock = Any()
@@ -87,7 +88,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var semanticOverlay: SemanticFusionOverlayView? = null
     private var semanticDiagnostic: ArCoreSemanticDiagnostic? = null
     private var semanticFusionEnabled = false
-    private var displayedSemanticResult: SemanticFusionResult? = null // main-thread only
+    private var semanticRgbFallbackEnabled = false
+    private var displayedSemanticResult: SemanticObservation? = null // main-thread only
     private val semanticOverlayStats = SemanticOverlayStats()
     private val semanticDisplayTrace = SemanticDisplayTrace()
 
@@ -175,6 +177,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         cameraPreviewEnabled = intent.getBooleanExtra(EXTRA_CAMERA_PREVIEW, true)
         surfaceProbingEnabled = intent.getBooleanExtra(EXTRA_SURFACE_PROBE, true)
         semanticFusionEnabled = intent.getBooleanExtra(EXTRA_SEMANTIC_FUSION, false)
+        semanticRgbFallbackEnabled = semanticFusionEnabled && intent.getBooleanExtra(EXTRA_SEMANTIC_RGB_FALLBACK, false)
         diagnosticDepthMode = when (intent.getStringExtra(EXTRA_DEPTH_MODE)) {
             null, "RAW_DEPTH_ONLY" -> Config.DepthMode.RAW_DEPTH_ONLY
             "AUTOMATIC" -> Config.DepthMode.AUTOMATIC
@@ -232,7 +235,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 runOnUiThread {
                     val active = semanticDiagnostic
                     val now = SystemClock.elapsedRealtimeNanos()
-                    val decision = if (stopping.get() || active == null) SemanticDisplayDecision.STOPPED
+                    val decision = if (stopping.get() || frameFailurePending.get() || active == null) SemanticDisplayDecision.STOPPED
                         else if (result == null) null else active.displayDecision(result, now)
                     if (result != null) semanticDisplayTrace.ui(result.receivedNs, result.completedElapsedNs,
                         now, decision ?: SemanticDisplayDecision.STOPPED)
@@ -243,11 +246,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                     } else {
                         displayedSemanticResult = result
                         semanticOverlay?.show(result)
-                        val cells = result.cells
+                        val cells = result.paintCells
+                        val height = if (result is SemanticFusionResult)
+                            "${result.ground.status}/${result.ground.reason}; raised=${result.ground.raisedSamples}, " +
+                                "flat-rug=${result.ground.flatRugSamples}"
+                            else "UNKNOWN — RGB labels only; no admitted raw geometry"
                         semanticStatusView?.text = "Model labels: wall ${cells.count { it.label == 1 }}, " +
                             "floor ${cells.count { it.label == 4 }}, rug ${cells.count { it.label == 29 }} /64 cells. " +
-                            "Height: ${result.ground.status}/${result.ground.reason}; raised=${result.ground.raisedSamples}, " +
-                            "flat-rug=${result.ground.flatRugSamples}. Not safety or obstacle confirmation."
+                            "Height: $height. Not safety or obstacle confirmation."
                         handler.postDelayed({
                             // Receipt expiry, not a fresh lifetime beginning at publication.
                             if (displayedSemanticResult === result &&
@@ -268,7 +274,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             "RAW_DEPTH_START duration_seconds=$durationSeconds " +
                 "requested_depth_mode=$diagnosticDepthMode " +
                 "camera_preview=$cameraPreviewEnabled surface_probe=$surfaceProbingEnabled " +
-                "semantic_fusion=$semanticFusionEnabled " +
+                "semantic_fusion=$semanticFusionEnabled semantic_rgb_fallback=$semanticRgbFallbackEnabled " +
                 "depth_sample_admission_cap_hz=$SAMPLE_CAP_HZ " +
                 "confidence_threshold_diagnostic_only=128 " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
@@ -362,7 +368,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 )
                 if (semanticFusionEnabled) addView(
                     SemanticFusionOverlayView(this@RawDepthDiagnosticActivity, semanticOverlayStats, semanticDisplayTrace) { result, now ->
-                        if (stopping.get()) SemanticDisplayDecision.STOPPED else
+                        if (stopping.get() || frameFailurePending.get()) SemanticDisplayDecision.STOPPED else
                             semanticDiagnostic?.displayDecision(result, now) ?: SemanticDisplayDecision.STOPPED
                     }.also { semanticOverlay = it },
                     FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
@@ -497,8 +503,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         if (cameraPreviewEnabled) cameraBackground.onSurfaceCreated()
         Log.i(TAG, "CAMERA_BACKGROUND_READY enabled=$cameraPreviewEnabled no_image_storage=true navigation=none")
         } catch (error: Exception) {
-            Log.e(TAG, "camera background initialization failed", error)
-            runOnUiThread { requestStop("background_init_${error.javaClass.simpleName}", failed = true) }
+            failFrame("background_init_${error.javaClass.simpleName}",error)
         }
     }
 
@@ -511,11 +516,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        if (stopping.get() || !sessionResumed || cameraTextureId == 0) return
+        if (stopping.get() || frameFailurePending.get() || !sessionResumed || cameraTextureId == 0) return
 
         synchronized(frameInUseLock) {
             val active = session ?: return
-            if (stopping.get() || !sessionResumed) return
+            if (stopping.get() || frameFailurePending.get() || !sessionResumed) return
             try {
                 val rotation = displayRotation()
                 if (semanticViewport.changed(rotation, viewportWidth, viewportHeight) ||
@@ -544,13 +549,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 }
                 processFrame(frame)
             } catch (error: CameraNotAvailableException) {
-                Log.e(TAG, "camera/config error on GL thread", error)
-                runOnUiThread { requestStop("camera_unavailable_runtime", failed = true) }
+                failFrame("camera_unavailable_runtime",error)
             } catch (error: Exception) {
-                Log.e(TAG, "unexpected GL-frame error", error)
-                runOnUiThread {
-                    requestStop("gl_frame_${error.javaClass.simpleName}", failed = true)
-                }
+                failFrame("gl_frame_${error.javaClass.simpleName}",error)
             }
         }
     }
@@ -626,7 +627,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     }
 
     private fun processFrame(frame: Frame) {
-        if (stopping.get()) return
+        if (stopping.get() || frameFailurePending.get()) return
         val cameraTimestampNs = frame.timestamp
         if (cameraTimestampNs <= 0L) return
 
@@ -693,14 +694,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         } catch (_: NotYetAvailableException) {
             synchronized(statsLock) { notYetAvailableCount++ }
         } catch (error: Exception) {
-            Log.e(TAG, "depth acquire/process failed", error)
-            runOnUiThread {
-                requestStop("depth_process_${error.javaClass.simpleName}", failed = true)
-            }
+            failFrame("depth_process_${error.javaClass.simpleName}",error)
+            return
         }
-        if (!stopping.get() && diagnosticDepthMode == Config.DepthMode.AUTOMATIC) {
+        if (!stopping.get() && !frameFailurePending.get() && diagnosticDepthMode == Config.DepthMode.AUTOMATIC) {
             sampleDenseDepth(frame)
         }
+        // Raw gets first opportunity on this unchanged Frame. Fallback never reuses old world points.
+        if (!stopping.get() && !frameFailurePending.get() && semanticRgbFallbackEnabled) semanticDiagnostic?.captureRgbOnly(frame)
     }
 
     /** Smoothed SDK depth has NO confidence and never enters raw admission or navigation. */
@@ -728,10 +729,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             synchronized(statsLock) { denseNotYetAvailable++ }
         } catch (error: Exception) {
             synchronized(statsLock) { denseInvalid++ }
-            Log.e(TAG, "dense depth acquire/process failed", error)
-            runOnUiThread {
-                requestStop("dense_process_${error.javaClass.simpleName}", failed = true)
-            }
+            failFrame("dense_process_${error.javaClass.simpleName}",error)
         }
     }
 
@@ -1011,6 +1009,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         }
     }
 
+    /** Fence GL/model work immediately; leave UI cleanup to requestStop's own terminal CAS. */
+    private fun failFrame(reason: String, error: Exception) {
+        if (!frameFailurePending.compareAndSet(false,true)) return
+        semanticDiagnostic?.stop()
+        Log.e(TAG,"frame processing disabled: $reason",error)
+        runOnUiThread { requestStop(reason,failed=true) }
+    }
+
     private fun requestStop(reason: String, failed: Boolean) {
         if (!stopping.compareAndSet(false, true)) return
         this.failed = failed || this.failed
@@ -1257,6 +1263,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         const val EXTRA_SURFACE_PROBE = "triguide.diagnostic.surface_probe"
         const val EXTRA_DEPTH_MODE = "triguide.diagnostic.depth_mode"
         const val EXTRA_SEMANTIC_FUSION = "triguide.diagnostic.semantic_fusion"
+        const val EXTRA_SEMANTIC_RGB_FALLBACK = "triguide.diagnostic.semantic_rgb_fallback"
 
         private const val TAG = "TriGuideRawDepth"
         private const val DEFAULT_DURATION_SECONDS = 20

@@ -1,5 +1,36 @@
 # Shared execution queue — 2026-10-19
 
+## COMPLETE desktop pair / DEVICE PENDING —0.9.37/50,2026-10-20
+
+Final865fulltests/build/policiesPASS, source238file/stagedAPKhashchecked.
+Rfinal no scopedHigh/Medium; H/Rjobsfinished. TypedRGBoptin/fatalfence andpublic
+GTsupportaudit implemented, no nav/model/threshold/permission change. New037
+NOTinstalled; phone absent, ownerfreshreadiness requested for20sRGBfallback
+test. No activeworker/silentcamera. Preserve ownerdirtyvoice rule/research10.
+RGB_ONLY_AND_SUPPORT_2026-10-20.md; SAFETY_GATES_2026-10-20.md. Prior scopes
+below are history and cannot silently restart.
+
+## SOURCE FROZEN / FINAL GATE —0.9.37 typedRGB/support,2026-10-20
+
+Hsourcefinished; CodexmissingAPI/module/integrity/resource/allGLguardRED→fixes.
+114focused/GT27cases actual; first862/864gates superseded by final allGLfence.
+Rfinalnarrowrereview and stablegate running. No source edits during gate; no
+phoneinstall/camera until useful exactverifiedcandidate and freshownerready.
+No oldtaskrestart. Ownerdirtyvoice rule/research10 preserved. Typedfallbackoptin
+defaultOFF; originalconfidence/uniqueness/250ms/tracking/ground/STOP preserved.
+
+## ACTIVE pair —typed2D fallback and publicGT support audit,2026-10-20
+
+Baselinebb26eaa/0.9.36/836tests, actuallivecoloursconfirmed but0groundsupports.
+Codex owns typedobservation/RGBmapping tests+source, sharedARCore capture/Activity/
+overlay integration, gates/version/Git; no phone until new readycandidate.
+CursorH exclusive after Codex RED: research/evaluate_hypersim_support.py and
+docs/CURSOR_SUPPORT_AUDIT_2026-10-20.md ONLY. Codex owns research/tests/test_hypersim_support.py.
+Use existing publichashverified fixture, no download/training/model change,
+Android changes/ADB/Git or other files. Audit structuralGT/syntheticdrop only,
+not model confidence/ground/clearance. Raw unique/confidence/TTL/STOP unchanged.
+Preserve ownerdirtyvoice rule andresearch10. Prior COMPLETE scopes are history.
+
 ## COMPLETE desktop+phone pair —0.9.36/49,2026-10-20
 
 836fullgatePASS, exactinstalledhashverified. Synthetic5s visible/humanconfirmed;

@@ -1,0 +1,4 @@
+<resources>
+    <string name="synthetic_render_disclaimer">اختبار رسم اصطناعي — ليست كاميرا ولا نتيجة تعرّف.\nالمطلوب شبكة مربعات: أزرق، بنفسجي، وأصفر.\nSynthetic drawing test only. No scene or walking assessment.</string>
+    <string name="synthetic_render_stop">إيقاف الاختبار / Stop test</string>
+</resources>

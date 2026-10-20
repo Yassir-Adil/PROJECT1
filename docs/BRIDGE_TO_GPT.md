@@ -1,5 +1,13 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —0.9.37 typedRGB/publicsupport desktop verified
+
+Codex independently executedRED/GREEN and corrected Hscale/hash and Rfatalfence
+issues; finalRsource no scopedHigh/Medium.865gate/build/policiesPASS, source238
+hash/stagedAPKchecked. Existingpublicfixture27GTcases actual, notmodel/phone/
+confidence benchmark. No037install/camera; phoneabsentlastcheck, readinessasked.
+Allworkersfinished. RGB_ONLY_AND_SUPPORT_2026-10-20.md has evidence/limits.
+
 ### CODEX_RECORD —0.9.36 actual display accepted, ground still unknown
 
 836desktopgatePASS+Rfinal, exactUSBinstalledhash. Owner confirms synthetic5s

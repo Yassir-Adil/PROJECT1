@@ -1,5 +1,17 @@
 # Architecture
 
+## 0.9.37 opt-in typedRGB availability / publicGT support audit
+
+SemanticObservation is a view-only sealed interface: RGB-only copiedpaintgrid/
+metadata has no world/ground fields, while SemanticFusionResult retains admitted
+same-frame raw geometry. SharedCPUcopy/close+oneworker/1Hz/250ms gate, rawfirst
+then opt-in RGBfallback on existing10Hz opportunities. Direct SDKVIEW→IMAGE for
+RGB vs snappeddepth→IMAGE for fusion; no old depth join. Both require tracking.
+ImmediateframeFailurePending fences allfatalGL/raw/dense branches, stops model
+publication before posting independent UIcleanupCAS. No productionnav linkage.
+Host publicGT audit is independentPython structuralcount experiment, not phone
+confidence/model inference/Kotlin ground acceptance. RGB_ONLY_AND_SUPPORT_2026-10-20.md.
+
 ## 0.9.36 render attribution / isolated synthetic test
 
 Existing semanticworker result adds localcompletiontime, not sensorage. Pure

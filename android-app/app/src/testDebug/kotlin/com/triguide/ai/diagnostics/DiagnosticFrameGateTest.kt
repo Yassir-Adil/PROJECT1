@@ -8,6 +8,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiagnosticFrameGateTest {
+    @Test fun rawOfferWinsCurrentFrameAndRgbFallbackCannotAcquireSecondTicket() {
+        val gate = DiagnosticFrameGate(1_000_000_000,250_000_000).apply { start() }
+        val raw = gate.offer(100,0).ticket!!
+        assertNull(gate.offer(100,1).ticket)
+        assertEquals("accepted",gate.complete(raw,20))
+        assertNull(gate.offer(101,30).ticket)
+        assertNotNull(gate.offer(102,1_000_000_000).ticket)
+    }
+
+    @Test fun rgbOfferUsesSameStopAndStaleGateEvenWithoutAnyRawDepth() {
+        val gate = DiagnosticFrameGate(1_000_000_000,250_000_000).apply { start() }
+        val rgb = gate.offer(1,0).ticket!!
+        assertEquals("stale",gate.complete(rgb,250_000_001))
+        val later = gate.offer(2,1_000_000_000).ticket!!
+        gate.stop()
+        assertEquals("stopped_or_old_session",gate.complete(later,1_000_000_010))
+    }
     @Test fun productionDefaultReceiptDeadlineIs250MillisecondsAndDoesNotRestartAtCompletion() {
         val gate = DiagnosticFrameGate().apply { start() }
         val accepted = gate.offer(1,0).ticket!!

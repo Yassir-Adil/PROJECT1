@@ -15,6 +15,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import com.triguide.ai.R
 
 /** DUMP-protected, debug-only synthetic drawing self-test; no camera/model/session acquisition. */
 class SemanticRenderDiagnosticActivity : ComponentActivity() {
@@ -36,16 +37,14 @@ class SemanticRenderDiagnosticActivity : ComponentActivity() {
             setBackgroundColor(Color.rgb(20,20,20))
         }
         root.addView(TextView(this).apply {
-            text = "اختبار رسم اصطناعي — ليست كاميرا ولا نتيجة تعرّف.\n" +
-                "المطلوب شبكة مربعات: أزرق، بنفسجي، وأصفر.\n" +
-                "Synthetic drawing test only. No scene or walking assessment."
+            text = getString(R.string.synthetic_render_disclaimer)
             textSize = 18f; setTextColor(Color.WHITE)
             setPadding(dp(16),dp(16),dp(16),dp(16))
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         patternView = PatternView(this)
         root.addView(patternView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f))
         root.addView(Button(this).apply {
-            text = "إيقاف الاختبار / Stop test"; minHeight = dp(56)
+            text = getString(R.string.synthetic_render_stop); minHeight = dp(56)
             setOnClickListener { finishDiagnostic("user_stop") }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         setContentView(root)

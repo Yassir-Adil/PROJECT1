@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-10-20 — Keep RGB-only labels typed and optional; audit support, not relax it
+
+Separate view-onlyRGB observation from rawfused geometry. Explicit diagnostic
+fallback defaultOFF, rawfirst and sameone-ticket/1Hz/250ms/CPUowner retained.
+No old worldpoints/ground inference inRGB branch. PublicGT audit reused pinned
+fixture to measure samplecount loss under labelled SYNTHETIC periodic drops;
+do not turn those into sensorconfidence/modelaccuracy or a gridupgrade by fiat.
+Actual scale<=0/hash-provenance test failures fixed before GREEN. Resource-copy
+cleanup no newdependency. Fullgate/device acceptance separate; staged safety
+backlog rather than promise of complete safety. RGB_ONLY_AND_SUPPORT_2026-10-20.md.
+
 ## 2026-10-20 — Accept measured display, not inferred navigation readiness
 
 0.9.36 static self-test visible and separate live20s shows8freshCanvas with owner

@@ -1,5 +1,19 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —0.9.37 desktop complete, no active task
+
+Hhostaudit independently tested/fixed; Rfatalrace and allGLfollow-up fixed after
+actualsourceRED, Rfinal accepted.865fullgate/build/policyPASS; source/stagedhash
+rechecked. No037install/phone, serialabsentlastcheck; ownerfreshready requested.
+No oldscope restart. RGB_ONLY_AND_SUPPORT_2026-10-20.md and WORK_QUEUElatest.
+
+### CURRENT_SCOPE —typed2D / structural publicGT support audit tests-first
+
+Read latestWORK_QUEUE. Codex added missing-API tests; RED pending. CursorH source
+scope only research/evaluate_hypersim_support.py + response doc AFTER RED release.
+No tests/Android/Gradle/ADB/Git/network or privateoutputs/fixtures access. GTaudit
+does not score model confidence or permit navigation. Other tasks not active.
+
 ### CURRENT_SCOPE —0.9.36 desktop+device complete, no active assignment
 
 836gatePASS; installedhashverified, synthetic and livecells humanconfirmed.

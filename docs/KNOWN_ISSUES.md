@@ -1,5 +1,23 @@
 # Known Issues
 
+## Current0.9.37 — desktopverified, deviceavailability / geometry open
+
+Final865tests/build/policiesPASS and scopedsourceRaccepted; no037phoneinstall
+yet, serialabsent. TypedRGBfallbackdefaultOFF and stillrequiresARCoreTRACKING;
+it may consume cadence slots otherwiseavailableforlaterfusion, no measuredgain
+claim. GT27cases are suppliedlabels/syntheticdrops, not actualdepthconfidence.
+No confirmedground/wall/stair/clearance; prior036supportsmax4. Lint41/14warnings
+remain. FreshownerUSB/unlock/scene requested onlyforuseful20s test. SAFETY_GATES_2026-10-20.md.
+
+## Current0.9.37 source — optionalRGB availability, ground still unproven
+
+TypedRGB-only fallback shares1Hzslot and can reduce semantically fused raw
+opportunities; defaultOFF, must measure before claiming gain. 114focused/
+28policy/12supporttests PASS; fullgate/finalRpending, no newphoneinstall yet.
+27publicGT cases expose sparse/anchor loss but are not actualSDKconfidence or
+modelaccuracy.3GTscenes not safetyvalidation. Ground/nav/raw thresholds untouched;
+SAFETY_GATES_2026-10-20.md lists required milestones. No phone action now.
+
 ## Latest actual0.9.36 — colours seen, geometric support still insufficient
 
 5s synthetic and20s live bothcomplete; owner confirms intendedcells, livefresh

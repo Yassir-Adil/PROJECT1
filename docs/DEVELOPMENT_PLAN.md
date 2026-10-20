@@ -2,6 +2,18 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current0.9.37/50 — typedRGB / publicGT pair verified, phone pending
+
+Opt-inRGB-only observation separated from rawfused geometry; rawfirst/shared
+owner/1Hz/250ms/tracking retained. Immediate fatalGL/raw/dense fence reviewed,
+no nav/model/permission/threshold changes. Final865tests/build/policiesPASS,
+Lint41debug/14release warnings0errors; source/stagedAPKhash independentlychecked.
+Publicexistingfixture27GT cases (no RGB/training/network) show13count6only,
+9noanchoredcomponent/11nosupport; not a model or sensorconfidence benchmark.
+Rfinal sourceaccepted, H/Rdone. Newversion NOTinstalled; phone absent lastcheck,
+fresh ownerready requested. SAFETY_GATES_2026-10-20.md defines remaining gates;
+RGB_ONLY_AND_SUPPORT_2026-10-20.md has hashes/results. No complete-safety claim.
+
 ## Latest actual0.9.36/49 — synthetic and live colours confirmed
 
 836engineeringtests/build/policyPASS; exactinstalledhashverified.5s synthetic

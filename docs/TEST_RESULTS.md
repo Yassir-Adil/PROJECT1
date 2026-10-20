@@ -2,6 +2,27 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.37 final engineering PASS865; device NOT_STARTED
+
+Gate20261020T153635414179Z:726app+10sim+30policy+99eval=865,0fail/error/skip,
+bothbuilds/models/permissions/debug/private-rootpolicyPASS. Source238fileSHA
+independently rechecked, stageddebughashmatched, Rfinal source no scopedH/M.
+Lint0errors/fatal41debug/14release warnings.114focused and13hostsupportcases
+are contained in totals, not extra independent observations. Realpublic27GT
+cases structuralonly. Intermediate862/864PASS and sourceguard policyFAIL
+superseded but retained as history. No037install/physicalRGB/geometry/safety
+claim; phoneabsentlastcheck and ownerreadiness requested. RGB_ONLY_AND_SUPPORT_2026-10-20.md.
+
+## 2026-10-20 —0.9.37 typedRGB/support tests; allGL final gate running
+
+MissingAPI/module/resource actualRED then114focused/28policy/12supportPASS.
+Publicexistingfixture27structuralcases executed, no RGB/model/phoneaccuracy.
+Actualscale0/-1 and missing-hashfailures fixed, end-to-endtamper tested.
+First862gatePASS preceded Rfatalfence; subsequentpolicyFAILstaleassertion fixed
+with strongerconditions,864gatePASS preceded allGLextension. NewallGLguardRED,
+finalpolicy30/research99/app726 baseline and source rereview pending. No newly
+installedphone/runtimeclaim. RGB_ONLY_AND_SUPPORT_2026-10-20.md; allfailureskept.
+
 ## 2026-10-20 —0.9.36 actual synthetic/live display confirmed; ground UNVERIFIED
 
 Installed49/basehashverified.5s synthetic COMPLETE2draws/128cells +humanconfirmed
