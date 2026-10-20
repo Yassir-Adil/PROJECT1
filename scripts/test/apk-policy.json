@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "package": "com.triguide.ai",
-  "minimum_jvm_tests": {"app": 694, "sim": 10},
-  "minimum_python_tests": {"policy": 21, "evaluation": 86},
+  "minimum_jvm_tests": {"app": 715, "sim": 10},
+  "minimum_python_tests": {"policy": 25, "evaluation": 86},
   "models": [
     {
       "asset": "assets/models/efficientdet_lite0.tflite",

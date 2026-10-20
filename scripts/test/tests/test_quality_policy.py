@@ -119,7 +119,7 @@ class QualityPolicyTest(unittest.TestCase):
         tree = "\n".join(f'''      E: activity (line=2)
         A: android:name(0x1)="com.triguide.ai.diagnostics.{name}DiagnosticActivity"
         A: android:permission(0x2)="android.permission.DUMP"
-''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth"))
+''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth", "SemanticRender"))
         audit_manifest(PERMISSIONS, tree, "debug", PACKAGE)
         with self.assertRaisesRegex(PolicyError, "DUMP protected"):
             audit_manifest(PERMISSIONS, tree.replace('android.permission.DUMP', 'other', 1), "debug", PACKAGE)
@@ -139,7 +139,7 @@ class QualityPolicyTest(unittest.TestCase):
         tree = "\n".join(f'''      E: activity (line=2)
         A: android:name(0x1)="com.triguide.ai.diagnostics.{name}DiagnosticActivity"
         A: android:permission(0x2)="android.permission.DUMP"
-''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "Unexpected"))
+''' for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth", "SemanticRender", "Unexpected"))
         with self.assertRaisesRegex(PolicyError, "inventory"):
             audit_manifest(PERMISSIONS, tree, "debug", PACKAGE)
 

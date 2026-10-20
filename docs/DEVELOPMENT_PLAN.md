@@ -2,6 +2,29 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Latest actual0.9.36/49 — synthetic and live colours confirmed
+
+836engineeringtests/build/policyPASS; exactinstalledhashverified.5s synthetic
+COMPLETE/ownergridconfirmed. Separatelyready20.17s live COMPLETE+CLOSED:22raw/
+8freshsemantics/8freshCanvas, ownercoloursoverroomconfirmed;0groundcandidate,
+support0–4, all64heightunknown. No causal035comparison/accuracy/navclaim.
+Phone stopped, no more owneraction this round. Next two measured priorities:
+typed2D observation independent of rawdepth and public/labeled support geometry
+evaluation while preserving6point/TTL/STOP gates. No model/sensor purchase by
+assumption. PHONE_RENDER_0936_2026-10-20.md. Earlier pending entries are history.
+
+## Current0.9.36/49 — renderer pair built, physical acceptance pending
+
+Two bounded recovery improvements implemented: UI/View/draw attribution and
+isolated same-style synthetic drawing self-test. RealRED→GREEN,103focused,
+836fulltests/builds/policiesPASS, finalR no scopedHigh/Medium. Debugartifact
+hash-staged; not installed/camera-tested. Owner readiness requested for5s
+no-camera synthetic pattern, not another20s room setup. No active worker.
+Next after rendering acceptance: diagnostic2D/raw-depth separation; no newmodel/
+nav/TTL/permission changes. Lint51debug/14release warnings,0errors; six new
+lab-localization warnings deferred explicitly. RENDER_RECOVERY_2026-10-20.md.
+Earlier entries below are historical checkpoint states.
+
 ## Owner clarification / reviewed recovery plan —2026-10-20
 
 The intended semantic grid did NOT appear; earlier colours-visible answer was

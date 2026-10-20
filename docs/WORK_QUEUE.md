@@ -1,5 +1,34 @@
 # Shared execution queue — 2026-10-19
 
+## COMPLETE desktop+phone pair —0.9.36/49,2026-10-20
+
+836fullgatePASS, exactinstalledhashverified. Synthetic5s visible/humanconfirmed;
+separate20.17s live COMPLETE+CLOSED22raw/8fresh/8Canvas, ownerlivecoloursconfirmed.
+0groundcandidate/supportmax4; uncertaintypreserved. Appstopped/noPID, allA/Rjobs
+finished. No further phone action this round. Next typed2D/rawdepth separation
+and public/labeled support evaluation are PLANNED, not current writing scopes.
+PHONE_RENDER_0936_2026-10-20.md. Older DEVICEPENDING/ACTIVE states are history.
+
+## COMPLETE desktop pair / DEVICE PENDING —0.9.36/49,2026-10-20
+
+103focused +25policy +836fullgate/build/APKpoliciesPASS. Source230filehash
+rechecked, stageddebughashmatched. Rfinal no scopedHigh/Medium; allA/Rjobsfinished,
+no active assignments. No install/camera yet; awaiting requested owner unlock/
+look for5s synthetic pattern (no scene/movement). No code scope reopening until
+reviewed next stage. Preserve unrelated owner rule/research10. RENDER_RECOVERY_2026-10-20.md.
+Following ACTIVE/planned scopes are historical execution records, not leases.
+
+## ACTIVE — render attribution / synthetic renderer,2026-10-20
+
+Codex owns tests-first RED/GREEN, SemanticFusionPublication decision reasons,
+new SemanticDisplayTrace, Activity/overlay integration, debug-only synthetic
+render Activity/manifest policy, gate/version/docs/Git. No phone until built.
+Cursor A exclusive planned source writes after Codex RED release:
+debug diagnostics/SemanticPaintGrid.kt and SemanticGridPainter.kt only;
+docs/CURSOR_PAINT_GRID_2026-10-20.md for response. Codex owns matching new tests.
+No model/runtime/permission/nav/250ms/raw gate changes. Preserve owner dirty
+voice rule and research10. Diagnostic2D decoupling is next stage, not this pair.
+
 ## PLANNED / NO ACTIVE WORKER — clarified no-colours,2026-10-20
 
 Owner corrected visual feedback: intended grid NOT seen. Read-only Cursor review

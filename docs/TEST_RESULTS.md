@@ -2,6 +2,36 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.36 actual synthetic/live display confirmed; ground UNVERIFIED
+
+Installed49/basehashverified.5s synthetic COMPLETE2draws/128cells +humanconfirmed
+grid/colours/text. Separatelyconfirmed20.17s cameraAUTOMATIC COMPLETE+CLOSED:
+22raw/8fresh/0stale/0reference, UI8/View8/freshCanvas8;1expiredprepaintentry
+rejected. Ownerlivecoloursconfirmed.0–4support,6count/2componentrejections,
+all64unknown. Receipt56.86/241.44ms n8, not causal035performance comparison.
+Appstopped/noPID;836fullgateunchanged. PHONE_RENDER_0936_2026-10-20.md. No new
+navigation/ground/wall/rug accuracy approval or additional ownerstep required.
+
+## 2026-10-20 —0.9.36 stable engineering PASS836; device NOT_STARTED
+
+Gate20261020T143606116459Z:715app+10sim+25policy+86eval=836,0fail/error/skip;
+bothbuilds/APKmodel/permission/debug/private-rootpolicyPASS. Source230files hash
+independently matched after gate; stageddebughash matches. FinalR source no
+scopedHigh/Medium, no reviewer execution claim. Lint0fatal/error51debug/14release
+warnings; sixnewsyntheticlab localization warnings tracked. Physicalsynthetic/
+livecolors NOTtested; owner readiness pending. Full details/hashes/RED history
+RENDER_RECOVERY_2026-10-20.md. No navigation or safety accuracy conclusion.
+
+## 2026-10-20 —0.9.36 focused PASS103, policy PASS25; full gate pending
+
+Real compileRED before decision/trace/paint/session APIs, policyRED for new
+reviewedcomponent,3assertionfailures before boundedcopy/clockfixes, boundsAPI
+RED+2sourceguardsRED then fixes. Final103tests/12suites0fail/error and25policy
+PASS executed by Codex. Source guards do not prove Android rendering; one
+default250ms regression alreadyGREEN, no inventedRED. Stablefullgate/finalR
+source rereview running, no phone/visual/accuracy claim. No cadence/TTL/model/
+permission/mainnav changes. RENDER_RECOVERY_2026-10-20.md details scope/evidence.
+
 ## 2026-10-20 — Clarified visual failure; fresh focused regressions PASS82
 
 After explaining intended grid, owner says it did NOT appear. Visual acceptance

@@ -1,5 +1,14 @@
 package com.triguide.ai.diagnostics
 
+/** Reasons are diagnostic only; ALLOWED is display eligibility, never movement permission. */
+internal enum class SemanticDisplayDecision {
+    ALLOWED, STOPPED, NOT_TRACKING, REVISION_CHANGED, INVALID_TIMESTAMP,
+    CLOCK_ROLLBACK, EXPIRED, PUBLICATION_REJECTED, INVALID_BOUNDS, EMPTY_PAINT;
+
+    /** Missing layout may retry within ORIGINAL receipt age; terminal/content rejections clear. */
+    val clearsPublication: Boolean get() = this != ALLOWED && this != INVALID_BOUNDS
+}
+
 /** Revision invalidation is independent of inference completion and stops are terminal. */
 internal class SemanticFusionPublication {
     private var generation = 0L
@@ -14,8 +23,18 @@ internal class SemanticFusionPublication {
     }
     @Synchronized fun invalidateGeometry() { generation++; }
     @Synchronized fun stop() { stopped = true; tracking = false; generation++ }
+    @Synchronized fun decision(revision: Long, receivedNs: Long, nowNs: Long): SemanticDisplayDecision = when {
+        stopped -> SemanticDisplayDecision.STOPPED
+        !tracking -> SemanticDisplayDecision.NOT_TRACKING
+        revision != generation -> SemanticDisplayDecision.REVISION_CHANGED
+        receivedNs < 0 -> SemanticDisplayDecision.INVALID_TIMESTAMP
+        nowNs < receivedNs -> SemanticDisplayDecision.CLOCK_ROLLBACK
+        !SemanticFusionMapping.fresh(receivedNs, nowNs, true, true) -> SemanticDisplayDecision.EXPIRED
+        else -> SemanticDisplayDecision.ALLOWED
+    }
+
     @Synchronized fun canPublish(revision: Long, receivedNs: Long, nowNs: Long): Boolean =
-        revision == generation && SemanticFusionMapping.fresh(receivedNs, nowNs, !stopped, tracking)
+        decision(revision, receivedNs, nowNs) == SemanticDisplayDecision.ALLOWED
 }
 
 /** Surface size alone misses a 180-degree display rotation. */

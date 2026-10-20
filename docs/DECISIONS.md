@@ -1,5 +1,26 @@
 # Decision Log
 
+## 2026-10-20 — Accept measured display, not inferred navigation readiness
+
+0.9.36 static self-test visible and separate live20s shows8freshCanvas with owner
+confirmation. Stopapp and recordsuccess/limits. Do not attribute improvement to
+layout/timer alone:rawadmission1→22 and scene/motion/temperature differ. Ground
+supportmax4<6 and no candidates means geometry remainsUNKNOWN; no floorlabel/
+rug exception, threshold decrease, model swap or turn/CLEAR. Next stage typed2D
+cadence and independent ground-support evaluation. PHONE_RENDER_0936_2026-10-20.md.
+
+## 2026-10-20 — Instrument render stages and isolate synthetic drawing first
+
+Implement recovery stage1 as two bounded improvements: diagnosticUI/View/draw
+attribution and same-style no-camera synthetic test. Reuse existing painter/
+AndroidView APIs, no new deps, opacity/TTL/cadence/nav/model or permission change.
+Typedpaintcell cannot carry geometry. Exact reviewed debugDUMP activity added
+to allowlist, absentrelease; pattern must say synthetic, never scene evidence.
+Keep livepublication through temporarymissingbounds within ORIGINAL deadline;
+one identitycancelled expiry timer; terminalstop/clockguards for synthetictest.
+ActualRED→GREEN incl independent review corrections; no physicalrootcauseclaim.
+2D/raw-depth decoupling next stage after rendering acceptance. See RENDER_RECOVERY_2026-10-20.md.
+
 ## 2026-10-20 — Correct misunderstood feedback before advancing
 
 Owner clarified the intended semantic grid did NOT appear after its meaning was

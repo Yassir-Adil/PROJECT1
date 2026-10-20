@@ -1,5 +1,17 @@
 # Architecture
 
+## 0.9.36 render attribution / isolated synthetic test
+
+Existing semanticworker result adds localcompletiontime, not sensorage. Pure
+publication decision preserves250ms/stop/tracking/revision eligibility; bounded
+SemanticDisplayTrace separates UI/View/onDraw entries/rejections from actual
+paint commands and freshCanvas stats. SharedSemanticGridPainter consumes only
+paintcells with column/row/label; depth→paint stripsworldgeometry. Independent
+DUMP-protected debug SemanticRenderDiagnosticActivity uses syntheticpaintcells,
+no camera/model/ground/navigation, bounded3..15s session. Samepalettestyle, no
+stale mask extension. Sourcebounds/callback/clock fixes and tests described in
+RENDER_RECOVERY_2026-10-20.md. Deviceacceptance pending; no production nav change.
+
 ## 0.9.34 diagnostic observability follow-up
 
 Pure SemanticOverlayStats separates accepted inference from main-thread publish

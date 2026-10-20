@@ -1,5 +1,34 @@
 # Known Issues
 
+## Latest actual0.9.36 — colours seen, geometric support still insufficient
+
+5s synthetic and20s live bothcomplete; owner confirms intendedcells, livefresh
+Canvas8matches8accepted. Thisrunvisuallypassed, not proof of oldfailure'scause.
+0groundcandidates with0–4supports,6too_few_geometry_samples/2no_bottomcomponent;
+all64heightsunknown,0verticalplanes.2Dcadence still gatedbyrawadmission; firstcold
+result241.44ms leaves littleUIbudget.836gatePASS; Lint51/14warnincl6newlabcopy.
+Phone stopped, no more identical probe now. PHONE_RENDER_0936_2026-10-20.md.
+
+## Current0.9.36/49 — built, not physically accepted
+
+836fulltests/build/policyPASS, finalsource R no scopedHigh/Medium. Renderer
+attribution/self-test implemented; exactsource/stagedAPKhash checked. No new
+install/device test yet; current no-colours cause not proved fixed. Await owner
+ready for5s no-camera pattern, no room movement. Lint51debug/14release warnings
+include sixnewSetTextI18n lab-copy issues; migrate to debugstring resources later
+without suppressing them. Geometry/2D cadence separation, ground/wall/rugaccuracy
+and realaudio/TalkBack remain unverified. RENDER_RECOVERY_2026-10-20.md.
+
+## 0.9.36 candidate — device rendering still unverified
+
+Renderstage reasons and synthetic isolated drawing instrument missing035grid;
+not a measured livevisibility fix. Corrected temporarybounds discard, identity
+expiry cleanup, oversized copy and synthetic clockreentry after actualRED.
+103focused/25policyPASS, finalR/fullgatepending. No installed/runtime change yet,
+no true2D cadence separation/ground/wall/rug/safe-path proof. Ask for short5s
+synthetic check only after verifiedcandidate, not another unprepared camera run.
+RENDER_RECOVERY_2026-10-20.md. Older checkpoints below are historical.
+
 ## Current clarified issue — semantic grid NOT visible
 
 Owner understood grid explanation then confirmed it did NOT appear. Earlier

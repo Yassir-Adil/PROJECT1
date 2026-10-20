@@ -76,7 +76,7 @@ def audit_manifest(permissions, tree, variant, package):
         activities = [block for block in re.split(r"(?m)^\s*E: ", tree)
                       if block.startswith("activity ") and re.search(r"com\.triguide\.ai\.diagnostics\.\w*DiagnosticActivity", block)]
         expected = {f"{package}.diagnostics.{name}DiagnosticActivity"
-                    for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth")}
+                    for name in ("DeepLab", "LiveSegmenter", "DepthCapability", "RawDepth", "SemanticRender")}
         names = [re.search(r'com\.triguide\.ai\.diagnostics\.\w*DiagnosticActivity', block)[0]
                  for block in activities]
         require(len(names) == len(expected) and set(names) == expected,

@@ -1,5 +1,22 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —0.9.36 actual display accepted, ground still unknown
+
+836desktopgatePASS+Rfinal, exactUSBinstalledhash. Owner confirms synthetic5s
+grid and separatelylive20s colouredcells. Live8fresh/8Canvas/0stale,22rawadmits,
+0groundreference/max4supports; fullclosure/stopverified. No causalcomparison/
+safetyclaim or furtherowneraction. PHONE_RENDER_0936_2026-10-20.md has actualdata;
+older phonepending entries are historical. Allworkersdone.
+
+### CODEX_RECORD —0.9.36 complete desktop gate, device pending
+
+CursorA bounded paint sources independently reviewed/corrected, Rinitial risks
+fixed after actualRED and Rfinal no scopedHigh/Medium. Codex103focused/25policy/
+836fulltests/build/APKpoliciesPASS, source230filehash rechecked, stagedAPKhash
+matches. No worker executed tests or phone. Lint51debug/14release warnings0errors;
+sixnewlablocalization issues explicit. No install/camera/visibility claim; owner
+ready requested for5s synthetic pattern. RENDER_RECOVERY_2026-10-20.md.
+
 ### CODEX_RECORD —2026-10-20 clarified no-colours / reviewed recovery plan
 
 Owner clarified grid NOT visible after explanation. Cursor ask/read-only review

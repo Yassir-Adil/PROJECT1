@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-10-20 — Actual0.9.36 synthetic + live display accepted for this run
+
+USBinstalled49/basehashmatched. Owner-ready5s synthetic COMPLETE2draws/128cells,
+ownergrid/disclaimerconfirmed. Separate owner-ready20.17s live COMPLETE+CLOSED:
+22rawadmits/8fresh/0stale, UI8/View8/Canvas8/370cells,1expiredprepaintrejected;
+owner confirms livecolouredcells. Ground0candidates, support0–4, exact6count/
+2bottomcomponentrejects, all64unknown. Phone stopped/noPID. No camera/safe-path
+accuracy or causal035gain claim.836desktopgate remains. PHONE_RENDER_0936_2026-10-20.md.
+
+## 2026-10-20 — Final0.9.36/49 desktop gate complete
+
+Stable836fulltestsPASS(715app+10sim+25policy+86eval),0fail/error/skip, bothbuilds/
+models/permission/debug/private-rootpolicyPASS. Lint0errors51debug/14release
+warnings (sixnewlabSetTextI18n, not hidden). Source230file fingerprint independently
+rechecked, debugAPKhash-staged. FinalRsource no scopedHigh/Medium; A/Rfinished.
+No install/camera/physicalrendering yet. Owner asked to unlock/look at5s synthetic
+pattern; awaiting readiness, no scene/movement needed. RENDER_RECOVERY_2026-10-20.md.
+Older pending records below describe checkpoints, not current active work.
+
+## 2026-10-20 —0.9.36 source candidate: attribution and synthetic renderer
+
+Tests-first real compile/policy/assertion/sourceguard RED then fixes; final103
+focused/25policy PASS. Cursor A implemented only typedpaintgrid/painter, Codex
+reviewed/corrected/integrated. Live display reasons, bounded UI/View/draw trace,
+same-style sharedpainter and debugDUMP syntheticno-camera/no-model self-test.
+Rinitial bounds/expiry/size risks addressed with originalTTL preserved; final
+rereview/fullgate in progress on frozen source. No install/phone/camera yet;
+2D/raw-depth decoupling next stage, not implemented. No nav/model/permission
+change. RENDER_RECOVERY_2026-10-20.md; userfiles preserved.
+
 ## 2026-10-20 — Owner clarification and bounded display recovery audit
 
 Owner clarified semantic coloured grid NOT visible after explanation; supersedes

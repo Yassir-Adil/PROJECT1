@@ -20,7 +20,7 @@ internal data class SemanticFusionPoint(val imageU: Double, val imageV: Double,
     val worldX: Double? = null, val worldY: Double? = null, val worldZ: Double? = null)
 internal data class SemanticFusionResult(val revision: Long, val receivedNs: Long,
     val frameTimestampNs: Long, val cells: List<SemanticDepthCell>, val ground: SemanticGroundReading,
-    val unmappedCells: Int)
+    val unmappedCells: Int, val completedElapsedNs: Long = receivedNs)
 
 /** Opt-in diagnostic on the EXISTING ARCore owner. No camera owner, guidance or speech. */
 internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: (SemanticFusionResult?) -> Unit) {
@@ -71,6 +71,9 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
 
     fun canDisplay(result: SemanticFusionResult, nowNs: Long): Boolean =
         publication.canPublish(result.revision, result.receivedNs, nowNs)
+
+    fun displayDecision(result: SemanticFusionResult, nowNs: Long): SemanticDisplayDecision =
+        publication.decision(result.revision, result.receivedNs, nowNs)
 
     /** Only called inside the already-admitted live raw-depth/confidence scope on GL. */
     fun capture(frame: Frame, depth: Image, confidence: Image) {
@@ -146,7 +149,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                         }
                     }
                     if (outcome != "accepted" || !publication.canPublish(revision, received, ended)) return@execute
-                    val result = SemanticFusionResult(revision, received, frameStamp, cells, reading, unmapped)
+                    val result = SemanticFusionResult(revision, received, frameStamp, cells, reading, unmapped, ended)
                     synchronized(lock) { completed++; if (reading.referenceYMeters != null) candidateFrames++ }
                     Log.i(TAG, "SEMANTIC_FUSION_SAMPLE status=${reading.status} reason=${reading.reason} support=${reading.supportCount} " +
                         "cpu_upright_quarter_turns=${captured.quarterTurns} " +

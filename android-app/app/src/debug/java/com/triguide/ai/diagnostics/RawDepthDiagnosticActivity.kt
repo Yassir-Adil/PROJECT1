@@ -89,6 +89,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var semanticFusionEnabled = false
     private var displayedSemanticResult: SemanticFusionResult? = null // main-thread only
     private val semanticOverlayStats = SemanticOverlayStats()
+    private val semanticDisplayTrace = SemanticDisplayTrace()
 
     private var session: Session? = null
     @Volatile private var sessionResumed = false
@@ -230,8 +231,12 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             semanticDiagnostic = ArCoreSemanticDiagnostic(this) { result ->
                 runOnUiThread {
                     val active = semanticDiagnostic
-                    if (result == null || stopping.get() || active == null ||
-                        !active.canDisplay(result, SystemClock.elapsedRealtimeNanos())) {
+                    val now = SystemClock.elapsedRealtimeNanos()
+                    val decision = if (stopping.get() || active == null) SemanticDisplayDecision.STOPPED
+                        else if (result == null) null else active.displayDecision(result, now)
+                    if (result != null) semanticDisplayTrace.ui(result.receivedNs, result.completedElapsedNs,
+                        now, decision ?: SemanticDisplayDecision.STOPPED)
+                    if (result == null || decision != SemanticDisplayDecision.ALLOWED) {
                         displayedSemanticResult = null
                         semanticOverlay?.show(null)
                         semanticStatusView?.text = "Semantic + raw depth: UNKNOWN / مجهول. تشخيص فقط؛ لا إذن للمشي."
@@ -356,8 +361,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                     ),
                 )
                 if (semanticFusionEnabled) addView(
-                    SemanticFusionOverlayView(this@RawDepthDiagnosticActivity, semanticOverlayStats) { result, now ->
-                        !stopping.get() && semanticDiagnostic?.canDisplay(result, now) == true
+                    SemanticFusionOverlayView(this@RawDepthDiagnosticActivity, semanticOverlayStats, semanticDisplayTrace) { result, now ->
+                        if (stopping.get()) SemanticDisplayDecision.STOPPED else
+                            semanticDiagnostic?.displayDecision(result, now) ?: SemanticDisplayDecision.STOPPED
                     }.also { semanticOverlay = it },
                     FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
                 )
@@ -1014,6 +1020,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         motionStats.stop()
         semanticDiagnostic?.stop()
         semanticOverlayStats.stop()
+        semanticDisplayTrace.stop()
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Drain GL first (never hold frameInUseLock while waiting on GL), then pause session, then result.
@@ -1140,6 +1147,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val observed = coverageStats.snapshot()
         Log.i(TAG, "SEMANTIC_FUSION_RESULT ${semanticDiagnostic?.summary(elapsedS) ?: "semantic_enabled=false"} navigation=none")
         if (semanticFusionEnabled) {
+            Log.i(TAG, "SEMANTIC_DISPLAY_TRACE ${semanticDisplayTrace.snapshot().logFields()}")
             val overlay = semanticOverlayStats.snapshot()
             Log.i(TAG, "SEMANTIC_OVERLAY_RESULT published_samples=${overlay.publishedSamples} " +
                 "canvas_samples=${overlay.canvasSamples} fresh_canvas_calls=${overlay.canvasCalls} " +

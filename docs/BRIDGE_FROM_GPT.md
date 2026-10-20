@@ -1,5 +1,28 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —0.9.36 desktop+device complete, no active assignment
+
+836gatePASS; installedhashverified, synthetic and livecells humanconfirmed.
+Live22raw/8fresh/8Canvas/0groundcandidate, max4supports; appstopped. No navclaim.
+AllA/Rworkersfinished. Next typed2D separation/supportevaluation awaits bounded
+tests-first scope, do not restart older tasks. PHONE_RENDER_0936_2026-10-20.md.
+
+### CURRENT_SCOPE —0.9.36 desktop complete, no active worker
+
+Apaint helper reviewed/fixed/integrated, Rfinal no scopedHigh/Medium. Actual
+836fulltests/build/policyPASS, source/hash-stagedAPK independently checked.
+No newinstall/camera, awaiting owner5s syntheticready. No nav/model/permission/
+TTL/cadence changes. RENDER_RECOVERY_2026-10-20.md and latestWORK_QUEUE govern;
+all older writing scopes below are historical and must not silently restart.
+
+### CURRENT_SCOPE —2026-10-20 renderer pair tests first
+
+Read latest WORK_QUEUE. Codex added new tests before helpers; RED pending.
+Cursor A may implement only SemanticPaintGrid.kt / SemanticGridPainter.kt and
+its response doc AFTER explicit RED release. No Activity/manifest/tests/Gradle/
+assets/Git/ADB/network edits. Palette/lifetime unchanged, synthetic labels never
+constitute scene observations or geometry. Other historical tasks not active.
+
 ### CURRENT_SCOPE —2026-10-20 recovery plan only, no writing assignment
 
 Owner clarified intended grid NOT seen, superseding earlier ambiguous answer.

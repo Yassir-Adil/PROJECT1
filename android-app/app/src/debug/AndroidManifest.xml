@@ -2,6 +2,13 @@
     <application>
         <meta-data android:name="com.google.ar.core" android:value="optional" />
         <activity
+            android:name="com.triguide.ai.diagnostics.SemanticRenderDiagnosticActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:permission="android.permission.DUMP"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
             android:name="com.triguide.ai.diagnostics.RawDepthDiagnosticActivity"
             android:excludeFromRecents="true"
             android:exported="true"

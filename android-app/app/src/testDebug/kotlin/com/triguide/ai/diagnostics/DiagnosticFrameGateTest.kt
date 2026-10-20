@@ -8,6 +8,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiagnosticFrameGateTest {
+    @Test fun productionDefaultReceiptDeadlineIs250MillisecondsAndDoesNotRestartAtCompletion() {
+        val gate = DiagnosticFrameGate().apply { start() }
+        val accepted = gate.offer(1,0).ticket!!
+        assertEquals("accepted", gate.complete(accepted,250_000_000))
+        val expired = gate.offer(2,300_000_000).ticket!!
+        assertEquals("stale", gate.complete(expired,550_000_001))
+    }
     private fun gate(interval: Long = 10, age: Long = 50) =
         DiagnosticFrameGate(interval, age).apply { start() }
 
