@@ -1,5 +1,15 @@
 # Open-source licenses
 
+## Host public RGB-D fixture/oracle —2026-10-20
+
+Adapted MIT ThomasGermer2020 WebFile Range/seek approach (fullMIT intransport
+module) and Apple2020 Hypersim pixel-centred ray/pose equations (fulltoolkit
+terms third_party/hypersim-toolkit-LICENSE.txt, source/modificationNOTICE).
+Dataset separatelyCC-BY-SA3.0, attributedRoberts etal.ICCV2021/Apple, tiny public
+validation geometry/metadata only storedoutsideGit/APK, nottrained/redistributed.
+Hosth5py3.16.0BSD-3-Clause, HDF5/wheel terms separate; no wheelvendoring orAndroid
+dependency. Exactwheelhash/provenance/limits: PUBLIC_RGBD_ORACLE_2026-10-20.md.
+
 ## Texture-depth projection and model-card audit —2026-10-20
 
 TextureDepthProjection.kt adapts the scalar unprojection in Google ARCore1.57

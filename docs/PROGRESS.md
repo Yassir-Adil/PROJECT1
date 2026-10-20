@@ -1,5 +1,17 @@
 # Progress Log
 
+## 2026-10-20 — Public fixtures/oracle and positive phone geometry, APKunchanged
+
+T/G disjoint tests-first, actualRED then source. Codex independently caught/fixed
+matrixbroadcast and numeric/testfixture defects; Ridentified pose-index/evaluator
+gaps, fixed after newRED with6end-to-endtests.713finaltests/builds/policyPASS,
+Lint0errors56/34warnings, source201fileSHArecorded. Selectivepublicv2fixture23
+files/3scenes,7.324MB archive transfer;2192998GTpointresiduals p90~1.9–2.4mm,
+not learned/phone accuracy. Hosth5py pinned/hashverified, noAndroidchange. Owner
+ready20sAUTOMATIC actualCOMPLETE+CLOSED:20rawadmits,3finiteworldpoints,4upward
+height samples,0vertical. Verified sameinstalled0.9.31SHA, stoppedapp. No photos/
+logs/weights uploaded. Allworkersfinished. PUBLIC_RGBD_ORACLE_2026-10-20.md.
+
 ## 2026-10-20 — Texture-depth coordinates and relative heights,0.9.31/44
 
 Bounded disjoint Cursor P/H tests first, actualCodex missing-helperRED then source;

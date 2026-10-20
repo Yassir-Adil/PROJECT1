@@ -2,6 +2,17 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —713-test gate PASS; positive projection observed, wall stillUNVERIFIED
+
+Finalgate20261020T041447079371Z:597app+10sim+20policy+86eval=713,0fail/error/skip;
+bothAPKs/build/policyPASS, Lint0errors56/34warnings. ActualREDs before fixes incl
+sourcefingerprint, numeric/transport, CSVdimparser andevaluatorintegrity. Three
+public held-outGTframes compare2192998points, p90~1.9–2.4mm coordinate residual
+(not model orphoneaccuracy). User-ready20.16s0.9.31AUTOMATICprobeCOMPLETE+CLOSED:
+565distinct/533tracking,20rawadmits,5projection samples/3finiteworldpoints,
+4upwardheight samples,0vertical. SameAPKhash, no mainnav/defaultchange. Scoped
+stopconfirmed noPID. PUBLIC_RGBD_ORACLE_2026-10-20.md for hashes/limitations.
+
 ## 2026-10-20 —0.9.31 engineering PASS; positive geometry UNVERIFIED
 
 Real missing-helper compileRED before implementation,83focusedGREEN. Fullgate

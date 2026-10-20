@@ -1,5 +1,27 @@
 # Adapted ARCore sample pattern
 
+## Host-only Hypersim fixture oracle —2026-10-20
+
+research/hypersim_transport.py adapts Thomas Germer2020 MIT WebFile Range/seek
+approach; full MIT text retained in that module. Pinned source:
+https://github.com/apple/ml-hypersim/blob/3463c5c4a75f3cbfc65ed31cfd6e87204b3a2254/contrib/99991/download.py
+Changes: strict official HTTPS origin/206/range/length/ETag/encoding checks,
+bounded transfer/request counts, injectable fake transport; no URL table copied.
+
+research/hypersim_geometry.py adapts the pixel-centred ray/pose/unit equations
+from Apple2020 Hypersim notebook; full toolkit terms retained separately in
+hypersim-toolkit-LICENSE.txt. Source:
+https://github.com/apple/ml-hypersim/blob/3463c5c4a75f3cbfc65ed31cfd6e87204b3a2254/contrib/mikeroberts3000/jupyter/01_casting_rays_that_match_hypersim_images.ipynb
+Changes: pure numpy, validation/invalid-data masks/robust norms, bounded arrays,
+residual/ground-truth semantic reporting. No pandas/Embree/meshes/toolkit binary
+or Android runtime imported. No endorsement/patent clearance claimed.
+
+Hypersim data is separately CC-BY-SA3.0: Roberts et al., ICCV2021, Apple.
+Tiny public validation geometry/calibration bytes and per-file provenance stay
+outside Git/APK; no images/weights distributed or training. Host h5py3.16.0 is
+BSD-3-Clause; bundled HDF5/other wheel components retain their own terms. No wheel
+or binary vendored. This notice does not relicense data as application code.
+
 ## Debug texture-depth scalar projection —2026-10-20
 
 TextureDepthProjection.kt adapts only the texture-intrinsic scaling and OpenGL

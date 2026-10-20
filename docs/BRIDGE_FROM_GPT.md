@@ -1,5 +1,14 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 RGB-D/oracle pair complete, APKsame0.9.31
+
+T/G/R finished, allscopesclosed.713tests/builds/policyPASS; v2publicfixture23files,
+3valscenes/2192998GTpoints, coordinateoracle notrecognition. Userready20sphone
+COMPLETE+CLOSED20rawadmits/3worldpoints/4upwardheight samples,0vertical. Source/
+hashes/limits in PUBLIC_RGBD_ORACLE_2026-10-20.md. Next one-camera semantic+geometry
+diagnosticadapter before modelreplacement/navfusion. Appstopped, no owneraction.
+Preserve dirtyownerrule/externalresearch10. No silentworkerrestart orprivateupload.
+
 ### CURRENT_SCOPE —2026-10-20 geometry pair complete,0.9.31/44
 
 P/H/R finished; no activeworker. ReadWORK_QUEUE/GEOMETRY_COORDINATES_2026-10-20.md.

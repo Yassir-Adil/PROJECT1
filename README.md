@@ -10,6 +10,15 @@ Debug APKs from the script below land in `outputs/apk/TriGuideAI-<versionName>-d
 
 ## Scripts / الأوامر
 
+Small public RGB-D coordinate evaluation (host-only, **not** model training or
+walking accuracy): see `docs/PUBLIC_RGBD_ORACLE_2026-10-20.md`. Install host
+requirements from `research/requirements-eval.txt` in the evaluation environment.
+`research/hypersim_fixture.py --fetch --output-root <new-directory-outside-repo>`
+downloads only the pinned public validation members, refusing existing roots.
+`research/evaluate_hypersim_fixture.py --fixture-root <that-directory> --output <new-report-directory>`
+runs offline with hash/calibration checks. Data licences remain separate; do not
+commit fixtures. No phone, network permission, model or Android-runtime change.
+
 Local engineering verification (tests, Lint, debug/release builds, APK model and
 privacy checks; **no phone install/control**):
 

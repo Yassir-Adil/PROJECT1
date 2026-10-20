@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-10-20 — Validate public geometry before adding a new model
+
+Reuse MITselectiveRange/ZIP and Apple per-scene ray/pose maths; tiny publicval
+set, no training/newweights/hardware/cloud. Keep data/code licences separate,
+host h5py3.16.0 hashpin, noAPKdependency. Added actualRED/reproducibility tests,
+fixed sparseposemapping/sourcefingerprint and numeric failures;713gatePASS.
+Accepted preservedpartialroots as incomplete, no silentresume/delete. Kept
+normalizedprivateunitray matrix after 1e200scaleproof; Rwithdrew recommendation
+to returnoriginal. Physical20sprobe nowshows3worldpoints/20rawadmits/upwardheight,
+0vertical. Do not call GTclassZmedian tabletop height or this a wallsafetywin.
+No APK/default/navigationchange. PUBLIC_RGBD_ORACLE_2026-10-20.md.
+
 ## 2026-10-20 — Reuse texture-depth coordinates before ground classification
 
 Measured CPU4:3 vsGPU/depth16:9 requires official texture intrinsics and physical

@@ -1,5 +1,16 @@
 # Known Issues
 
+## Public oracle and new phone evidence —2026-10-20
+
+Hypersim explicitRange nowworks; tiny v2fixture available locally.713tests/pass,
+RMedium findings fixed withtests; incompletepartialroots cannotberesumed/trusted.
+Three syntheticframes doNOTmeasuremodel/phoneaccuracy, no RGBmodelinference or
+training. Actual20sphone20rawadmits/3worldpoints/4upwardheight samples observed,
+but0vertical planes; floor/table/mat/step/wall identity and metricaccuracy still
+unverified. Same0.9.31APK, no threshold/navdefaultchange. Lint56/34warnings remain.
+No further identical ownerprobe planned before useful instrument/integration.
+PUBLIC_RGBD_ORACLE_2026-10-20.md. Previous failures below remain historical facts.
+
 ## 0.9.31/44 —2026-10-20
 
 Coordinate/relative-height debug contracts tested; physical ground/table/wall/

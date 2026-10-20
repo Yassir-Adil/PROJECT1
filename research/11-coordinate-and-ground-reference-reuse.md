@@ -1,5 +1,11 @@
 # Coordinate and ground-reference reuse — 2026-10-20
 
+Follow-up now executed: bounded public v2fixture23files/3valscenes, exactpose-index
+binding and offlinecoordinateoracle;713fulltests andactual20sphone projection
+observed. PUBLIC_RGBD_ORACLE_2026-10-20.md has current evidence. Earlier transport
+failures below are historical, not the current availability. No learned floor/
+wall accuracy or navigation approval from the new data.
+
 ## Decisions from actual evidence
 
 Redmi0.9.30 readback: CPU640x480, GPU1920x1080, depth160x90. Rescaling CPU

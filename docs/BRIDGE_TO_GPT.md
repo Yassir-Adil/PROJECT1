@@ -1,5 +1,14 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 publicRGB-D / runtime projection verified
+
+Codex independently executed missing-source/numeric/fingerprint/integrityREDs,
+fixedreviewfindings,713fulltests/build/policyPASS; Rfinalsourceaccepted. Tiny
+3scenev2fixture locallyhashverified, coordinateoracle residual~1.9–2.4mmp90,
+NOT learnedaccuracy. Userready20s0.9.31probeCOMPLETE+CLOSED20rawadmits/3worldpoints,
+4upwardheights,0vertical; installedSHAunchanged, appstopped. Details:
+PUBLIC_RGBD_ORACLE_2026-10-20.md. Allworkersfinished, no owneractionpending.
+
 ### CODEX_RECORD —2026-10-20 geometry,0.9.31/44 installed
 
 P/H test-first source, Codex realRED then83focused/653fulltests/build/policyPASS;

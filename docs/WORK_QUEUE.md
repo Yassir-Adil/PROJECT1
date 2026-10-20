@@ -1,5 +1,32 @@
 # Shared execution queue — 2026-10-19
 
+## Completed pair —2026-10-20, bounded public RGB-D fixtures and geometry oracle
+
+FINAL:713full tests/builds/policy PASS,0errors,56/34Lintwarnings. Three held-out
+synthetic scenes23hashedfiles fetched selectively,7.324MB archive bytes;2192998
+GTpoints compared,1.868–2.413mm p90coordinate residual (NOT model/phone accuracy).
+Rfindings fixed/tested; all T/G/R workers finished. Actual owner-ready20s phone
+AUTOMATIC COMPLETE+CLOSED:20 rawadmits,3finiteworldpoints,4upwardheight samples,
+0vertical. App stopped. APK0.9.31/44 bytes/default/nav/permissions unchanged.
+PUBLIC_RGBD_ORACLE_2026-10-20.md has evidence/limits. No further owner action now.
+Following scopes are execution history; no worker may silently restart them.
+
+Baseline e145115 /0.9.31/44. Owner requests software work first; do NOT start,
+install or query the phone until a new useful physical test is ready and the
+owner is explicitly told the setup. Preserve unrelated dirty owner rule and
+untracked external research10. No Android/nav/model/permission changes planned.
+
+| Owner | Exclusive files | Gate |
+| --- | --- | --- |
+| Cursor T | research/hypersim_transport.py; research/tests/test_hypersim_transport.py; docs/CURSOR_RGBD_TRANSPORT_2026-10-20.md | Tests only first; Codex actual RED before source. Adapt MIT HTTP Range/zipfile approach, validate206/range/identity/ETag/budgets without unbounded downloads. Fake transport tests, no actual network. |
+| Cursor G | research/hypersim_geometry.py; research/tests/test_hypersim_geometry.py; docs/CURSOR_RGBD_GEOMETRY_2026-10-20.md | Tests only first; Codex actual RED before source. Reuse official per-scene ray matrix/pose/asset units, range!=camera-z. Pure numpy oracle, no h5py/network/mainnav. |
+| Codex | downloader/replay CLI, primary-source/license/metadata checks, RED/GREEN, tiny public fixture fetch if transport works, full gate and independent review, shared docs/backup | Public held-out scenes only; hashes/attribution outside Git/APK. No scene/image uploads, giant download, paid data or synthetic 'accuracy'. |
+
+Workers read AGENTS/plan/progress, explicit contracts and upstream math described
+by Codex. Read/edit only, no shell/Gradle/ADB/Git/network/private outputs or other
+writes/approval bypass. Stop after tests and await release. Ground-truth labels
+may evaluate math/semantic height separation but cannot become live predictions.
+
 ## Completed pair —2026-10-20, texture-depth projection and surface-height diagnostics
 
 FINAL0.9.31/44 installed/hash verified. Real missing-helper RED then83 focused

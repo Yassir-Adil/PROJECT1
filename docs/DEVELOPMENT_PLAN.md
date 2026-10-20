@@ -2,6 +2,18 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current checkpoint —2026-10-20, public RGB-D and positive phone projection
+
+App remains0.9.31/44 unchanged. Two host improvements: bounded public fixture
+download/provenance and correct Hypersim geometry oracle.23files/3held-outscenes,
+2192998GTpoints,1.868–2.413mm p90 coordinate residual, NOT model/phone accuracy.
+Tests-first with real RED incl Cursor corrections;713fulltests/builds/policyPASS,
+Rfinalsourceaccepted. User-ready20s actualAUTOMATICprobe COMPLETE+CLOSED:20raw
+admits,3finiteworldpoints,4upwardheight samples,0vertical. No navapproval/default
+change. Next one-camera semantic/geometry diagnostic fusion, notanothermodel
+until measured evidence. PUBLIC_RGBD_ORACLE_2026-10-20.md. Phone stopped; owner
+action done, no additional test requested this round.
+
 ## Current checkpoint —2026-10-20,0.9.31/44
 
 Two prerequisite diagnostics reuse official texture-depth projection and existing

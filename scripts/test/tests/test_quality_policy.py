@@ -23,6 +23,24 @@ uses-permission: name='{PACKAGE}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
 
 
 class QualityPolicyTest(unittest.TestCase):
+    def test_source_fingerprint_covers_all_research_helpers_and_requirements(self):
+        # Existing gate covered evaluator/tests but missed new helper modules.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "research").mkdir()
+            helper = root / "research/hypersim_geometry.py"
+            requirements = root / "research/requirements-rgbd.txt"
+            helper.write_text("before\n", encoding="utf-8")
+            requirements.write_text("h5py==3.16.0\n", encoding="utf-8")
+            first = source_fingerprint(root)
+            self.assertEqual(2, first["files"])
+            helper.write_text("after\n", encoding="utf-8")
+            self.assertNotEqual(first["sha256"], source_fingerprint(root)["sha256"])
+            second = source_fingerprint(root)
+            requirements.write_text("changed\n", encoding="utf-8")
+            self.assertNotEqual(second["sha256"], source_fingerprint(root)["sha256"])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

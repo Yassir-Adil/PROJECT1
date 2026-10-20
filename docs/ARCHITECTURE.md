@@ -1,5 +1,15 @@
 # Architecture
 
+## Host RGB-D fixture/oracle —2026-10-20 (no Android consumer)
+
+Explicit --fetch uses official boundedHTTPRange+zipfile with strongidentity,
+path/size/CRC/nooverwrite and complete-only hashedmanifest. Data outsideGit/APK.
+Offline evaluator verifies allhashes/PIN/publicval/SPEC, safeHDF5datasets, exact
+frame→keyframe mapping, unit/shape/rotation; fullM_cam_from_uv pixelcenter rays
+and Euclideanrange, not Androidcamera-z. GTsemantic world-Z is descriptiveonly.
+No sourceimport/pipeline authority in Android/mainnav. Sourcefingerprint now
+covers allresearchPython/requirementfiles. Reuse/legal/results: PUBLIC_RGBD_ORACLE_2026-10-20.md.
+
 ## 0.9.31 debug coordinate and surface-height contracts —2026-10-20
 
 Existing singleARCoreGLowner unchanged. Pure TextureDepthProjection adapts Google

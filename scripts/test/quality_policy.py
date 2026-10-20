@@ -130,8 +130,10 @@ def source_fingerprint(root):
     names = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=root)
     selected = sorted({p for p in names.decode("utf-8").split("\0") if p and
                        (p.startswith(("android-app/", "scripts/")) or p in
-                        {".gitignore", "research/evaluate_ade20k_segmenter.py", "research/requirements-eval.txt"} or
-                        p.startswith("research/tests/"))})
+                        {".gitignore"} or
+                        (p.startswith("research/") and
+                         (p.endswith(".py") or
+                          (Path(p).name.startswith("requirements") and p.endswith(".txt")))))})
     digest = hashlib.sha256()
     for name in selected:
         path = Path(root) / name
