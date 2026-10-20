@@ -1,5 +1,24 @@
 # Architecture
 
+## 0.9.32 opt-in semantic/raw-depth diagnostic —2026-10-20
+
+0.9.33 follow-up derives CPU→view quarter-turns from SDK axes before worker
+rotation and uses the identical integer rotation for semantic lookup. Raw depth
+physical axes remain unchanged. Converter has equivalent heap fast path with
+stride/offset validation, no colour/filter algorithm change. New orientation
+RED then100focusedPASS; runtime result below refers to0.9.32, not0.9.33.
+
+Existing ARCore session/GL owner supplies a copied closed-before-inference CPU
+YUV image and64 SDK-mapped view-grid samples from an admitted raw pair. Existing
+hash-pinned DiagnosticSegmenter runs on one bounded worker, not GL/UI; no SDK
+objects escape. Receipt250ms expiry/revision invalidation on stop/tracking or
+rotation/size prevents stale publication. Stateless SemanticGroundDiagnostic
+joins floor4 bottom-centre component with finite horizontal geometry, single-frame
+candidate/relative height counts only. No production/nav/voice/default consumer.
+Semantic extra defaultsfalse.0.9.32 actual20s6freshfusion/1stale,0groundcandidate;
+modelidentity/runtime integration observed, physical recognition unverified.
+Details/evidence: SEMANTIC_DEPTH_FUSION_2026-10-20.md.
+
 ## Host RGB-D fixture/oracle —2026-10-20 (no Android consumer)
 
 Explicit --fetch uses official boundedHTTPRange+zipfile with strongidentity,

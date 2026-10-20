@@ -1,5 +1,25 @@
 # Decision Log
 
+## 2026-10-20 — One camera and diagnostic geometry before guidance fusion
+
+After real0.9.32 test, keep its failure/latency evidence.0.9.33 restores upright
+modelinput using SDK CPU→view axes rather than guessed sensor angles, with real
+RED/allquarter-turn bijection tests. Conversion exact-equivalence baseline PASS
+before optimization; hostp50 3.8062→1.7216ms is NOT Redmi gain. Do not rerun camera
+with owner putdown/11%battery; need fresh stationary setup later. Tested0.9.32
+stays installed until separately useful0.9.33 device test, no silent upgrade.
+
+Reuse existing ARCore1.57 SDK transforms/raw gates/projection and pinned MOSAIC
+interpreter; no new model/download/runtime/cloud/hardware. Keep semantic fusion
+explicit opt-in in protected debug Activity, not production navigation. Preserve
+RGB bilinear preprocessing (categorical label lookup does not require nearest
+RGB). Correct rotation-only changes and live overlay validator after independent
+review; measure bounded GL copy rather than move native Frame/Image to worker.
+Only connected floor-labelled geometry may suggest a reference; rug alone never
+anchors it. No temporal/physical floor proof or obstacle/safety threshold claim.
+No reference => all64 height samples UNKNOWN. Evidence and review dispositions:
+SEMANTIC_DEPTH_FUSION_2026-10-20.md; CURSOR_SEMANTIC_FUSION_REVIEW_2026-10-20.md.
+
 ## 2026-10-20 — Validate public geometry before adding a new model
 
 Reuse MITselectiveRange/ZIP and Apple per-scene ray/pose maths; tiny publicval

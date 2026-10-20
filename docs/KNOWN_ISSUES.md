@@ -1,5 +1,25 @@
 # Known Issues
 
+## Current0.9.33 follow-up — runtime pending
+
+0.9.32 actual6fresh/1stale/0groundcandidate, mostlywall-like labels and0–3floor
+cells, cannotclaimwall/flooraccuracy. Preparation dominates invoke; optimized
+converter has exact tests and hostgain only. RawCPUorientation corrected to
+view-upright in0.9.33 with4newtests, not proven cause or field fix.100focused/
+797full tests/build/policyPASS, finalR no actionableHigh/Medium. Lint45/14warnings
+remain. Phone11%charging; stopped0.9.32 installed,0.9.33 device
+test deferred until fresh owner setup. No threshold/navbypass or approval claim.
+
+## 0.9.32 candidate — semantic/raw-depth runtime not yet verified
+
+94focused tests pass after actualRED/fixes. Full gate and post-fix source review
+pending. Phone fusion throughput/colour/crop/overlay alignment and closure are
+UNVERIFIED.8x8 raw grid is sparse; known model floor-on-stairs confusion persists.
+Single-frame floor-like candidate thresholds are uncalibrated, no temporal
+reference/real floor identity, wall accuracy, rug-edge or walkability proof.
+No production nav/STOP bypass or newpermissions. Previous0.9.31 phone evidence
+does not validate0.9.32. SEMANTIC_DEPTH_FUSION_2026-10-20.md.
+
 ## Public oracle and new phone evidence —2026-10-20
 
 Hypersim explicitRange nowworks; tiny v2fixture available locally.713tests/pass,

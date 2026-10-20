@@ -2,6 +2,26 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 — Real0.9.32 fusion,0.9.33 follow-up under final gate
+
+0.9.32/45 stablegate20261020T053311702676Z:675app+10sim+20policy+86eval=791,
+0fail/error/skip; bothbuild/APKpolicyPASS,Lint0errors45/34warnings. Actualownerready
+20.18sAUTOMATIC+semantic probeCOMPLETE+CLOSED,installedbaseAPKSHAexact.34rawadmits,
+6freshfusion/1stale,0groundcandidate,unmapped0. Acceptedlatency147.69/239.94ms,
+allattempts165.96/607.16ms p50/p90; preparation118.64ms dominates31.82msinvoke.
+No floor/wall/rug-height accuracy proved. All unknownheight64, no navpermission.
+Phone stopped/owner told charge11%. Exact measurements/hashes in
+SEMANTIC_DEPTH_FUSION_2026-10-20.md; private logs remain ignored.
+
+0.9.33/46:actualorientationmissing-helperRED then100focusedPASS; conversion
+equivalence baselinePASS beforeoptimization (no fabricated correctnessRED),
+heap/direct/slicedarray identical. Hostconverterp503.8062→1.7216ms,p906.5006→
+2.0169ms,notRedmi. Stablegate20261020T092130274140Z PASS681app+10sim+20policy+
+86eval=797,0fail/error/skip; both builds/model/permission/isolation/private-root
+policyPASS,Lint0errors45/14warnings. FinalR scopedsourceaccepted, current216file
+fingerprint matches summary. Not installed/tested on phone. Prior0.9.32 evidence
+does not validate changed inputorientation. No activeCursor scope.
+
 ## 2026-10-20 —713-test gate PASS; positive projection observed, wall stillUNVERIFIED
 
 Finalgate20261020T041447079371Z:597app+10sim+20policy+86eval=713,0fail/error/skip;

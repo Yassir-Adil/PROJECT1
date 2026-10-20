@@ -1,5 +1,38 @@
 # Shared execution queue — 2026-10-19
 
+## COMPLETE desktop pair —2026-10-20 semantic/depth diagnostic integration
+
+FINAL0.9.33/46:100focused/797full tests/build/policyPASS; Lint0errors45/14warnings,
+source216filesSHAverified. Final independent R review no actionable High/Medium.
+AllY/H/R scopes finished; no activeworker/silentrestart.0.9.33 artifact hash-
+staged, deliberately NOT installed/camera-tested. Actual0.9.32/45 remains installed
+and stopped after ownerready20s:6freshfusion/1stale,0groundcandidate. Phone11%
+charging; next useful camera test needs fresh owner setup/lowerhalfvisiblefloor.
+No mainnav/default/model/newpermission or privateupload. Preserve two unrelated
+owner files. Following scopes/updates are execution history, not active leases.
+
+Update:0.9.32/45 actual791test gate/source rereviewPASS, installed/hashverified;
+owner-ready20sCOMPLETE+CLOSED,6freshfusion/1stale,0groundcandidate. Phone stopped,
+11%charging, owner told put it down. No further camera start without new setup.
+Follow-up0.9.33/46 includes view-upright modelinput (realRED) and converter fast
+path after exact baselineequivalence tests. Host3.8062→1.7216ms p50 only, NOT
+Redmi speed. CursorY optimization complete; Rnewsource review/full gate running.
+No paid/model/nav/permission/default change; preserve unrelatedfiles.
+
+Owner explicitly requested implement/test/fix the proposed pair. Baseline8a72aca,
+0.9.31/44,713 tests. Preserve dirty owner voice rule and external research10.
+No phone access until a useful built candidate and explicit physical setup.
+
+| Owner | Exclusive writes | Gate |
+| --- | --- | --- |
+| Cursor Y | debug diagnostics/Yuv420Rgb.kt; matching testDebug Yuv420RgbTest.kt; docs/CURSOR_RGBD_YUV_2026-10-20.md | Tests ONLY first, stop; Codex executes RED before implementation release. Strict stride/position/limit/bounded YUV conversion, no SDK objects/network. |
+| Cursor H | debug diagnostics/SemanticGroundDiagnostic.kt; matching testDebug SemanticGroundDiagnosticTest.kt; docs/CURSOR_SEMANTIC_GROUND_2026-10-20.md | Tests ONLY first, stop; Codex executes RED before source. Connected bottom-centre floor-label component plus finite gravity-aligned geometry; rug cannot anchor ground; diagnostic candidates only. |
+| Codex | ARCore adapter/worker lifecycle/coordinate mapping/overlay/freshness tests, gates, shared docs and sanitized backup | One existing ARCore camera, copy and close CPU image before worker inference; SDK transforms, bounded one-inflight worker, no stale publication/clear/turn/navigation or new permissions/models. |
+
+Workers read AGENTS/plan/progress and only relevant source. No shell/build/ADB/
+Git/network/private output access, other writes, or approval bypass. Review before
+integration; source observations are not physical accuracy or movement permission.
+
 ## Completed pair —2026-10-20, bounded public RGB-D fixtures and geometry oracle
 
 FINAL:713full tests/builds/policy PASS,0errors,56/34Lintwarnings. Three held-out

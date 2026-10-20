@@ -36,6 +36,26 @@ internal object RawDepthFrameStats {
     private const val DEPTH_BYTES = 2
     private const val CONFIDENCE_BYTES = 1
 
+    /** SDK-selected texture pixels; same validator/decoder as the historical diagnostic grid. */
+    fun sampleConfidentPixels(
+        width: Int, height: Int,
+        depth: ByteBuffer, depthRowStride: Int, depthPixelStride: Int,
+        confidence: ByteBuffer, confidenceRowStride: Int, confidencePixelStride: Int,
+        points: List<Pair<Int, Int>>, confidenceThreshold: Int = 128,
+    ): List<RawDepthPixel> {
+        require(width > 0 && height > 0 && width.toLong() * height <= MAX_PIXELS)
+        require(points.size <= 64 && confidenceThreshold in 0..255)
+        require(points.all { (x, y) -> x in 0 until width && y in 0 until height })
+        validatePlane(width, height, depth, depthRowStride, depthPixelStride, DEPTH_BYTES, "depth")
+        validatePlane(width, height, confidence, confidenceRowStride, confidencePixelStride, CONFIDENCE_BYTES, "confidence")
+        return points.mapNotNull { (x, y) ->
+            val di = (depth.position().toLong() + y.toLong() * depthRowStride + x.toLong() * depthPixelStride).toInt()
+            val ci = (confidence.position().toLong() + y.toLong() * confidenceRowStride + x.toLong() * confidencePixelStride).toInt()
+            val mm = readUint16Le(depth, di)
+            if (mm > 0 && readUint8(confidence, ci) >= confidenceThreshold) RawDepthPixel(x, y, mm) else null
+        }
+    }
+
     /** At most64 positions; missing or low-confidence pixels do not become geometry. */
     fun sampleConfidentGrid(
         width: Int, height: Int,

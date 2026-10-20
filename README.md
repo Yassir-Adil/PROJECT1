@@ -4,6 +4,10 @@ Android AI navigation and **virtual** three-wheel robotic steering simulation fo
 
 ## Status
 
+Single-camera semantic/raw-depth **diagnostic** integration and actual device
+results: [2026-10-20 report](docs/SEMANTIC_DEPTH_FUSION_2026-10-20.md).
+It does not enable walking/turn/clear guidance; educational debug probe only.
+
 The version string is `versionName` in `android-app/app/build.gradle.kts`. What was actually built and installed is in `docs/PROGRESS.md` and `docs/TEST_RESULTS.md`.
 
 Debug APKs from the script below land in `outputs/apk/TriGuideAI-<versionName>-debug.apk`.

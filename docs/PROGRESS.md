@@ -1,5 +1,28 @@
 # Progress Log
 
+## 2026-10-20 — Actual fusion and0.9.33 follow-up
+
+0.9.32 USBinstall/hashverified, ownerready20.18sCOMPLETE+CLOSED:34rawadmits,
+6freshfusion/1stale, no unmappedcells,0groundcandidate. Accepted latency147.69/
+239.94ms p50/p90; modelinvoke31.82/44.82ms, workerprepare118.64/406.80ms. Wall-like
+labels are not measuredrecognition. Phone stopped, owner told rest/charge11%.
+0.9.33 view-upright input (realRED) and exact-equivalent YUVfastpath added with
+CursorY;100focused/797fulltests/build/policyPASS, Lint0errors45/14warnings. Final
+R no actionableHigh/Medium; sourcefingerprint verified. Hostconverter3.8062→
+1.7216msp50 only; no0.9.33 install/runtime or recognition-gain claim. Full details:
+SEMANTIC_DEPTH_FUSION_2026-10-20.md.
+
+## 2026-10-20 — Single-camera semantic/raw-depth candidate0.9.32/45
+
+Owner authorized implement/test/fix. CursorY/H disjoint tests-first source, Codex
+independent RED then integration and review.94focused tests pass after fixture,
+syntax and unknown-height fixes. Opt-in current-ARCore CPU image/mapped raw grid,
+bounded worker/expiry/revision and floor-like relative heights only; no mainnav/
+model/permission/default change.791full tests/builds/policyPASS, Lint0errors45/34
+warnings. Independent re-review no remaining scopedHigh/Medium. Owner-ready
+phone0.9.32/45 install/hashverified; bounded20s fusion test in progress.
+See SEMANTIC_DEPTH_FUSION_2026-10-20.md for exact failure history and limits.
+
 ## 2026-10-20 — Public fixtures/oracle and positive phone geometry, APKunchanged
 
 T/G disjoint tests-first, actualRED then source. Codex independently caught/fixed

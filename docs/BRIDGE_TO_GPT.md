@@ -1,5 +1,17 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 semantic/raw-depth pair and measured follow-up
+
+Y/H disjoint tests first, Codex realRED/fixes/integration. IndependentR initial
+findings rotation/liveoverlay fixed, re-review no scopedHigh/Medium.0.9.32/45
+791fulltests/build/policyPASS,installed/hashverified. Actual20s6fresh/1stale,
+0groundreference,stopped/closed; labels not measured accuracy. Preparation>
+inference motivated exact converter fastpath; Codex found missing view-upright
+CPU input,realRED/rotation+lookupfixed0.9.33/46.100focusedPASS,hostgainonly.
+0.9.33 final797test/build/policyPASS, finalR no scopedHigh/Medium. No0.9.33phone.
+Allworkersfinished. Owner told putdown/charge11%; no
+automatic furthercamera. SEMANTIC_DEPTH_FUSION_2026-10-20.md, latestWORK_QUEUE.
+
 ### CODEX_RECORD —2026-10-20 publicRGB-D / runtime projection verified
 
 Codex independently executed missing-source/numeric/fingerprint/integrityREDs,

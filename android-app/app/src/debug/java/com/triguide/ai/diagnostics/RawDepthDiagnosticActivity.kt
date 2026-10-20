@@ -83,6 +83,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private lateinit var surfaceView: GLSurfaceView
     private lateinit var statusView: TextView
     private lateinit var surfaceStatusView: TextView
+    private var semanticStatusView: TextView? = null
+    private var semanticOverlay: SemanticFusionOverlayView? = null
+    private var semanticDiagnostic: ArCoreSemanticDiagnostic? = null
+    private var semanticFusionEnabled = false
+    private var displayedSemanticResult: SemanticFusionResult? = null // main-thread only
 
     private var session: Session? = null
     @Volatile private var sessionResumed = false
@@ -90,6 +95,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var viewportWidth = 0
     private var viewportHeight = 0
     private var viewportChanged = false
+    private val semanticViewport = SemanticViewport()
     private var durationSeconds = DEFAULT_DURATION_SECONDS
     private var sessionStartedElapsedNs = 0L
     private var lastSampleAdmissionElapsedNs = 0L
@@ -166,6 +172,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, DEFAULT_DURATION_SECONDS)
         cameraPreviewEnabled = intent.getBooleanExtra(EXTRA_CAMERA_PREVIEW, true)
         surfaceProbingEnabled = intent.getBooleanExtra(EXTRA_SURFACE_PROBE, true)
+        semanticFusionEnabled = intent.getBooleanExtra(EXTRA_SEMANTIC_FUSION, false)
         diagnosticDepthMode = when (intent.getStringExtra(EXTRA_DEPTH_MODE)) {
             null, "RAW_DEPTH_ONLY" -> Config.DepthMode.RAW_DEPTH_ONLY
             "AUTOMATIC" -> Config.DepthMode.AUTOMATIC
@@ -218,12 +225,44 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         buildUi()
+        if (semanticFusionEnabled) {
+            semanticDiagnostic = ArCoreSemanticDiagnostic(this) { result ->
+                runOnUiThread {
+                    val active = semanticDiagnostic
+                    if (result == null || stopping.get() || active == null ||
+                        !active.canDisplay(result, SystemClock.elapsedRealtimeNanos())) {
+                        displayedSemanticResult = null
+                        semanticOverlay?.show(null)
+                        semanticStatusView?.text = "Semantic + raw depth: UNKNOWN / مجهول. تشخيص فقط؛ لا إذن للمشي."
+                    } else {
+                        displayedSemanticResult = result
+                        semanticOverlay?.show(result)
+                        val cells = result.cells
+                        semanticStatusView?.text = "Model labels: wall ${cells.count { it.label == 1 }}, " +
+                            "floor ${cells.count { it.label == 4 }}, rug ${cells.count { it.label == 29 }} /64 cells. " +
+                            "Height: ${result.ground.status}; raised=${result.ground.raisedSamples}, " +
+                            "flat-rug=${result.ground.flatRugSamples}. Not safety or obstacle confirmation."
+                        handler.postDelayed({
+                            // Receipt expiry, not a fresh lifetime beginning at publication.
+                            if (displayedSemanticResult === result &&
+                                semanticDiagnostic?.canDisplay(result, SystemClock.elapsedRealtimeNanos()) != true) {
+                                displayedSemanticResult = null
+                                semanticOverlay?.show(null)
+                                semanticStatusView?.text = "Semantic + raw depth: UNKNOWN / انتهت صلاحية النتيجة. لا إذن للمشي."
+                            }
+                        }, ((ArCoreSemanticDiagnostic.MAX_AGE_NS - (SystemClock.elapsedRealtimeNanos() - result.receivedNs))
+                            .coerceAtLeast(0) / 1_000_000L) + 1)
+                    }
+                }
+            }
+        }
 
         Log.i(
             TAG,
             "RAW_DEPTH_START duration_seconds=$durationSeconds " +
                 "requested_depth_mode=$diagnosticDepthMode " +
                 "camera_preview=$cameraPreviewEnabled surface_probe=$surfaceProbingEnabled " +
+                "semantic_fusion=$semanticFusionEnabled " +
                 "depth_sample_admission_cap_hz=$SAMPLE_CAP_HZ " +
                 "confidence_threshold_diagnostic_only=128 " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
@@ -299,6 +338,13 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
         )
+        if (semanticFusionEnabled) {
+            semanticStatusView = TextView(this).apply {
+                textSize = 13f; setTextColor(Color.WHITE); setPadding(dp(16), 0, dp(16), dp(8))
+                maxLines = 4
+                text = "Semantic + raw depth: starting / جارٍ التحضير. تشخيص فقط؛ لا إذن للمشي."
+            }.also { root.addView(it) }
+        }
         root.addView(
             FrameLayout(this).apply {
                 addView(
@@ -307,6 +353,12 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
                     ),
+                )
+                if (semanticFusionEnabled) addView(
+                    SemanticFusionOverlayView(this@RawDepthDiagnosticActivity) { result, now ->
+                        !stopping.get() && semanticDiagnostic?.canDisplay(result, now) == true
+                    }.also { semanticOverlay = it },
+                    FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
                 )
                 if (surfaceProbingEnabled) addView(
                     SurfaceProbeOverlayView(this@RawDepthDiagnosticActivity),
@@ -458,8 +510,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             val active = session ?: return
             if (stopping.get() || !sessionResumed) return
             try {
-                if (viewportChanged && viewportWidth > 0 && viewportHeight > 0) {
-                    active.setDisplayGeometry(displayRotation(), viewportWidth, viewportHeight)
+                val rotation = displayRotation()
+                if (semanticViewport.changed(rotation, viewportWidth, viewportHeight) ||
+                    (viewportChanged && viewportWidth > 0 && viewportHeight > 0)) {
+                    semanticDiagnostic?.geometryChanged()
+                    active.setDisplayGeometry(rotation, viewportWidth, viewportHeight)
                     viewportChanged = false
                 }
                 active.setCameraTextureNames(intArrayOf(cameraTextureId))
@@ -584,6 +639,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
         }
         if (!isNewDistinctFrame) return
+        semanticDiagnostic?.trackingChanged(tracking)
         if (tracking) {
             val pose = frame.camera.pose
             motionStats.record(cameraTimestampNs, true, pose.tx().toDouble(), pose.ty().toDouble(), pose.tz().toDouble())
@@ -809,6 +865,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             receiptToSummaryMs += latencyMs
         }
         sampleTextureProjection(frame, depth, confidence)
+        semanticDiagnostic?.capture(frame, depth, confidence)
 
         maybeLogSample(completedElapsedNs, summary.sampledPixels, validFraction, confidentFraction, latencyMs)
         maybeUpdateUi(completedElapsedNs)
@@ -954,6 +1011,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         sampleGate.stop()
         coverageStats.stop()
         motionStats.stop()
+        semanticDiagnostic?.stop()
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Drain GL first (never hold frameInUseLock while waiting on GL), then pause session, then result.
@@ -1078,6 +1136,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
         }
         val observed = coverageStats.snapshot()
+        Log.i(TAG, "SEMANTIC_FUSION_RESULT ${semanticDiagnostic?.summary(elapsedS) ?: "semantic_enabled=false"} navigation=none")
         val motion = motionStats.snapshot()
         Log.i(
             TAG,
@@ -1176,6 +1235,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         const val EXTRA_CAMERA_PREVIEW = "triguide.diagnostic.camera_preview"
         const val EXTRA_SURFACE_PROBE = "triguide.diagnostic.surface_probe"
         const val EXTRA_DEPTH_MODE = "triguide.diagnostic.depth_mode"
+        const val EXTRA_SEMANTIC_FUSION = "triguide.diagnostic.semantic_fusion"
 
         private const val TAG = "TriGuideRawDepth"
         private const val DEFAULT_DURATION_SECONDS = 20

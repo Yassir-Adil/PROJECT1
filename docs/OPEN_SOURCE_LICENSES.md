@@ -1,5 +1,16 @@
 # Open-source licenses
 
+## 0.9.32 single-camera diagnostic reuse —2026-10-20
+
+No new library, model, dataset download or bundled asset. Existing debug-only
+ARCore1.57 SDK API and hash-pinned MOSAIC/LiteRT interpreter reused; their SDK,
+code, weights and ADE20K rights remain separate as documented below. Existing
+Apache2-attributed texture-depth projection reused without removing attribution.
+New stride converter/mapping/height policy are project code/standard maths, not
+copied application source. Primary Frame/Coordinates2d/YUV contracts rechecked;
+links and assumptions: SEMANTIC_DEPTH_FUSION_2026-10-20.md. No licensing/safety
+approval inferred from successful build or educational use.
+
 ## Host public RGB-D fixture/oracle —2026-10-20
 
 Adapted MIT ThomasGermer2020 WebFile Range/seek approach (fullMIT intransport

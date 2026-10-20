@@ -2,6 +2,28 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Active checkpoint —2026-10-20, semantic/raw-depth0.9.32/45 candidate
+
+Follow-up0.9.33/46 source has SDK-derived view-upright modelinput and exact
+converter fast path after real0.9.32 bottleneck measurement.100focused/797full
+tests/build/policyPASS, finalR no actionableHigh/Medium. Actual0.9.32 test6fresh/
+1stale,0groundcandidate, still
+installed; stoppedphone11%charging. No automatic additional camera test.
+
+Two requested improvements implemented diagnostically: one-camera SDK-mapped
+CPU segmentation+admitted raw depth, and connected-floor-like reference/relative
+height counts.94focused /791full tests/builds/policyPASS after realRED/review fixes;
+independent re-review no remaining scopedHigh/Medium. DefaultsemanticsOFF, no
+mainnav/model/permission change. Owner-ready0.9.32 install/hashverified;20s phone
+fusion testCOMPLETE+CLOSED. SEMANTIC_DEPTH_FUSION_2026-10-20.md.
+
+| Priority | Next gate / unused option | Why / defer condition |
+| --- | --- | --- |
+| 1 | Physical0.9.33 upright fusion20s with more visiblefloor, orientation and preparation timing |0.9.32 runtime observed but no reference; fresh setup after charging, not another unprepared duplicate. |
+| 2 | Multi-distinct-frame reference stability and labelled measured floor/table/mat/edge scenes | Current candidate is stateless; cannot enable guidance from one frame or GT oracle. |
+| 3 | Add existing object detector on same copied ARCore CPU frame | Defer until semantic/depth runtime cost known; do not add another camera owner or obscure performance. |
+| 4 | Model replacement/retraining, V2 alternative, hardware/cloud | Existing failure is unverified integration/ground reference; require measured benefit, rights and separate approvals where relevant. |
+
 ## Current checkpoint —2026-10-20, public RGB-D and positive phone projection
 
 App remains0.9.31/44 unchanged. Two host improvements: bounded public fixture

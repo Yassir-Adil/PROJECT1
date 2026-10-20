@@ -1,5 +1,16 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 semantic/raw-depth integration0.9.32 candidate
+
+Y/H source complete after independentCodexRED;94focused/791fullgateGREEN,
+RrereviewnoHigh/Medium,0.9.32installed/hashverified and20sCOMPLETE+CLOSED:
+6freshfusion/1stale,0groundcandidate. Phone stopped/owner toldcharge11%.
+Follow-up0.9.33/46 now100focusedPASS:SDKview-upright image and exactconverter
+fastpath after baselinemeasurement.797fullgate/build/policyPASS, finalR no scoped
+High/Medium. AllY/H/R scopes finished; sourcefingerprint verified, no activeworker.
+No0.9.33phone, mainnav/default/model change. No silentworkerrestart.
+SEMANTIC_DEPTH_FUSION_2026-10-20.md records contracts/evidence/limits.
+
 ### CURRENT_SCOPE —2026-10-20 RGB-D/oracle pair complete, APKsame0.9.31
 
 T/G/R finished, allscopesclosed.713tests/builds/policyPASS; v2publicfixture23files,
