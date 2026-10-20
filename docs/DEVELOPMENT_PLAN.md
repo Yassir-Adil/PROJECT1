@@ -2,6 +2,17 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current checkpoint —2026-10-20,0.9.31/44
+
+Two prerequisite diagnostics reuse official texture-depth projection and existing
+SDK plane heights, not guessed CPU scaling/lowest-plane=floor. Tests-first real
+RED,83 focused/653 full tests/builds/policy PASS, independent review accepted,
+installed exactSHA.15s phone smokeNO_DEPTH+CLOSED (SDK insufficientlight,
+0tracking), no positive physical projection/floor/table/wall accuracy claim.
+No mainnav/default/model/permission changes. Next tiny held-outRGB-D coordinate/
+ground fixture then labelled scene validation; bounded Hypersim GET failed, no
+giant download/training. research11 and GEOMETRY_COORDINATES_2026-10-20.md.
+
 ## Current checkpoint —2026-10-20,0.9.30/43
 
 607-test full gate/builds/policy pass; installed/hash verified. Reconnected phone

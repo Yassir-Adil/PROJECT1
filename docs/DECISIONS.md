@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-10-20 — Reuse texture-depth coordinates before ground classification
+
+Measured CPU4:3 vsGPU/depth16:9 requires official texture intrinsics and physical
+pose, not guessed CPU rescale. Adapt GoogleApache2 scalar formula, preserve our
+unsigned/stride/confidence handling, sameFrame rawadmission. Relative upward
+plane heights remain diagnostic; no lowest/largest=floor.653tests pass, installed
+0.9.31; phone smoke insufficientlight, no positivegeometry acceptance. Guideline
+model-specific Apachegrant independently verified fromPDF, but explicitindoor/
+safetycritical limits keep it researchonly. HypersimselectiveGET failed; do not
+fall back to2GB/1.9TBdownload or disableTLS. Evidence/reusableoptions: research11
+and GEOMETRY_COORDINATES_2026-10-20.md. Existing navigation/defaults unchanged.
+
 ## 2026-10-20 — Measure motion and compare SDK depth without promoting smoothed pixels
 
 Two tracked-but-empty phone runs didnot justify weakerconfidence ornewmodel.

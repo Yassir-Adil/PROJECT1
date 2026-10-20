@@ -2,6 +2,17 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.31 engineering PASS; positive geometry UNVERIFIED
+
+Real missing-helper compileRED before implementation,83focusedGREEN. Fullgate
+20261020T034155749325Z PASS653 tests (597+10+19+27),0fail/error/skip; both builds/
+APK isolation/permission/privacy policy pass. Lint0errors56/34warnings. Installed
+SHAexact0.9.31/44. Actual15.17s defaultRAWphone smokeNO_DEPTH thenCLOSED:
+407frames/0tracking, insufficientlight;14not_tracking height samples,0projection.
+Not a prepared scene/accuracy/voice/safety test. No owner intervention needed
+for research/software; positive geometry test pending. Details/hashes:
+GEOMETRY_COORDINATES_2026-10-20.md. Existing production guidance unchanged.
+
 ## 2026-10-20 —0.9.30 engineering PASS; raw/AUTO observed, wall accuracy UNVERIFIED
 
 607 full tests (551+10+19+27),0 failures/errors/skips; both builds/policy pass,

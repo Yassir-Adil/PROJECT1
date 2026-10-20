@@ -1,5 +1,17 @@
 # Adapted ARCore sample pattern
 
+## Debug texture-depth scalar projection —2026-10-20
+
+TextureDepthProjection.kt adapts only the texture-intrinsic scaling and OpenGL
+camera unprojection formula from Google ARCore SDK v1.57.0 PointCloudHelper.java.
+Copyright2021 Google LLC; modifications Copyright2026 TriGuide-AI contributors.
+Source: https://github.com/google-ar/arcore-android-sdk/blob/v1.57.0/samples/raw_depth_java/app/src/main/java/com/google/ar/core/examples/java/rawdepth/PointCloudHelper.java
+Apache-2.0 header retained; full source licence arcore-sample-LICENSE.txt.
+Changes: pure scalar contract, strict dimensions/aspect/units/numeric validation;
+our existing stride/unsigned/confidence decoder retained, no packed/signed-short
+shortcut, point-cloud renderer, RGB acquisition, anchors, storage or authority.
+SDK binary terms remain separate. Model-card PDF was inspected, not vendored.
+
 ## Debug live camera background —2026-10-20
 
 DiagnosticCameraBackground.kt adapts the OES screen-quad background/shader

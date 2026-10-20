@@ -109,6 +109,10 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var denseInvalid = 0
     private val denseProcessingMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
     private var lastSurfaceProbeElapsedNs = 0L
+    private var lastProjectionElapsedNs = 0L
+    private var projectionSamples = 0
+    private var projectionWorldPoints = 0
+    private var heightProfileSamples = 0
     private var backgroundDraws = 0
     private var surfaceProbeSamples = 0
     private var verticalSurfaceSamples = 0
@@ -497,6 +501,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         lastSurfaceProbeElapsedNs = started
         val active = session ?: return
         val inventory = ArCoreSurfaceProbe.inventory(active, frame)
+        val heights = ArCoreSurfaceProbe.heights(active, frame)
         val observations = ArCoreSurfaceProbe.sample(frame, viewportWidth, viewportHeight)
         val latencyMs = (SystemClock.elapsedRealtimeNanos() - started) / NS_PER_MS
         if (stopping.get()) return
@@ -507,6 +512,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             if (inventory.trackingVertical > 0) inventoryVerticalSamples++
             if (inventory.trackingUpward > 0) inventoryUpwardSamples++
             if (inventory.truncated) inventoryTruncatedSamples++
+            if (heights.eligibleUpward > 0) heightProfileSamples++
             if (surfaceProbeMs.size >= MAX_LATENCY_SAMPLES) surfaceProbeMs.removeAt(0)
             surfaceProbeMs += latencyMs
         }
@@ -519,6 +525,13 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             "tracking_downward=${inventory.trackingDownward} paused=${inventory.paused} " +
             "stopped=${inventory.stopped} subsumed=${inventory.subsumed} unknown_kind=${inventory.unknownKind} " +
             "scope=session_known_not_visibility semantics=orientation_only navigation=none")
+        Log.i(TAG, "SURFACE_HEIGHT_PROFILE frame_ts_ns=${frame.timestamp} status=${heights.status} " +
+            "inspected=${heights.inspected} upward=${heights.eligibleUpward} ignored=${heights.ignored} " +
+            "invalid_height=${heights.invalidHeight} truncated=${heights.truncated} " +
+            "min_camera_above_m=${heights.minCameraAboveMeters ?: "unavailable"} " +
+            "max_camera_above_m=${heights.maxCameraAboveMeters ?: "unavailable"} " +
+            "source=current_sdk_world_y scope=session_known_not_visibility " +
+            "ground_reference=unknown floor_table_identity=unknown metric_accuracy=unverified navigation=none")
         val motion = motionStats.snapshot()
         Log.i(TAG, "CAMERA_MOTION tracked_samples=${motion.trackedSamples} segments=${motion.trackingSegments} " +
             "max_segment_displacement_m=${motion.maxSegmentDisplacementMeters ?: "unavailable"} " +
@@ -531,7 +544,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val description = observations.joinToString(" | ") {
             "${it.ray.name}: ${it.reading.kind} ${it.reading.distanceMeters?.let { m -> "~${format(m.toDouble())}m" } ?: "—"}"
         } + "\nKnown SDK planes: V=${inventory.trackingVertical} U=${inventory.trackingUpward}" +
-            " (${inventory.status}); not visibility or floor proof. لا إذن للمشي."
+            " (${inventory.status}); not visibility or floor proof." +
+            "\nCamera above upward SDK planes: " +
+            "${heights.minCameraAboveMeters?.let { format(it) } ?: "—"} to " +
+            "${heights.maxCameraAboveMeters?.let { format(it) } ?: "—"}m; " +
+            "floor/table UNKNOWN. لا إذن للمشي."
         runOnUiThread { if (!stopping.get()) surfaceStatusView.text = description }
     }
 
@@ -602,6 +619,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 acquireConfidence = { it.acquireRawDepthConfidenceImage() },
             ) { pair, depth, confidence ->
                 summarizeAndGate(
+                    frame = frame,
                     pair = pair,
                     depth = depth,
                     confidence = confidence,
@@ -655,6 +673,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     }
 
     private fun summarizeAndGate(
+        frame: Frame,
         pair: RawDepthPairProof,
         depth: Image,
         confidence: Image,
@@ -789,9 +808,61 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
             receiptToSummaryMs += latencyMs
         }
+        sampleTextureProjection(frame, depth, confidence)
 
         maybeLogSample(completedElapsedNs, summary.sampledPixels, validFraction, confidentFraction, latencyMs)
         maybeUpdateUi(completedElapsedNs)
+    }
+
+    /** Same live Frame/pair only. Tiny raw grid; no dense inference, storage or authority. */
+    private fun sampleTextureProjection(frame: Frame, depth: Image, confidence: Image) {
+        val now = SystemClock.elapsedRealtimeNanos()
+        if (stopping.get() || now - lastProjectionElapsedNs < UI_LOG_MIN_INTERVAL_NS) return
+        lastProjectionElapsedNs = now
+        val intrinsics = frame.camera.textureIntrinsics
+        val dimensions = intrinsics.imageDimensions
+        val focal = intrinsics.focalLength
+        val principal = intrinsics.principalPoint
+        val calibration = TextureDepthCalibration(
+            dimensions[0], dimensions[1], depth.width, depth.height,
+            focal[0].toDouble(), focal[1].toDouble(), principal[0].toDouble(), principal[1].toDouble(),
+        )
+        val depthPlane = depth.planes[0]
+        val confidencePlane = confidence.planes[0]
+        val pixels = RawDepthFrameStats.sampleConfidentGrid(
+            depth.width, depth.height, depthPlane.buffer, depthPlane.rowStride, depthPlane.pixelStride,
+            confidencePlane.buffer, confidencePlane.rowStride, confidencePlane.pixelStride,
+            confidenceThreshold = CONFIDENCE_THRESHOLD_DIAGNOSTIC,
+        )
+        // Physical (not display-oriented) camera pose matches unrotated texture intrinsics.
+        val pose = frame.camera.pose
+        var cameraPoints = 0
+        var worldPoints = 0
+        for (pixel in pixels) {
+            val point = TextureDepthProjection.project(calibration, pixel.x, pixel.y, pixel.depthMm) ?: continue
+            cameraPoints++
+            val xyz = floatArrayOf(point.xMeters.toFloat(), point.yMeters.toFloat(), point.zMeters.toFloat())
+            if (xyz.any { !it.isFinite() }) continue
+            val world = pose.transformPoint(xyz)
+            if (world.all { it.isFinite() }) worldPoints++
+        }
+        if (stopping.get()) return
+        synchronized(statsLock) {
+            projectionSamples++
+            projectionWorldPoints += worldPoints
+        }
+        val status = when {
+            pixels.isEmpty() -> "no_confident_grid_pixels"
+            cameraPoints < pixels.size || worldPoints < cameraPoints -> "invalid_projection"
+            else -> "observed"
+        }
+        Log.i(TAG, "DEPTH_PROJECTION frame_ts_ns=${frame.timestamp} status=$status " +
+            "texture=${dimensions[0]}x${dimensions[1]} depth=${depth.width}x${depth.height} " +
+            "confident_grid_pixels=${pixels.size} camera_points=$cameraPoints finite_world_points=$worldPoints " +
+            "source=texture_intrinsics pose=physical_camera grid_max=9 " +
+            "depth_kind=camera_z_mm axes=opengl_camera sensor_age=unknown " +
+            "metric_accuracy=unverified no_coordinates_logged=true navigation=none " +
+            "processing_ms=${format((SystemClock.elapsedRealtimeNanos() - now) / NS_PER_MS)}")
     }
 
     private fun maybeLogSample(
@@ -994,6 +1065,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 "surface_samples_with_vertical=$verticalSurfaceSamples surface_samples_with_upward=$upwardSurfaceSamples " +
                 "inventory_samples_with_vertical=$inventoryVerticalSamples inventory_samples_with_upward=$inventoryUpwardSamples " +
                 "inventory_truncated_samples=$inventoryTruncatedSamples inventory_scope=session_known_not_visibility " +
+                "height_profile_samples_with_upward=$heightProfileSamples ground_reference=unknown " +
+                "projection_samples=$projectionSamples projection_finite_world_points=$projectionWorldPoints " +
+                "projection_scope=raw_confident_grid_only projection_navigation=none " +
                 percentiles("session_update", sessionUpdateMs) + " " + percentiles("surface_probe", surfaceProbeMs)
             status = when {
                 this.failed -> "FAIL"

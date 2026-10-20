@@ -1,5 +1,17 @@
 # Architecture
 
+## 0.9.31 debug coordinate and surface-height contracts —2026-10-20
+
+Existing singleARCoreGLowner unchanged. Pure TextureDepthProjection adapts Google
+texture intrinsic scaling (not CPU); current physical pose transforms at most9
+raw confident grid samples at1Hz AFTER admission inside same liveFrame/pair.
+Aggregate counts only, no retained points/SDKobjects, no dense/mainnavconsumer.
+Stride/UINT16 grid sampler reuses existing decoder/validation. Separate lazy256
+SurfaceHeightProfile computes signed cameraY-upwardPlaneY range, no selected
+ground or floor/table identity. Session-known!=visibility; no world/screen/metric
+physical calibration claim. RAWdefault/confidence128/navigation unchanged,
+debug/release APK isolation verified. GEOMETRY_COORDINATES_2026-10-20.md.
+
 ## 0.9.30 debug pose/config and opt-in dense comparison —2026-10-20
 
 Single ARCore camera/GLowner remains. Distinct tracked frames feed bounded pure

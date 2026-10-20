@@ -24,6 +24,9 @@ internal data class DepthOnlySummary(
     val validDepthPixels: Int,
 )
 
+/** One transient sampled pixel, never retained by the SDK adapter or written to logs. */
+internal data class RawDepthPixel(val x: Int, val y: Int, val depthMm: Int)
+
 /**
  * Decodes unsigned 16-bit little-endian depth (mm) and unsigned confidence 0..255
  * from caller-owned [ByteBuffer]s without mutating their state.
@@ -32,6 +35,34 @@ internal object RawDepthFrameStats {
     private const val MAX_PIXELS = 1_048_576
     private const val DEPTH_BYTES = 2
     private const val CONFIDENCE_BYTES = 1
+
+    /** At most64 positions; missing or low-confidence pixels do not become geometry. */
+    fun sampleConfidentGrid(
+        width: Int, height: Int,
+        depth: ByteBuffer, depthRowStride: Int, depthPixelStride: Int,
+        confidence: ByteBuffer, confidenceRowStride: Int, confidencePixelStride: Int,
+        gridSize: Int = 3, confidenceThreshold: Int = 128,
+    ): List<RawDepthPixel> {
+        require(width > 0 && height > 0 && width.toLong() * height <= MAX_PIXELS)
+        require(gridSize in 1..8 && confidenceThreshold in 0..255)
+        validatePlane(width, height, depth, depthRowStride, depthPixelStride, DEPTH_BYTES, "depth")
+        validatePlane(width, height, confidence, confidenceRowStride, confidencePixelStride, CONFIDENCE_BYTES, "confidence")
+        val columns = minOf(gridSize, width)
+        val rows = minOf(gridSize, height)
+        fun coordinate(i: Int, count: Int, extent: Int) =
+            if (count == 1) (extent - 1) / 2 else (i.toLong() * (extent - 1) / (count - 1)).toInt()
+        return buildList(columns * rows) {
+            for (row in 0 until rows) for (column in 0 until columns) {
+                val x = coordinate(column, columns, width)
+                val y = coordinate(row, rows, height)
+                // validatePlane proves absolute indices fit Int and remaining buffer.
+                val depthIndex = (depth.position().toLong() + y.toLong() * depthRowStride + x.toLong() * depthPixelStride).toInt()
+                val confidenceIndex = (confidence.position().toLong() + y.toLong() * confidenceRowStride + x.toLong() * confidencePixelStride).toInt()
+                val mm = readUint16Le(depth, depthIndex)
+                if (mm > 0 && readUint8(confidence, confidenceIndex) >= confidenceThreshold) add(RawDepthPixel(x, y, mm))
+            }
+        }
+    }
 
     fun summarize(
         width: Int,

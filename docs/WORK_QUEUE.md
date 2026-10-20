@@ -1,5 +1,33 @@
 # Shared execution queue — 2026-10-19
 
+## Completed pair —2026-10-20, texture-depth projection and surface-height diagnostics
+
+FINAL0.9.31/44 installed/hash verified. Real missing-helper RED then83 focused
+and653 full tests/builds/policy PASS, Lint0errors56/34warnings. Independent R
+source review accepted, all workers finished. Actual15s defaultRAW smoke:
+NO_DEPTH+CLOSED,407frames/0tracking, SDK insufficientlight,0projection,14explicit
+not_tracking height samples. Positive geometry/floor/table/wall accuracy remains
+UNVERIFIED. GEOMETRY_COORDINATES_2026-10-20.md has hashes/limits; research11 has
+primary-source reuse/data/model audit. No owner action required for source work.
+Following scope is execution history, not an active worker assignment.
+
+Baseline28fd899 /0.9.30/43. Two tasks, tests ONLY first; Codex executes RED
+before releasing source. Preserve dirty owner-request-voice-ux.mdc and external
+untracked research/10-reuse-licence-check.md. No main guidance/permission/model/
+dependency changes, no new camera owner, recording, raw coordinate logs or CLEAR.
+
+| Owner | Exclusive files | Contract |
+| --- | --- | --- |
+| Cursor P | debug diagnostics/TextureDepthProjection.kt; matching testDebug TextureDepthProjectionTest.kt; docs/CURSOR_PROJECTION_RESULT_2026-10-20.md | Pure bounded scalar texture-intrinsic unprojection. Match Google1.57 integer-pixel convention, positive camera-z depth mm to OpenGL x-right/y-up/z-back. Reject mismatched aspect, invalid dimensions/calibration/pixel/depth/nonfinite result; no CPU intrinsic fallback. |
+| Cursor H | debug diagnostics/SurfaceHeightProfile.kt; matching testDebug SurfaceHeightProfileTest.kt; docs/CURSOR_HEIGHT_RESULT_2026-10-20.md | Bounded256 lazy primitive session-plane profile. Only tracking, nonsubsumed upward planes; cameraY-planeY signed range, reject nonfinite/overflow. No minimum-plane=floor selection, semantics, stored SDK objects or authority. |
+| Codex | tests execution, SDK adapter/Activity, primary-source/data research, review, full gate, backup and shared docs | Current Frame/physical pose/texture intrinsics. Projection scalar counts only, surface relative-height ambiguity visible; diagnostic only. |
+
+Workers may read AGENTS/plan/progress and relevant existing helpers; no shell,
+Gradle/ADB/Git/network, private outputs access, other-file writes or approval bypass.
+End tests phase and await explicit implementation release. Other completed scopes
+below are history, not active jobs. Public Hypersim selective-download feasibility
+is research only until bounded transport/licence/calibration gates pass.
+
 ## Completed verification —2026-10-20, reconnected phone / zero-depth diagnosis
 
 FINAL:0.9.30/43 installed/hash verified;607 full tests/builds/APK policy PASS,

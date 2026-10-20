@@ -1,5 +1,14 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 geometry,0.9.31/44 installed
+
+P/H test-first source, Codex realRED then83focused/653fulltests/build/policyPASS;
+Rsourceaccepted with optional1Hzdoublequery note deferred. Installedhashverified.
+Actual15sdefaultRAWsmokeNO_DEPTH+CLOSED,407frames/0tracking/SDKinsufficientlight,
+14not_trackingheights/0projection. Not positivefloor/wallaccuracy. Newprojection
+uses textureintrinsics/physicalpose, no mainnav/permission/modelchange. Details:
+GEOMETRY_COORDINATES_2026-10-20.md/research11. Allworkerscomplete.
+
 ### CODEX_RECORD —2026-10-20 motion/dense,0.9.30/43 installed
 
 M/D tests first; Codex compileRED,54focusedGREEN thenoverflowRED/hypotfix.

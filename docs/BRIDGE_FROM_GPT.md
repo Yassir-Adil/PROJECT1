@@ -1,5 +1,14 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 geometry pair complete,0.9.31/44
+
+P/H/R finished; no activeworker. ReadWORK_QUEUE/GEOMETRY_COORDINATES_2026-10-20.md.
+ActualRED,83focused/653fulltests/build/policyPASS; installedexactSHA. Texture-depth
+physicalpose grid and signedupwardheight diagnostics only. Phone15ssmokeNO_DEPTH
+closed,0tracking/insufficientlight,0positiveprojection. No mainnav/default/model/
+permission change. research11 verifies reuse/modelcard/data transport, notnewAI
+accuracy. Preserve externalresearch10/dirtyownerrule; no silentworkerrestart.
+
 ### CURRENT_SCOPE —2026-10-20 motion/dense pair complete,0.9.30/43
 
 M/D builders andZreviewer finished. ReadWORK_QUEUE top/PHONE_INVENTORY_2026-10-20.md.

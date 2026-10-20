@@ -1,5 +1,22 @@
 # Open-source licenses
 
+## Texture-depth projection and model-card audit —2026-10-20
+
+TextureDepthProjection.kt adapts the scalar unprojection in Google ARCore1.57
+raw_depth_java/PointCloudHelper.java (Apache-2.0). Header/source URL/modifications
+and existing full sample licence are retained; SDK binary terms separate.
+Our stride/unsigned/confidence validation is retained instead of copying sample
+packed/signed-short shortcuts. No new dependency/weights/data in either APK.
+
+Google Guideline's pinned depth model card was independently downloaded and
+read: specific model Apache-2.0 grant verified, not inferred from source licence.
+Artifact hash/tensors/runtime and training-data terms remain separate; no model
+download/bundling/training clearance. Indoor/safety-critical limitations make it
+research-only here. Hypersim selective downloader MIT; data CC-BY-SA3.0, toolkit
+Apple terms. Range GET failed; no dataset downloaded. Pins/evidence/deferrals:
+research/11-coordinate-and-ground-reference-reuse.md. Earlier entries below are
+historical round scopes, not a statement that all model rights remain unknown.
+
 ## Reuse research and evaluation —2026-10-20
 
 Research source pins, separate code/weight/data terms and adoption gates:

@@ -1,5 +1,18 @@
 # Progress Log
 
+## 2026-10-20 — Texture-depth coordinates and relative heights,0.9.31/44
+
+Bounded disjoint Cursor P/H tests first, actualCodex missing-helperRED then source;
+Codex grid sampling/integration and independent R source review. Fixed incorrect
+huge-number fixture and2ULP arithmetic assertion, no safety threshold change.
+83focused/653full tests/builds/APKpolicyPASS; Lint0errors56/34warnings. Installed
+exactSHA/version. Actual15s phone defaultRAW smokeNO_DEPTH+CLOSED,407frames,
+0tracking, insufficientlight;14 not_tracking heights,0projection. Positive
+geometry remains unverified. No mainnav/model/default/permission changes. Primary
+Google sample/modelcard audit and bounded Hypersim transport check documented,
+no dataset/model/package download or private upload. Allworkersfinished; source
+backup final receipt follows Git verification. GEOMETRY_COORDINATES_2026-10-20.md.
+
 ## 2026-10-20 — Reconnected Redmi and motion/dense diagnostic pair,0.9.30/43
 
 Two actual0.9.29 probes completed NO_DEPTH+CLOSED,449 decoded all-zero pairs.

@@ -1,5 +1,15 @@
 # Known Issues
 
+## 0.9.31/44 —2026-10-20
+
+Coordinate/relative-height debug contracts tested; physical ground/table/wall/
+step/mat accuracy not established.15s smokeNO_DEPTH+CLOSED with SDK insufficient
+light/0tracking, so positive world projection not exercised. No more identical
+unprepared phone retries. Hypersim22-byte Range transport reset; no image/HDF5
+fixture downloaded or licence/security bypass. Optional two plane queries per
+1Hzsample deferred (no demonstrated bottleneck).653tests/pass, Lint56/34warnings
+remain (0errors). No default/nav/model/Internet change. GEOMETRY_COORDINATES_2026-10-20.md.
+
 ## 0.9.30/43 —2026-10-20
 
 Actual raw depth available in both debug modes; earlier zero-map cause not

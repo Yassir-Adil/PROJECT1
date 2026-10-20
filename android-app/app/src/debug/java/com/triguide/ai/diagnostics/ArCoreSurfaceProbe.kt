@@ -10,6 +10,26 @@ internal data class SurfaceProbeObservation(val ray: SurfaceProbeRay, val readin
 
 /** Called on the existing ARCore GL thread, with the setDisplayGeometry viewport. */
 internal object ArCoreSurfaceProbe {
+    /** Current SDK Y offsets, not a ground reference or physical floor classification. */
+    fun heights(session: Session, frame: Frame): SurfaceHeightSnapshot {
+        val tracking = frame.camera.trackingState == TrackingState.TRACKING
+        if (!tracking) return SurfaceHeightProfile.summarize(emptyList(), false, Double.NaN)
+        val cameraY = frame.camera.pose.ty().toDouble()
+        if (!cameraY.isFinite()) return SurfaceHeightProfile.summarize(emptyList(), true, cameraY)
+        val candidates = session.getAllTrackables(Plane::class.java).asSequence().map { plane ->
+            val kind = kindOf(plane.type)
+            val planeTracking = plane.trackingState == TrackingState.TRACKING
+            val subsumed = plane.subsumedBy != null
+            SurfaceHeightCandidate(
+                kind, if (kind == SurfaceKind.HORIZONTAL_UPWARD && planeTracking && !subsumed) {
+                    plane.centerPose.ty().toDouble()
+                } else Double.NaN,
+                planeTracking, subsumed,
+            )
+        }.asIterable()
+        return SurfaceHeightProfile.summarize(candidates, true, cameraY)
+    }
+
     /**
      * Session-known inventory, NOT current visibility or a current ray intersection.
      * Native getAllTrackables enumeration is SDK-owned; primitive mapping consumes
