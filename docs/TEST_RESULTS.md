@@ -2,6 +2,16 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 — Clarified visual failure; fresh focused regressions PASS82
+
+After explaining intended grid, owner says it did NOT appear. Visual acceptance
+NOT passed; cause remains unresolved, consistent with recordedCanvas0. Actual
+:app:testDebugUnitTest filtered Semantic* + DiagnosticFrameGateTest executed:
+82tests/8suites,0fail/error/skip, BUILD SUCCESSFUL47s. Pure helper tests cannot
+prove View.onDraw/compositor/visibility. No new tests/source yet, no fabricated
+RED; last811fullgate historical, not rerun. Cursor source/test review read-only
+and independently reviewed. DISPLAY_RECOVERY_PLAN_2026-10-20.md.
+
 ## 2026-10-20 —0.9.35 actual phone COMPLETE; semantic visibility UNRESOLVED
 
 Exactinstalled48/baseAPKhash rechecked.20.18sAUTOMATIC+semantics finished by

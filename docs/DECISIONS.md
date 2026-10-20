@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-10-20 — Correct misunderstood feedback before advancing
+
+Owner clarified the intended semantic grid did NOT appear after its meaning was
+explained. Preserve old answer as ambiguous history, not current confirmation;
+no longer treat feedback vsCanvas0 as conflicting. Five-minute audit plans bounded
+rendering attribution/synthetic debug self-test then typed diagnostic2D/geometry
+separation. Original250ms/raw-confidence/uniqueness/STOP gates unchanged.82newly
+rerun focused regressions PASS; no executable edits or claimed runtime fix.
+DISPLAY_RECOVERY_PLAN_2026-10-20.md contains stages, source evidence and deferrals.
+
 ## 2026-10-20 — Preserve conflicting visibility evidence and sparse support
 
 0.9.35 physical20.18s completed/closed. Owner reports colouredcells, telemetry

@@ -1,5 +1,13 @@
 # Known Issues
 
+## Current clarified issue — semantic grid NOT visible
+
+Owner understood grid explanation then confirmed it did NOT appear. Earlier
+positive feedback is superseded, not evidence of a visual pass. Canvas0 agrees;
+near-expiry rendering and depth-gated2D capture remain causes to investigate,
+not proven fixes.82fresh focused tests PASS, no app code changes. Detailed
+two-step recovery plan DISPLAY_RECOVERY_PLAN_2026-10-20.md; no phone action now.
+
 ## Current0.9.35 measured — sparse support and visibility attribution unresolved
 
 Actual20.18s run1rawadmit/1freshsemantic/0groundcandidate.96depth_not_new and

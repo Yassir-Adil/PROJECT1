@@ -8,12 +8,13 @@ AUTOMATIC + semantic_fusion=true diagnostic completed (20.18s), all three
 resource-closure markers were observed, and scoped force-stop left no app PID.
 No navigation, audio, image/coordinate recording, network permission or upload.
 
-**Owner reported coloured cells visible.** Instrumentation nevertheless recorded
-one publication and zero Canvas submissions. Preserve both observations: this is
-NOT a reconciled semantic-overlay rendering pass or proof the old issue is fixed.
-The diagnostic also contains other visual probes; there is no screenshot or
-frame recording to identify which colours the owner saw. Do not dismiss the
-owner report or invent an explanation for it.
+**Owner clarification after explaining the grid: the intended coloured cells
+did NOT appear.** The earlier ambiguous answer said colours appeared before the
+owner understood the question; retain that history, not a positive visual pass.
+Current visual feedback agrees with one publication and zero Canvas submissions.
+Why the View did not submit coloured drawing is still unresolved; there is no
+screenshot/frame recording. No claim the old issue is fixed. Updated diagnosis
+and staged plan: DISPLAY_RECOVERY_PLAN_2026-10-20.md.
 
 ## Reproducible evidence
 
@@ -46,7 +47,7 @@ owner report or invent an explanation for it.
 | Model labels, coarse 8x8 | wall 33, floor 24, rug 0 | Argmax labels, not verified identities or confidence |
 | Semantic grid raw world points / unmapped | 5 / 0 | Only 1 floor-component support; not ground coverage |
 | Height unknown | 64 of 64 | No floor reference; no rug-height/obstacle proof |
-| UI publication / fresh Canvas / actual paint submissions | 1 / 0 / 0 | Contradicts a simple interpretation of owner visibility; unresolved |
+| UI publication / fresh Canvas / actual paint submissions | 1 / 0 / 0 | Owner clarified the intended grid was not visible; exact failure cause unresolved |
 | Cleared without fresh Canvas | 1 | No post-paint rejection recorded |
 | Geometry invalidations | 3 | Sampled viewport 1173→1175→1178px during startup; not evidence of repeated semantic-driven reflow |
 | Semantic receipt→result | 239.720308ms | p50=p90 because n=1; not a latency distribution |

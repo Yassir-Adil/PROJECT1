@@ -2,6 +2,17 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Owner clarification / reviewed recovery plan —2026-10-20
+
+The intended semantic grid did NOT appear; earlier colours-visible answer was
+ambiguous before its meaning was explained. Current feedback matches Canvas0.
+Five-minute source/primary-doc audit + independent read-only Cursor review;
+82focused JVM regressions rerun PASS, no app code/APK changes. Next pair: bounded
+render-stage attribution/synthetic self-test, then diagnostic2D observation
+decoupled from sparse raw depth, while geometric fusion retains original gates.
+Detailed tests/scopes/options: DISPLAY_RECOVERY_PLAN_2026-10-20.md.
+No active worker or phone request. Older feedback below is historical.
+
 ## Actual0.9.35/48 checkpoint — phone complete, two measured follow-ups
 
 Owner-ready20.18s AUTOMATIC+semantics COMPLETE+CLOSED; installedhash rechecked,

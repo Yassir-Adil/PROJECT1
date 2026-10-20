@@ -1,5 +1,16 @@
 # Progress Log
 
+## 2026-10-20 — Owner clarification and bounded display recovery audit
+
+Owner clarified semantic coloured grid NOT visible after explanation; supersedes
+prior ambiguous positive answer, now agrees with Canvas0/submitted0. Read-only
+source/officialdocs audit identifies raw-admission coupling and near-expiry
+result, not a proven render cause. Cursor read-only test-gap review finished,
+Codex independently checked distinctions. Actual82focused/8suites PASS0fail/
+error/skip; no code/APK edits or fullgate rerun. Added staged plan with tests-first
+scopes, synthetic drawing isolation, 2D/geometry type separation and deferrals:
+DISPLAY_RECOVERY_PLAN_2026-10-20.md. No phone test/request or active worker.
+
 ## 2026-10-20 — Actual0.9.35 stationary phone probe complete
 
 Owner-ready20.18s AUTOMATIC+semantic COMPLETE, all3closuremarkers, stopped/noPID;

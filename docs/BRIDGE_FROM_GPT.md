@@ -1,5 +1,13 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 recovery plan only, no writing assignment
+
+Owner clarified intended grid NOT seen, superseding earlier ambiguous answer.
+Cursor read-only test-gap review completed, no implementation work in flight.
+Codex reran82focused JVM tests PASS; no executable edits/fullgate rerun/phone.
+DISPLAY_RECOVERY_PLAN_2026-10-20.md defines next rendering instrumentation and
+typed2D/geometry separation scopes; not an instruction to edit shared files yet.
+
 ### CURRENT_SCOPE —2026-10-20 actual0.9.35 measured, no active assignment
 
 Owner-ready20.18s complete/closed/stopped, installedhash rechecked.1rawadmit/

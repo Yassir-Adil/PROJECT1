@@ -1,5 +1,13 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 clarified no-colours / reviewed recovery plan
+
+Owner clarified grid NOT visible after explanation. Cursor ask/read-only review
+of pure helper tests complete: near-TTL chained publication/draw/defaultTTL gaps,
+and no JVM proof of AndroidonDraw. Codex checked scope and partialcoverage;
+actual82focused tests PASS, no app edits or active Cursor job. Plan and source/
+official-doc reasoning: DISPLAY_RECOVERY_PLAN_2026-10-20.md. No phone test now.
+
 ### CODEX_RECORD —2026-10-20 actual0.9.35 COMPLETE, unresolved attribution
 
 Owner-ready20.18s AUTOMATIC+semantic finished/closed, stopped; exactinstalled

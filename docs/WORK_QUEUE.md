@@ -1,5 +1,15 @@
 # Shared execution queue — 2026-10-19
 
+## PLANNED / NO ACTIVE WORKER — clarified no-colours,2026-10-20
+
+Owner corrected visual feedback: intended grid NOT seen. Read-only Cursor review
+finished; Codex82focused regressions PASS. No app edits/phone access. Implement
+next only after tests-first scope release: A rendering attribution/synthetic
+debug drawing isolation; B typed diagnostic2D capture independent of sparse
+depth, while geometric fusion keeps same-frame raw gate. Detailed files/scopes/
+acceptance: DISPLAY_RECOVERY_PLAN_2026-10-20.md. Historical positive answer below
+is superseded; preserve unrelated owner rule and research10 untouched.
+
 ## DEVICE COMPLETE / FOLLOW-UPS PLANNED —2026-10-20 0.9.35
 
 Actual owner-ready20.18s COMPLETE+CLOSED/stopped; installedhash rechecked.

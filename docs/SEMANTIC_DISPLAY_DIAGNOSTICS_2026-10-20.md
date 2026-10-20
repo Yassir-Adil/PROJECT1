@@ -1,5 +1,13 @@
 # Semantic canvas / ground-reason diagnostics0.9.34 —2026-10-20
 
+## Owner clarification — intended grid NOT visible
+
+After explaining cells, owner corrected earlier ambiguous response: no coloured
+semantic grid was seen. This agrees with Canvas0/submitted0; exact failure cause
+still unknown. Updated audit,82fresh regression passes, and staged recovery plan:
+DISPLAY_RECOVERY_PLAN_2026-10-20.md. Earlier positive wording below is history,
+not visual acceptance. No app code changes/phone test during planning.
+
 ## Actual0.9.35 phone result — supersedes pending camera notes below
 
 Owner-ready20.18s COMPLETE+CLOSED, installedhash rechecked, app stopped.
