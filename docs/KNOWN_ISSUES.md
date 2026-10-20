@@ -1,5 +1,11 @@
 # Known Issues
 
+Latest phone follow-up: `docs/RAW_DEPTH_REDMI_2026-10-20.md`. Unlock resolved,
+but two timed probes were interrupted before20s with0 accepted depth. First
+had426 camera frames but no tracking; second logs successful close on pause.
+Back/relaunch/debug-app events and transient USB prevent a clean measurement;
+do not infer an unsupported sensor or failed model from these attempts.
+
 ## Current checkpoint — 2026-10-20
 
 0.9.23/36 is installed/hash-verified. Bounded atomic local stores and immediate

@@ -1,5 +1,15 @@
 # Shared execution queue — 2026-10-19
 
+## Phone follow-up — 2026-10-20
+
+Owner unlocked Redmi. Two actual20s probes were interrupted on pause at15.49s
+(426 nontracking frames) and0.76s (0 frames), accepted depth0. Second run has
+RESULT+CLOSED; first explicit close unobserved. Back/relaunch/debug-app events
+and intermittent USB are recorded without attributing their origin. No guard
+weakened or source/model/permission changed. Await a coordinated20s no-input
+foreground interval; this is not blocked on phone unlock alone anymore.
+`docs/RAW_DEPTH_REDMI_2026-10-20.md` supersedes earlier phone status below.
+
 ## Current owner update — 2026-10-20
 
 The owner explicitly reversed the privacy choice: PROJECT1 may remain PUBLIC;
@@ -46,7 +56,7 @@ backup. Existing private captures and educational weights remain excluded.
 | --- | --- | --- | --- |
 | S1/S2 storage | Cursor storage worker + Codex review | memory helpers/stores and resilience tests; own result | 37 new tests GREEN |
 | D1/D2 decoder | Cursor depth worker + Codex review | debug RawDepthFrameStats and tests; own result | 20 tests GREEN |
-| D3 bounded ARCore probe | Cursor Android worker + Codex review | debug RawDepthDiagnosticActivity; own result | built; invalid-duration phone refusal PASS; valid depth pending unlock |
+| D3 bounded ARCore probe | Cursor Android worker + Codex review | debug RawDepthDiagnosticActivity; own result | built; invalid-duration refusal PASS; two interrupted runs, valid depth unverified |
 | Gate / memory I/O integration | Codex + bounded Cursor I/O worker | RawDepthSampleGate; CoalescingMemoryWriter; minimal root wiring; tests | 16 + 5 tests GREEN |
 | QA / APK | Codex after Cursor shell rejection | full offline gate, new staged APK | accepted463 tests; installed/hash verified |
 | Independent integration review | separate Cursor reviewer | read-only source; own integration review document only | initial + follow-up complete, no blocker |

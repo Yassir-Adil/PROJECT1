@@ -1,5 +1,14 @@
 # Decision Log
 
+## 2026-10-20 — Interrupted phone probes do not justify lowering safety gates
+
+Keep terminal pause/Stop behavior. Two physical attempts ended before their20s
+timer, with0 accepted depth; one received426 camera timestamps but never tracked.
+Coordinate a no-input foreground interval and collect explicit SDK tracking
+failure reasons if needed, rather than infer bad depth hardware or replace a
+model. No debug-security/transport setting was changed to force the experiment.
+Evidence: `docs/RAW_DEPTH_REDMI_2026-10-20.md`.
+
 ## 2026-10-20 — Two measured increments and explicit public source backup
 
 Implement storage resilience and an isolated official-SDK Raw Depth instrument

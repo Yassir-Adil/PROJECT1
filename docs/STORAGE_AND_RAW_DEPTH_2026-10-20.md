@@ -1,5 +1,9 @@
 # 0.9.23/36 — storage resilience and isolated Raw Depth
 
+Later phone follow-up: `docs/RAW_DEPTH_REDMI_2026-10-20.md`. Owner unlocked;
+two actual timed attempts were interrupted, accepted depth0. The older
+"screen locked / not attempted" status below describes the earlier checkpoint.
+
 ## Current result
 
 Implemented and desktop-verified, installed on the personal Redmi over USB.

@@ -1,5 +1,16 @@
 # Progress Log
 
+## 2026-10-20 — Unlocked-phone Raw Depth attempts
+
+Two actual20s probes ended early on pause:15.49s/426 nontracking camera frames,
+then0.76s/0 frames. Both accepted0 depth samples; neither is depth success or a
+full-time NO_DEPTH result. Second run logs RESULT then CLOSED; first shows camera
+disconnect but explicit Session close was not observed. Back/relaunch/debug-app
+events and intermittent USB complicate the session; no cause attribution to a
+model or hardware. No safety guard relaxed, no model/source/permission changed.
+Installed0.9.23 SHA still matches. Details and next controlled foreground test:
+`docs/RAW_DEPTH_REDMI_2026-10-20.md`. Previous463-test gate was not rerun here.
+
 ## 2026-10-20 — 0.9.23/36: storage hardening + isolated Raw Depth
 
 Installed0.9.23/36 over USB and verified installed APK SHA against the gate;

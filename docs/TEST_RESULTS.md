@@ -2,6 +2,15 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 — Real timed Raw Depth attempts: INTERRUPTED
+
+Requested20s twice; observed15.49s (426 distinct, all nontracking) and0.76s
+(0 frames). Accepted depth0 both; no distance/confidence/latency result exists.
+Second run proves pause result+close sequence; no full-duration/valid-depth pass.
+Installed APK hash unchanged. Full results, interruption evidence and limits:
+`docs/RAW_DEPTH_REDMI_2026-10-20.md`. Desktop463-test result below remains prior
+executed evidence, not a new run for this docs-only follow-up.
+
 ## 2026-10-20 — 0.9.23 final gate and Redmi refusal test
 
 **PASS (engineering), physical depth/UI acceptance still pending.**
