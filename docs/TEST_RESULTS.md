@@ -2,6 +2,36 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.35/48 final engineering PASS, camera NOT_STARTED
+
+Gate20261020T102847617148Z PASS:694app+10sim+21policy+86eval=811,0fail/error/skip,
+bothbuilds/asset/permission/isolation/private-rootPASS,Lint0errors45/14warnings.
+Source220file hashrecorded; exactinstalledbaseAPKhashverified. Sourcecontract
+layout testactualRED3subcases→setLines→GREEN, not Androidphysicalmeasurement.
+Rfinal scopedsourceaccepted. Phone app stopped/noPID.035colour/geometry test
+pending freshownerconfirmation;033lastactual13fresh/0stale/0reference, upright
+previewconfirmed butcoloursNOTseen. No newaccuracy/safe-pathclaim.
+
+## 2026-10-20 — Actual0.9.33 phone;0.9.34 diagnostics under verification
+
+Installed0.9.33/46 baseAPKSHA and216files source matched797-test gate. Actual
+owner-ready20.16sAUTOMATIC+semantic COMPLETE+CLOSED:13fresh/0stale,0candidate,
+33rawadmits; localreceipt61.137769/84.951308ms, SDK-derived turn1/unmapped0 all13.
+Owner upright image confirmed but no colouredcells seen => overlayvisibility
+NOTpassed.0..6floorgeometry supports; exactrejectbranch unrecoverable from old
+status. Privateaggregate logSHA bba9be0b...6190755, no media. Scoped appstop verified.
+PHONE_SEMANTIC_0933_2026-10-20.md contains conditions/cross-run limits.
+
+Source0.9.34/47:actualmissing-reason/stats compileRED before implementation,
+109focused testsPASS after9newtests; thresholds/freshness/navigation unchanged.
+Fullgate/independentreview pending; not phone-tested.
+
+Postreview newcounter compileRED and publicationclockrollback assertionRED fixed;
+final113focused/810fulltests PASS (694app+10sim+20policy+86eval),0fail/error/skip,
+bothbuilds/permission/models/isolation/private-rootpolicyPASS,Lint45/14warnings
+and0errors. Gate20261020T102314054144Z, source219fileSHAmatched before0.9.34/47
+USBinstall/basehashmatched. Fresh camera setup requested; no runtime claim yet.
+
 ## 2026-10-20 — Real0.9.32 fusion,0.9.33 follow-up under final gate
 
 0.9.32/45 stablegate20261020T053311702676Z:675app+10sim+20policy+86eval=791,

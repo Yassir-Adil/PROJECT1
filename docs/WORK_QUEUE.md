@@ -1,5 +1,44 @@
 # Shared execution queue — 2026-10-19
 
+## DESKTOP COMPLETE / DEVICE PENDING —2026-10-20 display/rejection diagnostics
+
+FINAL0.9.35/48:113focused JVM +source-layoutRED/GREEN,811fulltests/build/policy
+PASS; Lint0errors45/14warnings. Narrow Rfinal no High/Medium, all H/R jobsfinished.
+Source220fileSHA and stagedAPK checked; USBinstalled/basehashmatched; stopped/no
+PID. No035camera without fresh owner confirmation. Lastactual03320s13fresh/
+0stale/0reference; owneruprightyes/coloursnotseen.034/035notruntimevalidated.
+Preserve two unrelated ownerfiles. Scopes below are executionhistory, notactive.
+
+Latestsource0.9.35/48:after034810gate, Codexfound maxLines-only status text can
+resizeGLviewport/selfinvalidateoverlay. Sourcecontract RED→setLines6/5/4→GREEN,
+geometryinvalidatecounteradded. No threshold/freshness/style change.035gate/
+narrowRrunning,034installedhashverifiedbutcamera pending. Awaiting ownerfresh
+scene; do not silently start. Sourcefixed-height is not physicalrootcauseproof.
+
+Finalsource0.9.34/47:113focused/810full tests/build/policyPASS, Lint0errors45/14,
+Rre-review no scopedHigh/Medium, allH/Rworkersfinished. Source219fileSHAchecked,
+USBinstalled/baseAPKhashmatched. Awaiting explicit fresh owner scene for20s
+measurement; no activecamera or implicit overlayvisibility/ground accuracy pass.
+
+Sourcefreeze0.9.34/47:113focusedPASS, initial806fullgatePASS before review fixes;
+actual newcounter compileRED and publicationrollback assertionRED then fixed.
+Counters now distinguish submitted vs freshpaint; no broadCanvas.clear. Rfinal
+no scopedHigh/Medium, M1retracted. H/Rworkers finished. Finalstablegate running,
+no sourceedits during it.0.9.34 not installed/phone-tested; no fresh camera setup.
+
+0.9.33 exact-source/APK verified then installed, actual owner-ready20s COMPLETE+
+CLOSED:13freshfusion/0stale,0candidate, observed61.14/84.95ms p50/p90. Owner
+confirms upright live image but did NOT see coloured cells. Do not mark overlay
+visually verified or relax250ms freshness. Phone stopped; new setup before camera.
+
+Tests-first actual missing-reason/overlay-helper RED executed by Codex. Exclusive
+Cursor H scope: SemanticGroundDiagnostic.kt and docs/CURSOR_GROUND_REASONS_2026-10-20.md
+ONLY; add precise diagnostic rejection reasons, preserve every threshold/status
+and admission decision. No tests edits/shell/ADB/Git/network/other files. Codex
+owns new tests, pure canvas publication/draw metrics, Activity/overlay integration,
+verification, shared docs/backup. Source-only change0.9.34 candidate, no new model,
+permission, production navigation or lifetime/threshold change. Other jobs closed.
+
 ## COMPLETE desktop pair —2026-10-20 semantic/depth diagnostic integration
 
 FINAL0.9.33/46:100focused/797full tests/build/policyPASS; Lint0errors45/14warnings,

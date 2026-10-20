@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-10-20 — Final0.9.35/48 source/build/install, camera pending
+
+Actual0.9.33 phone13fresh/0stale/0reference, owner uprightyes/coloursnotseen.
+Follow-up reason/Canvas metrics +fixed-height status panes after realRED,
+113focused JVM andsourcecontractGREEN;811fulltests/build/policyPASS,0errors,
+45/14Lintwarnings. IndependentRfinal no scopedHigh/Medium; allH/Rjobsfinished.
+0.9.35 USBinstalled/basehashverified, stopped/noPID. No newcamera run without
+fresh owner confirmation; do not claim visiblecolours or floorevidence fixed.
+PHONE_SEMANTIC_0933_2026-10-20.md and SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md.
+
+## 2026-10-20 — Actual0.9.33 upright fusion / measured remaining gaps
+
+Exactsource/APK verified,0.9.33/46 USBinstalled;ownerready20.16sCOMPLETE+CLOSED,
+13fresh/0stale,0groundcandidate; localreceipt61.14/84.95ms,prep27.95/49.51ms,
+invoke24.64/31.12ms. All13clockwiseturn1/unmapped0. Owner uprightpreview confirmed,
+but no colouredcells observed, so overlay NOT visuallypassed. Phone stopped,
+79%charging,32.2→31.7°C not thermalproof. Source-only0.9.34 exactgroundreason/
+canvascounters follow-up started after actualmissing-API RED. Preserve geometry/
+freshness/nav gates. PHONE_SEMANTIC_0933_2026-10-20.md has rawcounts/limits.
+
+Final0.9.34/47:113focused/810full tests/build/policyPASS,Lint0errors45/14warnings,
+RfinalnoHigh/Medium. Clockrollback and paint-boundary telemetry fixes independently
+RED→GREEN. Source219file hash verified, installedexactbaseAPKhash. Awaitfresh
+owner setup before new camera; do not mark no-colours issue resolved yet.
+
+Subsequentsourceaudit:dynamicmaxLines-only status text couldresizeGLviewport and
+selfinvalidateoverlays.0.9.35 exactsetLines6/5/4 +geometry-invalidationcounter,
+actualsourcecontractRED→GREEN, fullgate/narrowRpending. No physicalrootcauseclaim
+or stale-lifetime extension.034 remains installed pending fresh camera setup.
+
 ## 2026-10-20 — Actual fusion and0.9.33 follow-up
 
 0.9.32 USBinstall/hashverified, ownerready20.18sCOMPLETE+CLOSED:34rawadmits,

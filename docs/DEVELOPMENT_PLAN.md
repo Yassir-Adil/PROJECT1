@@ -2,6 +2,28 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Final checkpoint0.9.35/48 — next step requires fresh stationary scene
+
+811tests/build/policyPASS; reason/Canvas instrumentation and fixed-line status
+layout independently reviewed, installed/basehashverified, stopped/noPID.
+No035camera yet. Lastactual033 ownerconfirmeduprightimage butnotcolouredcells,
+13fresh/0stale/0groundcandidate. Next ONLY useful device gate: lit floor-visible
+20s capture of precisegroundreason, UIpublish/submitted/freshCanvas counts and
+geometryinvalidations, with ownercolourfeedback. Do not weaken uncertainty gates.
+
+## Current0.9.33 device result /0.9.34 diagnostic follow-up
+
+0.9.33 nowinstalled/hash/sourceverified, owner-ready20.16s13fresh/0stale,
+61.14/84.95ms localreceipt,0reference. Owner confirms upright but no colouredcells.
+No walking/ground accuracy claim. Source-only0.9.34 adds9tests-first reason/canvas
+metrics after actualRED, focusedPASS; fullgate/reviewpending, no threshold/lifetime
+change. PHONE_SEMANTIC_0933_2026-10-20.md; SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md.
+
+0.9.34 final113focused/810full gate/build/policyPASS, independent Rfinalaccepted;
+installed/hashverified, fresh stationary camera setup pending. Next measured gate
+is precisegroundreason + submitted/freshCanvas vs owner visibility, not relaxing
+thresholds, longer stale overlays or swapping model without evidence.
+
 ## Active checkpoint —2026-10-20, semantic/raw-depth0.9.32/45 candidate
 
 Follow-up0.9.33/46 source has SDK-derived view-upright modelinput and exact

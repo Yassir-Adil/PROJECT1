@@ -23,6 +23,10 @@ internal data class SemanticDepthCell(
  *
  * `floor_like_candidate` is not confirmed floor, walkability, clearance, or
  * navigation authority. Thresholds are diagnostic assumptions only.
+ *
+ * [reason] is diagnostic-only detail for why a reading was admitted or rejected.
+ * It does not change [status], thresholds, support/component/admission, or
+ * [unknownSamples]. Absent a reference height, [unknownSamples] remains 64.
  */
 internal data class SemanticGroundReading(
     val status: String,
@@ -32,6 +36,7 @@ internal data class SemanticGroundReading(
     val flatRugSamples: Int,
     val belowSamples: Int,
     val unknownSamples: Int,
+    val reason: String = "",
 )
 
 /**
@@ -55,6 +60,20 @@ internal object SemanticGroundDiagnostic {
     private const val STATUS_INSUFFICIENT_SUPPORT = "insufficient_support"
     private const val STATUS_FLOOR_LIKE_CANDIDATE = "floor_like_candidate"
 
+    private const val REASON_INVALID_CELL_COUNT = "invalid_cell_count"
+    private const val REASON_INVALID_CELL_STRUCTURE = "invalid_cell_structure"
+    private const val REASON_PARTIAL_OR_NONFINITE_GEOMETRY = "partial_or_nonfinite_geometry"
+    private const val REASON_NO_BOTTOM_FLOOR_COMPONENT = "no_bottom_floor_component"
+    private const val REASON_TOO_FEW_GEOMETRY_SAMPLES = "too_few_geometry_samples"
+    private const val REASON_NONFINITE_SUPPORT_COORDINATES = "nonfinite_support_coordinates"
+    private const val REASON_NONFINITE_XZ_SPAN = "nonfinite_xz_span"
+    private const val REASON_INSUFFICIENT_XZ_SPAN = "insufficient_xz_span"
+    private const val REASON_COLLINEAR_OR_SMALL_AREA = "collinear_or_small_area"
+    private const val REASON_NONFINITE_MEDIAN_Y = "nonfinite_median_y"
+    private const val REASON_NONFINITE_HEIGHT_DELTA = "nonfinite_height_delta"
+    private const val REASON_NON_HORIZONTAL_FLOOR_SAMPLES = "non_horizontal_floor_samples"
+    private const val REASON_SINGLE_FRAME_FLOOR_LIKE_ONLY = "single_frame_floor_like_only"
+
     private val SEED_COLUMNS: IntArray = intArrayOf(3, 4)
     private const val SEED_ROW: Int = GRID - 1
     private val NEIGHBOR_DR: IntArray = intArrayOf(-1, 0, 1, 0)
@@ -62,7 +81,7 @@ internal object SemanticGroundDiagnostic {
 
     fun evaluate(cells: List<SemanticDepthCell>): SemanticGroundReading {
         if (cells.size != CELL_COUNT) {
-            return rejected(STATUS_INVALID)
+            return rejected(STATUS_INVALID, reason = REASON_INVALID_CELL_COUNT)
         }
 
         val grid = arrayOfNulls<SemanticDepthCell>(CELL_COUNT)
@@ -77,15 +96,16 @@ internal object SemanticGroundDiagnostic {
             val row = cell.row
             val label = cell.label
             if (column !in 0 until GRID || row !in 0 until GRID || label !in 0..31) {
-                return rejected(STATUS_INVALID)
+                return rejected(STATUS_INVALID, reason = REASON_INVALID_CELL_STRUCTURE)
             }
             val index = indexOf(column, row)
             if (occupied[index]) {
-                return rejected(STATUS_INVALID)
+                return rejected(STATUS_INVALID, reason = REASON_INVALID_CELL_STRUCTURE)
             }
             when (val geom = classifyGeometry(cell)) {
                 GeometryClass.Missing -> Unit
-                GeometryClass.PartialOrNonFinite -> return rejected(STATUS_INVALID)
+                GeometryClass.PartialOrNonFinite ->
+                    return rejected(STATUS_INVALID, reason = REASON_PARTIAL_OR_NONFINITE_GEOMETRY)
                 is GeometryClass.Finite -> {
                     hasGeometry[index] = true
                     xs[index] = geom.x
@@ -101,14 +121,15 @@ internal object SemanticGroundDiagnostic {
         val queue = ArrayDeque<Int>()
         for (seedColumn in SEED_COLUMNS) {
             val seedIndex = indexOf(seedColumn, SEED_ROW)
-            val seed = grid[seedIndex] ?: return rejected(STATUS_INVALID)
+            val seed = grid[seedIndex]
+                ?: return rejected(STATUS_INVALID, reason = REASON_INVALID_CELL_STRUCTURE)
             if (seed.label == LABEL_FLOOR && !inComponent[seedIndex]) {
                 inComponent[seedIndex] = true
                 queue.addLast(seedIndex)
             }
         }
         if (queue.isEmpty()) {
-            return rejected(STATUS_NO_FLOOR_COMPONENT)
+            return rejected(STATUS_NO_FLOOR_COMPONENT, reason = REASON_NO_BOTTOM_FLOOR_COMPONENT)
         }
 
         while (queue.isNotEmpty()) {
@@ -137,7 +158,11 @@ internal object SemanticGroundDiagnostic {
         val supportCount = supportIndices.size
 
         if (supportCount < MIN_SUPPORTS) {
-            return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+            return rejected(
+                STATUS_INSUFFICIENT_SUPPORT,
+                supportCount = supportCount,
+                reason = REASON_TOO_FEW_GEOMETRY_SAMPLES,
+            )
         }
 
         var minX = Double.POSITIVE_INFINITY
@@ -151,7 +176,11 @@ internal object SemanticGroundDiagnostic {
             val y = ys[index]
             val z = zs[index]
             if (!x.isFinite() || !y.isFinite() || !z.isFinite()) {
-                return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+                return rejected(
+                    STATUS_INSUFFICIENT_SUPPORT,
+                    supportCount = supportCount,
+                    reason = REASON_NONFINITE_SUPPORT_COORDINATES,
+                )
             }
             if (x < minX) minX = x
             if (x > maxX) maxX = x
@@ -162,25 +191,53 @@ internal object SemanticGroundDiagnostic {
 
         val xSpread = maxX - minX
         val zSpread = maxZ - minZ
-        if (!xSpread.isFinite() || !zSpread.isFinite() ||
-            xSpread < MIN_XZ_SPREAD_M || zSpread < MIN_XZ_SPREAD_M
-        ) {
-            return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+        if (!xSpread.isFinite() || !zSpread.isFinite()) {
+            return rejected(
+                STATUS_INSUFFICIENT_SUPPORT,
+                supportCount = supportCount,
+                reason = REASON_NONFINITE_XZ_SPAN,
+            )
+        }
+        if (xSpread < MIN_XZ_SPREAD_M || zSpread < MIN_XZ_SPREAD_M) {
+            return rejected(
+                STATUS_INSUFFICIENT_SUPPORT,
+                supportCount = supportCount,
+                reason = REASON_INSUFFICIENT_XZ_SPAN,
+            )
         }
 
         if (!hasNonCollinearXzCoverage(supportIndices, xs, zs)) {
-            return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+            return rejected(
+                STATUS_INSUFFICIENT_SUPPORT,
+                supportCount = supportCount,
+                reason = REASON_COLLINEAR_OR_SMALL_AREA,
+            )
         }
 
         supportYs.sort()
         val medianY = medianSorted(supportYs)
         if (!medianY.isFinite()) {
-            return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+            return rejected(
+                STATUS_INSUFFICIENT_SUPPORT,
+                supportCount = supportCount,
+                reason = REASON_NONFINITE_MEDIAN_Y,
+            )
         }
         for (y in supportYs) {
             val delta = y - medianY
-            if (!delta.isFinite() || abs(delta) > MAX_SUPPORT_Y_FROM_MEDIAN_M) {
-                return rejected(STATUS_INSUFFICIENT_SUPPORT, supportCount = supportCount)
+            if (!delta.isFinite()) {
+                return rejected(
+                    STATUS_INSUFFICIENT_SUPPORT,
+                    supportCount = supportCount,
+                    reason = REASON_NONFINITE_HEIGHT_DELTA,
+                )
+            }
+            if (abs(delta) > MAX_SUPPORT_Y_FROM_MEDIAN_M) {
+                return rejected(
+                    STATUS_INSUFFICIENT_SUPPORT,
+                    supportCount = supportCount,
+                    reason = REASON_NON_HORIZONTAL_FLOOR_SAMPLES,
+                )
             }
         }
 
@@ -220,6 +277,7 @@ internal object SemanticGroundDiagnostic {
             flatRugSamples = flatRug,
             belowSamples = below,
             unknownSamples = unknown,
+            reason = REASON_SINGLE_FRAME_FLOOR_LIKE_ONLY,
         )
     }
 
@@ -228,6 +286,7 @@ internal object SemanticGroundDiagnostic {
     private fun rejected(
         status: String,
         supportCount: Int = 0,
+        reason: String,
     ): SemanticGroundReading =
         SemanticGroundReading(
             status = status,
@@ -237,6 +296,7 @@ internal object SemanticGroundDiagnostic {
             flatRugSamples = 0,
             belowSamples = 0,
             unknownSamples = CELL_COUNT, // without a reference, every grid height remains unknown
+            reason = reason,
         )
 
     private sealed class GeometryClass {

@@ -1,5 +1,23 @@
 # Known Issues
 
+## Current0.9.35 installed — physical overlay/rejection confirmation pending
+
+Fixed-height diagnostic status panes prevent content-driven viewport reflow by
+API/source contract; not proved rootcause of033missingcolours. New counters and
+reasonfield can distinguish UIpublication/Canvas/expiry and ground count/span/
+area/height.811engineeringtests PASS, Rsourceaccepted; no035camera yet. Do not
+mark visibility/flooridentity/heightaccuracy solved. Phone stopped, fresh owner
+stationary scene needed. SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md.
+
+## 0.9.33 device result — coloured overlay NOT visually confirmed
+
+Owner-ready20s13fresh/0stale,0reference; uprightpreview confirmed, colouredcells
+NOT seen by owner. Inference acceptance cannot prove Canvas/UI/humanvisibility.
+Supports0..6 but old status hid geometric reject branch.0.9.34 reason/canvas
+instrumentation under test; no freshness/geometry bypass. Original run has no
+recordedpoints, exact reject reason cannot be reconstructed after fact. Phone
+stopped. PHONE_SEMANTIC_0933_2026-10-20.md has measured data/limitations.
+
 ## Current0.9.33 follow-up — runtime pending
 
 0.9.32 actual6fresh/1stale/0groundcandidate, mostlywall-like labels and0–3floor

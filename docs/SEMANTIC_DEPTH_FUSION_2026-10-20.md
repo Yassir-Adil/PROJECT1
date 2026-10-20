@@ -1,5 +1,14 @@
 # Single-camera semantic/raw-depth diagnostic — 2026-10-20
 
+## Live checkpoint after owner-ready0.9.33 test
+
+0.9.33/46 nowinstalled/hashverified and actual20.16sCOMPLETE+CLOSED:13fresh/0stale,
+61.14/84.95ms localreceipt p50/p90,0groundreference. Owner confirms upright image
+but did NOT see coloured cells; canvas/humanvisibility unverified. Detailed run:
+PHONE_SEMANTIC_0933_2026-10-20.md. Following not-installed text is earlier history.
+Phone stopped.0.9.34 reason/canvas instrumentation is a tests-first follow-up,
+not a threshold/lifetime/navigation change.
+
 ## Follow-up0.9.33/46 — orientation and measured-path preparation
 
 0.9.32 installed/physical evidence below is retained separately. Its worker

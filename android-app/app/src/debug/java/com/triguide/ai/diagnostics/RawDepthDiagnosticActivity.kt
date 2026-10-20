@@ -88,6 +88,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var semanticDiagnostic: ArCoreSemanticDiagnostic? = null
     private var semanticFusionEnabled = false
     private var displayedSemanticResult: SemanticFusionResult? = null // main-thread only
+    private val semanticOverlayStats = SemanticOverlayStats()
 
     private var session: Session? = null
     @Volatile private var sessionResumed = false
@@ -240,7 +241,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                         val cells = result.cells
                         semanticStatusView?.text = "Model labels: wall ${cells.count { it.label == 1 }}, " +
                             "floor ${cells.count { it.label == 4 }}, rug ${cells.count { it.label == 29 }} /64 cells. " +
-                            "Height: ${result.ground.status}; raised=${result.ground.raisedSamples}, " +
+                            "Height: ${result.ground.status}/${result.ground.reason}; raised=${result.ground.raisedSamples}, " +
                             "flat-rug=${result.ground.flatRugSamples}. Not safety or obstacle confirmation."
                         handler.postDelayed({
                             // Receipt expiry, not a fresh lifetime beginning at publication.
@@ -284,13 +285,13 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             textSize = 18f
             setTextColor(Color.WHITE)
             setPadding(dp(16), dp(12), dp(16), dp(8))
-            maxLines = 6
+            setLines(6) // stable height: status text must not resize the ARCore viewport
         }
         surfaceStatusView = TextView(this).apply {
             textSize = 14f
             setTextColor(Color.WHITE)
             setPadding(dp(16), 0, dp(16), dp(8))
-            maxLines = 5
+            setLines(5)
             text = if (surfaceProbingEnabled) {
                 "Surface probes: UNKNOWN. Geometry only; not floor/wall confirmation. لا إذن للمشي."
             } else "Surface probes disabled / فحص الأسطح معطّل. لا إذن للمشي."
@@ -341,7 +342,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         if (semanticFusionEnabled) {
             semanticStatusView = TextView(this).apply {
                 textSize = 13f; setTextColor(Color.WHITE); setPadding(dp(16), 0, dp(16), dp(8))
-                maxLines = 4
+                setLines(4) // publishing/expiry text cannot invalidate its own camera mapping
                 text = "Semantic + raw depth: starting / جارٍ التحضير. تشخيص فقط؛ لا إذن للمشي."
             }.also { root.addView(it) }
         }
@@ -355,7 +356,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                     ),
                 )
                 if (semanticFusionEnabled) addView(
-                    SemanticFusionOverlayView(this@RawDepthDiagnosticActivity) { result, now ->
+                    SemanticFusionOverlayView(this@RawDepthDiagnosticActivity, semanticOverlayStats) { result, now ->
                         !stopping.get() && semanticDiagnostic?.canDisplay(result, now) == true
                     }.also { semanticOverlay = it },
                     FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
@@ -1012,6 +1013,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         coverageStats.stop()
         motionStats.stop()
         semanticDiagnostic?.stop()
+        semanticOverlayStats.stop()
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Drain GL first (never hold frameInUseLock while waiting on GL), then pause session, then result.
@@ -1137,6 +1139,17 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         }
         val observed = coverageStats.snapshot()
         Log.i(TAG, "SEMANTIC_FUSION_RESULT ${semanticDiagnostic?.summary(elapsedS) ?: "semantic_enabled=false"} navigation=none")
+        if (semanticFusionEnabled) {
+            val overlay = semanticOverlayStats.snapshot()
+            Log.i(TAG, "SEMANTIC_OVERLAY_RESULT published_samples=${overlay.publishedSamples} " +
+                "canvas_samples=${overlay.canvasSamples} fresh_canvas_calls=${overlay.canvasCalls} " +
+                "fresh_painted_cells=${overlay.paintedCells} cleared_without_fresh_canvas=${overlay.clearedWithoutDraw} " +
+                "submitted_calls=${overlay.submittedCalls} submitted_cells=${overlay.submittedCells} " +
+                "rejected_after_paint_calls=${overlay.rejectedAfterPaintCalls} " +
+                "publish_to_first_canvas_p50_ms=${overlay.publishToFirstCanvasP50Ms ?: "unavailable"} " +
+                "publish_to_first_canvas_p90_ms=${overlay.publishToFirstCanvasP90Ms ?: "unavailable"} " +
+                "scope=canvas_submission_only human_visibility=unverified no_image_storage=true navigation=none")
+        }
         val motion = motionStats.snapshot()
         Log.i(
             TAG,

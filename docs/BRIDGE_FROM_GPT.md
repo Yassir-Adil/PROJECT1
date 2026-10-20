@@ -1,5 +1,22 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 source0.9.35 complete, deviceconfirmation pending
+
+AllH/Rscopesclosed;113focused +layoutsourceRED/GREEN,811fullgate/build/policy
+PASS,finalRnoHigh/Medium. Fixedlineheaders +geometryinvalidatecounter after034
+reason/canvas diagnostics.035installed/hashverified, stopped/noPID. No035camera.
+033actual13fresh/0stale/0reference, owneruprightyes/coloursnotseen. No silent
+workerrestart or camera without freshsceneconfirmation. WORK_QUEUElatest.
+
+### CURRENT_SCOPE —2026-10-20 actual0.9.33, diagnostic-only0.9.34
+
+Readlatest WORK_QUEUE.0.9.33 installed/hash/sourceverified,actual20s13fresh/0stale,
+0reference,uprightpreview confirmed but colours NOT seen. No overlayvisibility
+claim. Phone stopped. Hreason implementationdone afteractualRED; Codex109focused
+PASS.0.9.34 counters/reasons only, fullgate/Rrunning; no source/nav/lifetime
+scopeexpansion or silentworkerrestart. PHONE_SEMANTIC_0933_2026-10-20.md and
+SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md for evidence/limits.
+
 ### CURRENT_SCOPE —2026-10-20 semantic/raw-depth integration0.9.32 candidate
 
 Y/H source complete after independentCodexRED;94focused/791fullgateGREEN,

@@ -39,6 +39,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
     private val inferenceMs = ArrayList<Double>(60)
     private var completed = 0
     private var candidateFrames = 0
+    private var geometryInvalidations = 0
 
     init {
         val appContext = context.applicationContext
@@ -63,6 +64,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
     }
 
     fun geometryChanged() {
+        synchronized(lock) { geometryInvalidations++ }
         publication.invalidateGeometry()
         onResult(null)
     }
@@ -146,7 +148,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
                     if (outcome != "accepted" || !publication.canPublish(revision, received, ended)) return@execute
                     val result = SemanticFusionResult(revision, received, frameStamp, cells, reading, unmapped)
                     synchronized(lock) { completed++; if (reading.referenceYMeters != null) candidateFrames++ }
-                    Log.i(TAG, "SEMANTIC_FUSION_SAMPLE status=${reading.status} support=${reading.supportCount} " +
+                    Log.i(TAG, "SEMANTIC_FUSION_SAMPLE status=${reading.status} reason=${reading.reason} support=${reading.supportCount} " +
                         "cpu_upright_quarter_turns=${captured.quarterTurns} " +
                         "wall_cells=${cells.count { it.label == 1 }} floor_cells=${cells.count { it.label == 4 }} " +
                         "rug_cells=${cells.count { it.label == 29 }} raw_points=${cells.count { it.worldY != null }} " +
@@ -240,6 +242,7 @@ internal class ArCoreSemanticDiagnostic(context: Context, private val onResult: 
         }
         val fps = if (sessionSeconds.isFinite() && sessionSeconds > 0) (completed / sessionSeconds).toString() else "unavailable"
         "semantic_enabled=true semantic_completed=$completed semantic_candidate_frames=$candidateFrames " +
+            "semantic_geometry_invalidations=$geometryInvalidations " +
             "semantic_outcomes=${reasons.entries.joinToString(",") { "${it.key}:${it.value}" }.ifEmpty { "none" }} " +
             "semantic_accepted_per_session_second=$fps not_camera_fps=true " +
             percentiles("semantic_receipt_to_result", timings) + " " + percentiles("semantic_gl_capture", captureMs) + " " +

@@ -1,5 +1,15 @@
 # Architecture
 
+## 0.9.34 diagnostic observability follow-up
+
+Pure SemanticOverlayStats separates accepted inference from main-thread publish
+and distinct fresh coloured Canvas submissions; terminalstop/receiptage/identity
+gates and bounded first-draw percentiles. It does not prove compositor/human
+visibility. SemanticGroundReading.reason names the existing rejection branch,
+with unchanged statuses/thresholds/admission/unknown64. Same existing camera/
+model/runtime/nav isolation. Actual0.9.33 case and acceptance limits:
+PHONE_SEMANTIC_0933_2026-10-20.md; SEMANTIC_DISPLAY_DIAGNOSTICS_2026-10-20.md.
+
 ## 0.9.32 opt-in semantic/raw-depth diagnostic —2026-10-20
 
 0.9.33 follow-up derives CPU→view quarter-turns from SDK axes before worker

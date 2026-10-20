@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-10-20 — Observe missing colours/rejection, do not hide uncertainty
+
+0.9.33 actual13fresh/0stale, owner uprightpreviewyes but coloursnotseen. Treat
+inference≠UIpublish≠Canvas≠humanvisibility. Add bounded Canvas/first-draw metrics
+and named existing ground reject branches0.9.34; no perception/nav thresholds,
+1Hz/250ms, model or permission change. Count actual known-current paint commands
+separately if freshness expires midpaint; queue empty redraw rather than keep
+stale masks. Primary Androiddisplaylist contract does not prove explicit Canvas
+erase was missing; did not add broadCanvas.clear. Added realclockrollbackRED/
+guard. Fullreview: CURSOR_DISPLAY_REVIEW_2026-10-20.md. Physicalnewcandidate pending.
+
 ## 2026-10-20 — One camera and diagnostic geometry before guidance fusion
 
 After real0.9.32 test, keep its failure/latency evidence.0.9.33 restores upright

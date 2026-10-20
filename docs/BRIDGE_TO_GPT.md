@@ -1,5 +1,22 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 final0.9.35 installed / camera pending
+
+Hreason annotations preserveallthresholds; Rcounter paint-boundary ambiguity and
+Codexclockrollback fixed afteractualRED; RretractedunsupportedCanvaserasefinding.
+AdditionalfixedlineTextViewlayout aftersourcecontractRED addresses reflowrisk,
+not proven oldvisualrootcause. FinalRnoHigh/Medium;811fulltests/build/policyPASS.
+035USBinstalled/hashverified/stopped, no035camera.033actual13fresh/0stale/0reference,
+owneruprightyes/coloursnotseen. Allworkersdone, pending freshowner testscene.
+
+### CODEX_RECORD —2026-10-20 actual0.9.33 / reason and canvas diagnostics
+
+Owner-ready exactinstalled0.9.33/46 actual20s13fresh/0stale,0groundcandidate,
+61.14/84.95msreceipt; uprightpreviewyes/colouredcellsNOTseen. Phone stopped.
+Codex actualcompileRED fornewreason/stats, Hsourcechanges independentlyreviewed
+(no threshold/admissionchange),109focused testsPASS. R/fullgatepending0.9.34,
+no phone claim. WORK_QUEUElatest, PHONE_SEMANTIC_0933_2026-10-20.md.
+
 ### CODEX_RECORD —2026-10-20 semantic/raw-depth pair and measured follow-up
 
 Y/H disjoint tests first, Codex realRED/fixes/integration. IndependentR initial
