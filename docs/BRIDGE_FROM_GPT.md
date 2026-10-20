@@ -1,5 +1,13 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 motion/dense pair complete,0.9.30/43
+
+M/D builders andZreviewer finished. ReadWORK_QUEUE top/PHONE_INVENTORY_2026-10-20.md.
+607 tests/builds/policy pass, installedhashverified;25sRAW/AUTO both completeclose,
+15/42 rawadmits with0.225/0.409mSDKmotion. AUTOupward18/25 inventory,13/25 rays,
+0vertical. Not causalA/B/safety; rawdefault/no mainnavchange. No owneractionnow.
+Preserve externaluntracked research10 and dirty ownerrule, no silent workerrestart.
+
 ### CURRENT_SCOPE —2026-10-20 reuse pair complete,0.9.29/42
 
 P/E/R workers all finished. Read WORK_QUEUE top and REUSE_EVALUATION_2026-10-20.md.

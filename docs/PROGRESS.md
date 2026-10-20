@@ -1,5 +1,19 @@
 # Progress Log
 
+## 2026-10-20 — Reconnected Redmi and motion/dense diagnostic pair,0.9.30/43
+
+Two actual0.9.29 probes completed NO_DEPTH+CLOSED,449 decoded all-zero pairs.
+Z source audit found no matching reproduced decoder/config bug. M/D disjoint
+tests-first tasks, Codex missing-helper RED then54 focusedGREEN; added finite
+1e200 regression RED, fixed withhypot;607 full tests/builds/policy pass. Final
+polish independently reviewed and gate rerun. Installed/hash verified0.9.30.
+After recurring USB loss and owner reconnect, actual25s RAW/AUTO COMPLETE+CLOSED:
+15/42 raw admits; SDK motion0.225/0.409m, not controlled causalA/B. AUTO189 dense
+maps/83.07% nonzero observed, NOconfidence/admission; upward inventory18/25 and
+ray13/25,vertical0. Invalid-mode smoke fails beforecamera. App stopped, Redmi
+online, all workers done. Source/privacy/nav unchanged outside debugdiagnostics;
+one hostADB restart didnot establish durableUSBfix. PHONE_INVENTORY_2026-10-20.md.
+
 ## 2026-10-20 — Reuse research, plane inventory and failure-focused evaluation,0.9.29/42
 
 Task list preceded bounded Cursor P/E tests-first work and independent R review.

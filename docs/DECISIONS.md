@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-10-20 — Measure motion and compare SDK depth without promoting smoothed pixels
+
+Two tracked-but-empty phone runs didnot justify weakerconfidence ornewmodel.
+ReuseCamera.pose scalar displacement and existing16bit decoder for opt-in
+AUTOMATIC depth-only counts. Support/appliedconfig checked, raw default/proof/
+confidence128 remain. Dense has no confidence/admission/navigation authority.
+ActualRAW/AUTO admits15/42 and upwardhits inAUTO demonstrate runtime paths, not
+causal superiority: estimated movement/order differed,0vertical, no groundtruth.
+Keep default until measured held-outgeometry/energy.607 tests/builds/policy pass,
+installedhashverified. All limits/hostADBexception: PHONE_INVENTORY_2026-10-20.md.
+
 ## 2026-10-20 — Reuse what answers the measured failure before another model
 
 Add bounded diagnostic SDK plane inventory and preserve ADE150 risk classes in

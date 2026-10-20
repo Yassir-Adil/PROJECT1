@@ -77,6 +77,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private val handler = Handler(Looper.getMainLooper())
     private val sampleGate = RawDepthSampleGate()
     private val coverageStats = RawDepthCoverageStats()
+    private val motionStats = CameraMotionStats()
     private val cameraBackground = DiagnosticCameraBackground()
 
     private lateinit var surfaceView: GLSurfaceView
@@ -100,6 +101,13 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var hardwarePaused = false
     private var cameraPreviewEnabled = true
     private var surfaceProbingEnabled = true
+    private var diagnosticDepthMode = Config.DepthMode.RAW_DEPTH_ONLY
+    private var denseSamples = 0
+    private var denseSampledPixels = 0L
+    private var denseValidPixels = 0L
+    private var denseNotYetAvailable = 0
+    private var denseInvalid = 0
+    private val denseProcessingMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
     private var lastSurfaceProbeElapsedNs = 0L
     private var backgroundDraws = 0
     private var surfaceProbeSamples = 0
@@ -143,6 +151,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             stopReason = "restored_activity"
             stopping.set(true)
             sampleGate.stop()
+            motionStats.stop()
+            coverageStats.stop()
             Log.w(TAG, "RAW_DEPTH_START status=FAIL reason=restored_activity navigation=none")
             logResultOnce()
             finish()
@@ -152,6 +162,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, DEFAULT_DURATION_SECONDS)
         cameraPreviewEnabled = intent.getBooleanExtra(EXTRA_CAMERA_PREVIEW, true)
         surfaceProbingEnabled = intent.getBooleanExtra(EXTRA_SURFACE_PROBE, true)
+        diagnosticDepthMode = when (intent.getStringExtra(EXTRA_DEPTH_MODE)) {
+            null, "RAW_DEPTH_ONLY" -> Config.DepthMode.RAW_DEPTH_ONLY
+            "AUTOMATIC" -> Config.DepthMode.AUTOMATIC
+            else -> {
+                failClosedStartup("invalid_depth_mode")
+                return
+            }
+        }
         if (durationSeconds !in MIN_DURATION_SECONDS..MAX_DURATION_SECONDS) {
             failClosedStartup("invalid_duration")
             return
@@ -183,6 +201,10 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 failClosedStartup("raw_depth_unsupported")
                 return
             }
+            if (!created.isDepthModeSupported(diagnosticDepthMode)) {
+                failClosedStartup("requested_depth_mode_unsupported")
+                return
+            }
             configureSession(created)
         } catch (error: Exception) {
             Log.w(TAG, "session create failed", error)
@@ -196,6 +218,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         Log.i(
             TAG,
             "RAW_DEPTH_START duration_seconds=$durationSeconds " +
+                "requested_depth_mode=$diagnosticDepthMode " +
                 "camera_preview=$cameraPreviewEnabled surface_probe=$surfaceProbingEnabled " +
                 "depth_sample_admission_cap_hz=$SAMPLE_CAP_HZ " +
                 "confidence_threshold_diagnostic_only=128 " +
@@ -203,9 +226,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         )
         updateStatus(
             "Raw Depth diagnostic only / تشخيص العمق فقط. " +
-                "Stay mostly still; small hand motion may be needed for depth. " +
+                "Keep your feet still; slowly move the phone side to side toward lit textured objects. " +
                 "No walking instructions. Missing depth = unknown, not clear. " +
-                "ابقَ ثابتاً تقريباً؛ حركة يد بسيطة قد تلزم. لا تعليمات مشي. العمق الناقص = مجهول.",
+                "ثبّت قدميك وحرّك الهاتف جانبياً ببطء نحو أثاث مضاء؛ لا تكتفِ بتدويره. لا تمشِ. العمق الناقص = مجهول.",
         )
     }
 
@@ -300,7 +323,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
     private fun configureSession(target: Session) {
         val config = target.config
-        config.depthMode = Config.DepthMode.RAW_DEPTH_ONLY
+        config.depthMode = diagnosticDepthMode
         config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
         config.planeFindingMode = if (surfaceProbingEnabled) {
             Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
@@ -312,6 +335,17 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         // Task: autofocus when the API accepts it. ARCore exposes AUTO/FIXED on Config; AUTO is set here.
         config.focusMode = Config.FocusMode.AUTO
         target.configure(config)
+        val applied = target.config
+        check(applied.depthMode == diagnosticDepthMode) { "applied_depth_mode_mismatch" }
+        check(applied.planeFindingMode == config.planeFindingMode) { "applied_plane_mode_mismatch" }
+        check(applied.cloudAnchorMode == Config.CloudAnchorMode.DISABLED &&
+            applied.geospatialMode == Config.GeospatialMode.DISABLED) { "unexpected_cloud_config" }
+        val cameraConfig = target.cameraConfig
+        Log.i(TAG, "RAW_DEPTH_CONFIG requested_mode=$diagnosticDepthMode actual_mode=${applied.depthMode} " +
+            "planes=${applied.planeFindingMode} focus=${applied.focusMode} update=${applied.updateMode} " +
+            "facing=${cameraConfig.facingDirection} image_size=${cameraConfig.imageSize} " +
+            "texture_size=${cameraConfig.textureSize} cloud=${applied.cloudAnchorMode} " +
+            "geospatial=${applied.geospatialMode} navigation=none")
     }
 
     override fun onResume() {
@@ -485,6 +519,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             "tracking_downward=${inventory.trackingDownward} paused=${inventory.paused} " +
             "stopped=${inventory.stopped} subsumed=${inventory.subsumed} unknown_kind=${inventory.unknownKind} " +
             "scope=session_known_not_visibility semantics=orientation_only navigation=none")
+        val motion = motionStats.snapshot()
+        Log.i(TAG, "CAMERA_MOTION tracked_samples=${motion.trackedSamples} segments=${motion.trackingSegments} " +
+            "max_segment_displacement_m=${motion.maxSegmentDisplacementMeters ?: "unavailable"} " +
+            "capacity_reached=${motion.capacityReached} source=sdk_pose_only physical_accuracy=unverified " +
+            "parallax_readiness=not_inferred navigation=none no_coordinates_logged=true")
         Log.i(TAG, "SURFACE_SAMPLE frame_ts_ns=${frame.timestamp} viewport=${viewportWidth}x$viewportHeight " +
             "$logReadings processing_ms=${format(latencyMs)} coordinate_space=VIEW_PIXELS " +
             "distance_kind=sdk_hit_ray_m semantics=orientation_only no_floor_or_wall_confirmation=true " +
@@ -528,6 +567,12 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
         }
         if (!isNewDistinctFrame) return
+        if (tracking) {
+            val pose = frame.camera.pose
+            motionStats.record(cameraTimestampNs, true, pose.tx().toDouble(), pose.ty().toDouble(), pose.tz().toDouble())
+        } else {
+            motionStats.record(cameraTimestampNs, false, 0.0, 0.0, 0.0)
+        }
         maybeSampleSurfaces(frame)
         // Do not acquire depth while not TRACKING (startup NotTracking must not become fatal).
         if (!tracking) {
@@ -570,6 +615,41 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             Log.e(TAG, "depth acquire/process failed", error)
             runOnUiThread {
                 requestStop("depth_process_${error.javaClass.simpleName}", failed = true)
+            }
+        }
+        if (!stopping.get() && diagnosticDepthMode == Config.DepthMode.AUTOMATIC) {
+            sampleDenseDepth(frame)
+        }
+    }
+
+    /** Smoothed SDK depth has NO confidence and never enters raw admission or navigation. */
+    private fun sampleDenseDepth(frame: Frame) {
+        synchronized(statsLock) { if (denseSamples >= MAX_DENSE_SAMPLES) return }
+        val started = SystemClock.elapsedRealtimeNanos()
+        try {
+            frame.acquireDepthImage16Bits().use { image ->
+                RawDepthImageFormat.requireRaw16BitDepth(image.format)
+                val plane = image.planes[0]
+                val summary = RawDepthFrameStats.summarizeDepthOnly(
+                    image.width, image.height, plane.buffer, plane.rowStride, plane.pixelStride,
+                )
+                if (stopping.get()) return
+                synchronized(statsLock) {
+                    if (denseSamples >= MAX_DENSE_SAMPLES) return
+                    denseSamples++
+                    denseSampledPixels += summary.sampledPixels.toLong()
+                    denseValidPixels += summary.validDepthPixels.toLong()
+                    if (denseProcessingMs.size >= MAX_LATENCY_SAMPLES) denseProcessingMs.removeAt(0)
+                    denseProcessingMs += (SystemClock.elapsedRealtimeNanos() - started) / NS_PER_MS
+                }
+            }
+        } catch (_: NotYetAvailableException) {
+            synchronized(statsLock) { denseNotYetAvailable++ }
+        } catch (error: Exception) {
+            synchronized(statsLock) { denseInvalid++ }
+            Log.e(TAG, "dense depth acquire/process failed", error)
+            runOnUiThread {
+                requestStop("dense_process_${error.javaClass.simpleName}", failed = true)
             }
         }
     }
@@ -642,6 +722,17 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         if (summary.validDepthPixels <= 0 || summary.confidentPixels <= 0) {
             synchronized(statsLock) {
                 countRejection("no_valid_confident_pixels")
+            }
+            val now = SystemClock.elapsedRealtimeNanos()
+            if (!stopping.get() && now - lastSampleLogElapsedNs >= UI_LOG_MIN_INTERVAL_NS) {
+                lastSampleLogElapsedNs = now
+                Log.i(TAG, "RAW_DEPTH_EMPTY frame_ts_ns=$cameraTimestampNs depth_ts_ns=$depthTs " +
+                    "confidence_ts_ns=$confidenceTs sampled_pixels=${summary.sampledPixels} " +
+                    "valid_pixels=${summary.validDepthPixels} confident_pixels=${summary.confidentPixels} " +
+                    "width=${depth.width} height=${depth.height} depth_row_stride=${depthPlane.rowStride} " +
+                    "depth_pixel_stride=${depthPlane.pixelStride} confidence_row_stride=${confidencePlane.rowStride} " +
+                    "confidence_pixel_stride=${confidencePlane.pixelStride} mode=$diagnosticDepthMode " +
+                    "sensor_age=unknown navigation=none no_image_storage=true")
             }
             maybeUpdateUi(SystemClock.elapsedRealtimeNanos())
             return
@@ -791,6 +882,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         stopReason = reason
         sampleGate.stop()
         coverageStats.stop()
+        motionStats.stop()
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Drain GL first (never hold frameInUseLock while waiting on GL), then pause session, then result.
@@ -893,6 +985,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             valid = latestValidFraction
             confident = latestConfidentFraction
             surfaceLine = "camera_preview=$cameraPreviewEnabled background_draws=$backgroundDraws " +
+                "depth_mode=$diagnosticDepthMode dense_samples=$denseSamples dense_sampled_pixels=$denseSampledPixels " +
+                "dense_enabled=${diagnosticDepthMode == Config.DepthMode.AUTOMATIC} " +
+                "dense_valid_pixels=$denseValidPixels dense_not_yet_available=$denseNotYetAvailable dense_invalid=$denseInvalid " +
+                "dense_confidence=unavailable dense_counts_include_reprojection=true dense_navigation=none " +
+                percentiles("dense_processing", denseProcessingMs) + " " +
                 "surface_probe=$surfaceProbingEnabled surface_probe_samples=$surfaceProbeSamples " +
                 "surface_samples_with_vertical=$verticalSurfaceSamples surface_samples_with_upward=$upwardSurfaceSamples " +
                 "inventory_samples_with_vertical=$inventoryVerticalSamples inventory_samples_with_upward=$inventoryUpwardSamples " +
@@ -907,6 +1004,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
         }
         val observed = coverageStats.snapshot()
+        val motion = motionStats.snapshot()
         Log.i(
             TAG,
             "RAW_DEPTH_RESULT status=$status reason=$stopReason " +
@@ -922,6 +1020,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 "observed_confident_fraction=${fraction(observed.confidentFraction)} " +
                 "observed_capacity_reached=${observed.capacityReached} observed_counts_include_reprojection=true " +
                 "$surfaceLine surface_semantics=orientation_only no_floor_or_wall_confirmation=true " +
+                "motion_tracked_samples=${motion.trackedSamples} motion_segments=${motion.trackingSegments} " +
+                "motion_max_segment_displacement_m=${motion.maxSegmentDisplacementMeters ?: "unavailable"} " +
+                "motion_source=sdk_pose_only motion_physical_accuracy=unverified motion_parallax_readiness=not_inferred " +
                 "median_depth_mm=${median ?: "null"} p90_depth_mm=${p90 ?: "null"} " +
                 "distances_label=NOT_calibrated $latencyLine " +
                 "elapsed_s=${format(elapsedS)} duration_seconds=$durationSeconds " +
@@ -956,6 +1057,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             stopping.set(true)
             sampleGate.stop()
             coverageStats.stop()
+            motionStats.stop()
             pauseHardwareOnce()
             logResultOnce()
         }
@@ -976,7 +1078,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     }
 
     private fun updateStatus(text: String) {
-        if (::statusView.isInitialized) statusView.text = text
+        if (::statusView.isInitialized) statusView.text = "$diagnosticDepthMode — تشخيص فقط\n$text"
     }
 
     private fun percentiles(name: String, values: List<Double>): String {
@@ -999,6 +1101,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         const val EXTRA_DURATION_SECONDS = "triguide.diagnostic.duration_seconds"
         const val EXTRA_CAMERA_PREVIEW = "triguide.diagnostic.camera_preview"
         const val EXTRA_SURFACE_PROBE = "triguide.diagnostic.surface_probe"
+        const val EXTRA_DEPTH_MODE = "triguide.diagnostic.depth_mode"
 
         private const val TAG = "TriGuideRawDepth"
         private const val DEFAULT_DURATION_SECONDS = 20
@@ -1008,6 +1111,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         private const val SAMPLE_MIN_INTERVAL_NS = 100_000_000L
         private const val UI_LOG_MIN_INTERVAL_NS = 1_000_000_000L
         private const val MAX_LATENCY_SAMPLES = 600
+        private const val MAX_DENSE_SAMPLES = 600
         private const val CONFIDENCE_THRESHOLD_DIAGNOSTIC = 128
         private const val NS_PER_MS = 1_000_000.0
     }

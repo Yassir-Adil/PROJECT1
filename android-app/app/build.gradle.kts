@@ -12,8 +12,8 @@ android {
         applicationId = "com.triguide.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 42
-        versionName = "0.9.29"
+        versionCode = 43
+        versionName = "0.9.30"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

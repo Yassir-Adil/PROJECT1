@@ -620,6 +620,368 @@ class RawDepthFrameStatsTest {
         assertEquals(4, confidence.position())
     }
 
+    // -------------------------------------------------------------------------
+    // Depth-only dense diagnostic: DepthOnlySummary / summarizeDepthOnly
+    // No confidence, median, freshness, admission, floor/clear/turn fields.
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun depthOnlyAllZeroYieldsZeroValidPixels() {
+        val depth = depthBuffer(2, 2, intArrayOf(0, 0, 0, 0), pixelStride = 2, rowStride = 4)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 2,
+            depth = depth,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(4, summary.sampledPixels)
+        assertEquals(0, summary.validDepthPixels)
+    }
+
+    @Test
+    fun depthOnlyNonzeroCountsAreConfidenceIndependent() {
+        // Same depths that pair-summarize would treat differently by confidence;
+        // depth-only must count every nonzero UINT16 regardless of any confidence plane.
+        val depths = intArrayOf(10, 0, 30, 40, 50, 60, 70, 80, 90, 100)
+        val depth = depthBuffer(5, 2, depths, pixelStride = 2, rowStride = 10)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 5,
+            height = 2,
+            depth = depth,
+            depthRowStride = 10,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(10, summary.sampledPixels)
+        assertEquals(9, summary.validDepthPixels)
+    }
+
+    @Test
+    fun depthOnlyCountsFullUint16Including65535WithoutThirteenBitMask() {
+        val depths = intArrayOf(0xFFFF, 0x2000, 0, 0x1FFF)
+        val depth = depthBuffer(4, 1, depths, pixelStride = 2, rowStride = 8)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 4,
+            height = 1,
+            depth = depth,
+            depthRowStride = 8,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(4, summary.sampledPixels)
+        assertEquals(3, summary.validDepthPixels)
+    }
+
+    @Test
+    fun depthOnlyLittleEndianIndependentOfCallerByteOrder() {
+        val depth = ByteBuffer.allocate(4)
+        // Explicit LE payload: 1000 mm (0x03E8), 2000 mm (0x07D0)
+        depth.put(0, 0xE8.toByte())
+        depth.put(1, 0x03.toByte())
+        depth.put(2, 0xD0.toByte())
+        depth.put(3, 0x07.toByte())
+        depth.order(ByteOrder.BIG_ENDIAN)
+        depth.position(0)
+        depth.limit(4)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 1,
+            depth = depth,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(2, summary.sampledPixels)
+        assertEquals(2, summary.validDepthPixels)
+        assertEquals(ByteOrder.BIG_ENDIAN, depth.order())
+        assertEquals(0, depth.position())
+        assertEquals(4, depth.limit())
+    }
+
+    @Test
+    fun depthOnlyPaddedRowsAndWidePixelStridesSkipPadding() {
+        val depth = ByteBuffer.allocate(24).order(ByteOrder.LITTLE_ENDIAN)
+        depth.putShort(0, 100)
+        depth.putShort(4, 200)
+        depth.putShort(12, 300)
+        depth.putShort(16, 0) // zero remains invalid
+        // Poison padding so a stride bug would invent nonzero valid counts.
+        depth.putShort(2, 9_999.toShort())
+        depth.putShort(6, 9_999.toShort())
+        depth.putShort(8, 9_999.toShort())
+        depth.putShort(10, 9_999.toShort())
+        depth.putShort(14, 9_999.toShort())
+        depth.putShort(18, 9_999.toShort())
+        depth.putShort(20, 9_999.toShort())
+        depth.putShort(22, 9_999.toShort())
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 2,
+            depth = depth,
+            depthRowStride = 12,
+            depthPixelStride = 4,
+        )
+
+        assertEquals(4, summary.sampledPixels)
+        assertEquals(3, summary.validDepthPixels)
+    }
+
+    @Test
+    fun depthOnlyNonzeroPositionAndLimitPreservedOnSuccess() {
+        val depthBacking = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN)
+        depthBacking.position(4)
+        depthBacking.putShort(1_500.toShort())
+        depthBacking.putShort(0.toShort())
+        depthBacking.position(4)
+        depthBacking.limit(8)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 1,
+            depth = depthBacking,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(2, summary.sampledPixels)
+        assertEquals(1, summary.validDepthPixels)
+        assertEquals(4, depthBacking.position())
+        assertEquals(8, depthBacking.limit())
+        assertEquals(ByteOrder.LITTLE_ENDIAN, depthBacking.order())
+    }
+
+    @Test
+    fun depthOnlyNonzeroPositionAndLimitPreservedOnFailure() {
+        val depth = ByteBuffer.allocate(10).order(ByteOrder.LITTLE_ENDIAN)
+        depth.position(6)
+        depth.putShort(100)
+        depth.putShort(200)
+        depth.position(7) // insufficient remaining for width=2
+        depth.limit(10)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 2,
+                height = 1,
+                depth = depth,
+                depthRowStride = 4,
+                depthPixelStride = 2,
+            )
+        }
+        assertEquals(7, depth.position())
+        assertEquals(10, depth.limit())
+        assertEquals(ByteOrder.LITTLE_ENDIAN, depth.order())
+    }
+
+    @Test
+    fun depthOnlyInvalidDimensionsAreRejected() {
+        val depth = depthBuffer(1, 1, intArrayOf(100), 2, 2)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(0, 1, depth, 2, 2)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(1, 0, depth, 2, 2)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(-1, 1, depth, 2, 2)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(1, -1, depth, 2, 2)
+        }
+    }
+
+    @Test
+    fun depthOnlyPixelCountAboveCapIsRejectedWithoutOverflow() {
+        val depth = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 1_024,
+                height = 1_025,
+                depth = depth,
+                depthRowStride = 2,
+                depthPixelStride = 2,
+            )
+        }
+    }
+
+    @Test
+    fun depthOnlyExtremeDimensionsThatOverflowIntProductAreRejected() {
+        val depth = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = Int.MAX_VALUE,
+                height = 2,
+                depth = depth,
+                depthRowStride = 2,
+                depthPixelStride = 2,
+            )
+        }
+    }
+
+    @Test
+    fun depthOnlyOverlappingStridesAreRejected() {
+        val depth = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 2,
+                height = 1,
+                depth = depth,
+                depthRowStride = 4,
+                depthPixelStride = 1,
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 2,
+                height = 2,
+                depth = depth,
+                depthRowStride = 3,
+                depthPixelStride = 2,
+            )
+        }
+    }
+
+    @Test
+    fun depthOnlyTruncatedLastRowIsRejected() {
+        val depth = ByteBuffer.allocate(13).order(ByteOrder.LITTLE_ENDIAN)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 3,
+                height = 2,
+                depth = depth,
+                depthRowStride = 8,
+                depthPixelStride = 2,
+            )
+        }
+    }
+
+    @Test
+    fun depthOnlyLastRowWithoutTrailingPadIsAccepted() {
+        val depth = ByteBuffer.allocate(14).order(ByteOrder.LITTLE_ENDIAN)
+        depth.putShort(0, 10)
+        depth.putShort(2, 20)
+        depth.putShort(4, 0)
+        depth.putShort(8, 40)
+        depth.putShort(10, 50)
+        depth.putShort(12, 60)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 3,
+            height = 2,
+            depth = depth,
+            depthRowStride = 8,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(6, summary.sampledPixels)
+        assertEquals(5, summary.validDepthPixels)
+    }
+
+    @Test
+    fun depthOnlyReadOnlyAndDirectBuffersSupportedWithoutMutation() {
+        val depthBytes = byteArrayOf(0xE8.toByte(), 0x03, 0x00, 0x00) // 1000, 0 LE
+        val depthDirect = ByteBuffer.allocateDirect(4).order(ByteOrder.LITTLE_ENDIAN).put(depthBytes)
+        depthDirect.clear()
+        val depth = depthDirect.asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN)
+        val before = snapshot(depth)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 1,
+            depth = depth,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(2, summary.sampledPixels)
+        assertEquals(1, summary.validDepthPixels)
+        assertUnchanged(before, depth)
+        assertEquals(ByteOrder.LITTLE_ENDIAN, depth.order())
+    }
+
+    @Test
+    fun depthOnlyDoesNotMutateCallerBufferBytesOrOrder() {
+        val depth = ByteBuffer.allocate(8)
+        depth.order(ByteOrder.LITTLE_ENDIAN)
+        depth.putShort(0, 100)
+        depth.putShort(2, 0)
+        depth.putShort(4, 300)
+        depth.putShort(6, 400)
+        depth.order(ByteOrder.BIG_ENDIAN)
+        depth.position(0)
+        depth.limit(8)
+
+        val bytesBefore = ByteArray(8).also { depth.duplicate().order(ByteOrder.LITTLE_ENDIAN).get(it) }
+        val pos = depth.position()
+        val limit = depth.limit()
+        val order = depth.order()
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 2,
+            depth = depth,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+
+        assertEquals(4, summary.sampledPixels)
+        assertEquals(3, summary.validDepthPixels)
+        assertEquals(pos, depth.position())
+        assertEquals(limit, depth.limit())
+        assertEquals(order, depth.order())
+        val bytesAfter = ByteArray(8).also {
+            depth.duplicate().apply { clear(); order(ByteOrder.LITTLE_ENDIAN) }.get(it)
+        }
+        assertArrayEquals(bytesBefore, bytesAfter)
+    }
+
+    @Test
+    fun depthOnlyRemainingBytesAreMeasuredFromCurrentPosition() {
+        val depth = ByteBuffer.allocate(10).order(ByteOrder.LITTLE_ENDIAN)
+        depth.position(6)
+        depth.putShort(100)
+        depth.putShort(200)
+        depth.position(6)
+
+        val summary = RawDepthFrameStats.summarizeDepthOnly(
+            width = 2,
+            height = 1,
+            depth = depth,
+            depthRowStride = 4,
+            depthPixelStride = 2,
+        )
+        assertEquals(2, summary.sampledPixels)
+        assertEquals(2, summary.validDepthPixels)
+        assertEquals(6, depth.position())
+    }
+
+    @Test
+    fun depthOnlyNegativeRowStrideIsRejected() {
+        val depth = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            RawDepthFrameStats.summarizeDepthOnly(
+                width = 1,
+                height = 2,
+                depth = depth,
+                depthRowStride = -1,
+                depthPixelStride = 2,
+            )
+        }
+    }
+
     private fun summarize(
         width: Int,
         height: Int,

@@ -16,6 +16,15 @@ internal data class RawDepthSummary(
 )
 
 /**
+ * Diagnostic counts for one depth plane without confidence.
+ * CPU-only; does not own frames, claim walkability, or admit samples.
+ */
+internal data class DepthOnlySummary(
+    val sampledPixels: Int,
+    val validDepthPixels: Int,
+)
+
+/**
  * Decodes unsigned 16-bit little-endian depth (mm) and unsigned confidence 0..255
  * from caller-owned [ByteBuffer]s without mutating their state.
  */
@@ -107,6 +116,58 @@ internal object RawDepthFrameStats {
             confidentPixels = confidentPixels,
             medianDepthMm = nearestRank(confidentDepths, confidentPixels, 0.5),
             p90DepthMm = nearestRank(confidentDepths, confidentPixels, 0.9),
+        )
+    }
+
+    /**
+     * Depth-plane counts only: nonzero UINT16 LE millimetres are valid.
+     * No confidence plane, percentiles, admission, or floor/clear semantics.
+     * Does not mutate [depth] position, limit, order, or bytes.
+     */
+    fun summarizeDepthOnly(
+        width: Int,
+        height: Int,
+        depth: ByteBuffer,
+        depthRowStride: Int,
+        depthPixelStride: Int,
+    ): DepthOnlySummary {
+        if (width <= 0 || height <= 0) {
+            throw IllegalArgumentException("width and height must be positive")
+        }
+
+        val pixelCountLong = width.toLong() * height.toLong()
+        if (pixelCountLong > MAX_PIXELS) {
+            throw IllegalArgumentException("width*height exceeds $MAX_PIXELS")
+        }
+        val sampledPixels = pixelCountLong.toInt()
+
+        validatePlane(
+            width = width,
+            height = height,
+            buffer = depth,
+            rowStride = depthRowStride,
+            pixelStride = depthPixelStride,
+            elementSize = DEPTH_BYTES,
+            label = "depth",
+        )
+
+        val depthBase = depth.position()
+        var validDepthPixels = 0
+
+        for (y in 0 until height) {
+            val depthRow = depthBase.toLong() + y.toLong() * depthRowStride
+            for (x in 0 until width) {
+                val depthIndex = (depthRow + x.toLong() * depthPixelStride).toInt()
+                val depthMm = readUint16Le(depth, depthIndex)
+                if (depthMm != 0) {
+                    validDepthPixels++
+                }
+            }
+        }
+
+        return DepthOnlySummary(
+            sampledPixels = sampledPixels,
+            validDepthPixels = validDepthPixels,
         )
     }
 

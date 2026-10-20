@@ -1,5 +1,14 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 motion/dense,0.9.30/43 installed
+
+M/D tests first; Codex compileRED,54focusedGREEN thenoverflowRED/hypotfix.
+Final607-test/build/policygatePASS andZfinalsourcereviewaccepted. Actual25sRAW/
+AUTO bothcompleteclose:15/42 rawadmits; AUTO189densedecodes,18/25 upwardinventory,
+13/25 ray,0vertical. Differentposemovement/order meansno causalsuperiority.
+Default/rawgate/mainnav unchanged, no imagesuploaded. Appstopped/Redmionline,
+allworkersfinished. Evidence: PHONE_INVENTORY_2026-10-20.md.
+
 ### CODEX_RECORD —2026-10-20 reuse/inventory/evaluation,0.9.29/42
 
 P/E tests/source and R review complete, no active worker. Real RED before source;

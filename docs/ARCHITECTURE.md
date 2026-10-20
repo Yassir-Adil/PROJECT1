@@ -1,5 +1,16 @@
 # Architecture
 
+## 0.9.30 debug pose/config and opt-in dense comparison —2026-10-20
+
+Single ARCore camera/GLowner remains. Distinct tracked frames feed bounded pure
+CameraMotionStats; reset origin on trackingloss, SDKdelta only, no rawcoordinates
+logged. Appliedconfig readback enforced depth/planes/cloud/geospatial invariants.
+RAW_DEPTH_ONLY default. OptionalAUTOMATIC captures same-frame smoothedD_16 at
+existing≤10Hz slot, closes image, reusesdepth-only validator/count decoder;600
+scalar samples and boundedlatency. Dense never goes through rawproof/confidence
+gate/acceptedcount/main guidance. MainCameraX unchanged, no concurrentcameraowner,
+new model/dependency/permission. PHONE_INVENTORY_2026-10-20.md records real results.
+
 ## 0.9.29 diagnostic inventory and offline ADE150 evidence —2026-10-20
 
 ARCore GL/Frame owner unchanged.1Hz inventory maps up to256 session-known Plane

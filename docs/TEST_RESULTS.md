@@ -2,6 +2,17 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.30 engineering PASS; raw/AUTO observed, wall accuracy UNVERIFIED
+
+607 full tests (551+10+19+27),0 failures/errors/skips; both builds/policy pass,
+Lint0errors55/34warnings.55 focused cases included; real helper compile RED and
+overflow regression RED before fixes. Installed exactSHA; invalidmodeFAIL0frames.
+Owner-ready25s RAW/AUTO both COMPLETE+CLOSED:15/42 raw admits; AUTO189 dense
+maps,0invalid,18/25 upward inventory,13/25 upwardray,0vertical. Pose displacement
+different0.225/0.409m; no causal mode/accuracy/walkability claim. Two preceding
+0.9.29 runs were genuine NO_DEPTH, not retrospectively relabelled. No owner action
+remaining; detailed snapshots/hashes/USBlimits: PHONE_INVENTORY_2026-10-20.md.
+
 ## 2026-10-20 —0.9.29 inventory/evaluation:572-test gate PASS; phone runtime NOT VERIFIED
 
 Separate missing-helper RED before implementation.16 focused inventory JVM and

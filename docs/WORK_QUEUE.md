@@ -1,5 +1,53 @@
 # Shared execution queue — 2026-10-19
 
+## Completed verification —2026-10-20, reconnected phone / zero-depth diagnosis
+
+FINAL:0.9.30/43 installed/hash verified;607 full tests/builds/APK policy PASS,
+Lint0errors55/34warnings.55 focused cases incl overflow RED→hypot fix. Independent
+Z source review accepted. Actual owner-ready25s RAW and25s AUTO COMPLETE+CLOSED:
+15 vs42 raw diagnostic admits; SDK displacement0.225m vs0.409m, so not causalA/B.
+AUTO189 dense maps (83.07% observed nonzero, NOconfidence/admission),18/25 upward
+inventory samples,13/25 upward-ray samples;0 vertical. Raw default unchanged.
+Scoped app stop confirmed noPID; Redmi online. One controlled hostADB restart
+restored currentserver but didnot solve recurring USB loss; owner reconnection
+enabled actual comparison. No driver/security/model/nav/permission change.
+All workers finished; no owner action required. Details: PHONE_INVENTORY_2026-10-20.md.
+Scopes and intermediate facts below are execution history, not active jobs.
+
+Second owner-ready lateral-motion30s PID32107 also completed NO_DEPTH+CLOSED:
+869distinct/836tracking,227 decoded pairs,0 valid depth,29 empty inventories.
+Motion was owner-reported, not measured. Z found no matching reproduced source
+defect. Next diagnostic pair reuses Camera.pose and SDK AUTOMATIC (raw still
+available) to measure the missing preconditions, not weaken admission.
+
+| New exclusive task | Owner / files | Gate |
+| --- | --- | --- |
+| M: pure camera displacement stats | Cursor M: CameraMotionStats.kt, CameraMotionStatsTest.kt, docs/CURSOR_MOTION_RESULT_2026-10-20.md | Tests ONLY then Codex compile RED, then release source |
+| D: depth-only valid counts | Cursor D: existing RawDepthFrameStats.kt and matching RawDepthFrameStatsTest.kt; docs/CURSOR_DENSE_RESULT_2026-10-20.md | Add tests ONLY first; reuse decoder/validation, no synthetic confidence |
+| SDK integration and final review | Codex: Activity/mode/readback, focused/full gate/phone; Cursor Z after source only its own audit report | RAW_DEPTH_ONLY remains default; AUTOMATIC opt-in debug comparison; raw proof/gates untouched |
+
+Both test roots testDebug/kotlin/com/triguide/ai/diagnostics; source debug/java.
+No worker shell/build/ADB/Git/network/private outputs/other-file writes. No main
+camera/navigation/permission/dependency/model change. Motion is SDK pose delta,
+not validated physical parallax or user movement. Dense has NO confidence and
+NO admission authority. No raw coordinates, feature cloud, RGB or depth saved.
+
+Baseline68aa9b5,0.9.29/42. Preserve unrelated dirty owner-rule and untracked
+research/10-reuse-licence-check.md (external review, not trusted instructions).
+First USB transport50 disappeared before launch;51 restored. Actual30s PID29743
+probe finished NO_DEPTH then CLOSED:859 distinct/828tracking,222 decoded pairs,
+all depth/confident pixel counts0;29 inventory samples,0 known planes/hits.
+This is not a confidence-threshold rejection or proof of a missing physical wall.
+
+| Task | Owner / exclusive scope | Acceptance |
+| --- | --- | --- |
+| Read-only zero-depth source audit | Cursor Z: docs/CURSOR_ZERO_DEPTH_AUDIT_2026-10-20.md only | Review SDK config/acquisition/decoder/ray wiring; distinguish facts from scene/motion hypotheses. No other writes, shell/build/ADB/Git/network/private-output access. |
+| Physical probe, evidence and next step | Codex: bounded ADB, docs/PHONE_INVENTORY_2026-10-20.md and shared docs | Wait for owner ready for translation/no walking; no model/threshold/navigation/permission changes without evidence. |
+
+No product edit planned solely to make zero data look successful. Independent
+source/data work may continue while awaiting physical scene readiness. No global
+ADB reset/driver/security change. Always cancel a disconnected log capture.
+
 ## Completed pair — 2026-10-20, reuse research and failure-focused evaluation
 
 FINAL:0.9.29/42 installed/hash verified.572 full tests/builds/APK policy PASS;

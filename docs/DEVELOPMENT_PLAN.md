@@ -2,6 +2,18 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Current checkpoint —2026-10-20,0.9.30/43
+
+607-test full gate/builds/policy pass; installed/hash verified. Reconnected phone
+initially returned449 decoded zero maps over2×30s despite tracking. New bounded
+SDK-pose motion/config readback and opt-in AUTOMATIC depth-only comparison reuse
+existing ARCore/decoder. Actual25s RAW/AUTO completed+closed with15/42 raw admits,
+SDK displacement0.225/0.409m. AUTO189 dense maps,18/25 upward inventory and13/25
+ray samples;0 vertical. Different motion/order precludes causal mode comparison;
+RAW_DEPTH_ONLY remains default and no dense data enters guidance/admission.
+Next ground-reference/publicRGB-D gate, not another model/sensor by assumption.
+Evidence/USB recurrence/limits: PHONE_INVENTORY_2026-10-20.md. No owner action now.
+
 ## Current pair complete —2026-10-20,0.9.29/42
 
 Reused existing ARCore inventory API and ADE20K/LiteRT evaluation.572-test full

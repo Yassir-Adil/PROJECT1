@@ -1,5 +1,17 @@
 # Known Issues
 
+## 0.9.30/43 —2026-10-20
+
+Actual raw depth available in both debug modes; earlier zero-map cause not
+proved. RAW25s15 admits andAUTO25s42 admits with differentSDKmotion/order, no
+default switch. AUTO upward planes/rays observed, no vertical wall demonstrated.
+Ground reference/tabletop distinction, public calibratedRGB-D, step/rugheight,
+safe path and sustained thermal/realvoice/TalkBack remain unverified. Dense
+nonzero has no confidence and never admits/controls navigation.607 tests pass.
+USB intermittently losesADB while Windows device still present; one scopedhost
+restart restoredcurrentserver but recurrence requiredowner reconnect. No driver/
+security change or durablefixclaim. PHONE_INVENTORY_2026-10-20.md has evidence.
+
 ## 0.9.29/42 —2026-10-20
 
 Global session-known plane orientation inventory implemented; visibility/floor/
