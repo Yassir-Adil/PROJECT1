@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-10-20 — Replace an unsupported diagnostic clock rule with provenance
+
+After fresh official Frame/Image review and tests-first independent design
+review, remove debug exact depth/confidence equality and Frame-depth lag/future
+checks. They assumed comparable clocks without an established contract. Replace
+with structured current-Frame co-acquisition, active private proof, per-source
+advancing stamps and unchanged local250ms processing-age gate. No tolerance,
+confidence threshold change or production safety relaxation. Sensor age remains
+unknown; first admitted estimate is a baseline, not proof of physical freshness.
+Count observed decoded coverage separately from diagnostic admission, including
+zero/reprojected/rejected pairs, with bounded scalar state and missing≠zero.
+Reuse official ARCore acquisition and Kotlin resource management, no new model
+or dependency. Cursor P/C implement disjoint slices, R reviews, Codex executes
+RED/GREEN/integration/device/backup. Compiler caught Cursor's nested-private
+access defect; Codex corrected it without an exposed mint(timestamp) factory.
+See RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md for executed acceptance gates.
+
 ## 2026-10-20 — Diagnose timing without inventing clock compatibility
 
 After the owner corrected the view,0.9.25 acquired146 D_16/Y8 pairs with537/566

@@ -2,6 +2,18 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.27 pairing / coverage: engineering PASS, diagnostic phone run COMPLETE
+
+Missing-helper compile RED independently recorded before P/C implementation.
+First integration FAIL: Kotlin nested private access. Codex corrected structure;
+focused12 PairScope+23 Gate+13 Coverage=48 tests PASS, no failure/error.
+Full offline gate499 tests PASS (460+10+19+10), no failure/error/skip; both builds
+and APK policy pass, Lint0 errors55/34 warnings. Installed0.9.27/40 hash verified.
+Actual20.16s phone run:142 decoded pairs,9 diagnostic admits,113 empty-confidence
+and20 repeated-depth rejects; COMPLETE then CLOSED. Observed confidence0.411581%.
+No physical sensor-age, metric/height accuracy, wall/step or navigation safety pass.
+Exact hashes/results: RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md.
+
 ## 2026-10-20 —0.9.26/39 format regression and bounded diagnostic telemetry
 
 New physical RED:0.9.23 depth.format48 rejected by wrong guard after TRACKING.

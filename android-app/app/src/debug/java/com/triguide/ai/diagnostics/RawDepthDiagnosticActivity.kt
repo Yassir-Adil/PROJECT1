@@ -74,6 +74,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private val statsLock = Any()
     private val handler = Handler(Looper.getMainLooper())
     private val sampleGate = RawDepthSampleGate()
+    private val coverageStats = RawDepthCoverageStats()
 
     private lateinit var surfaceView: GLSurfaceView
     private lateinit var statusView: TextView
@@ -100,7 +101,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var trackingFrames = 0
     private var nonTrackingFrames = 0
     private var acceptedSamples = 0
-    private var newDepthAttempts = 0
+    private var acquiredPairAttempts = 0
     private var notYetAvailableCount = 0
     private var summarizeRejects = 0
     private var firstCameraTimestampNs: Long? = null
@@ -114,8 +115,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var firstConfidencePixelStride = 0
     private var latestMedianMm: Int? = null
     private var latestP90Mm: Int? = null
-    private var latestValidFraction = 0.0
-    private var latestConfidentFraction = 0.0
+    private var latestValidFraction: Double? = null
+    private var latestConfidentFraction: Double? = null
     private val gateRejections = sortedMapOf<String, Int>()
     private val receiptToSummaryMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
 
@@ -439,25 +440,22 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         lastSampleAdmissionElapsedNs = nowElapsed
         val receivedElapsedNs = nowElapsed
 
-        var depthImage: Image? = null
         try {
-            depthImage = frame.acquireRawDepthImage16Bits()
-            val depth = depthImage
-            var confidenceImage: Image? = null
-            try {
-                confidenceImage = frame.acquireRawDepthConfidenceImage()
-                val confidence = confidenceImage
+            // Both SDK calls use this unchanged Frame; no equality of image clocks
+            // is assumed. Scope owns cleanup even if acquisition/process/close fails.
+            RawDepthPairScope.withFrame(
+                frame = frame,
+                timestampOf = { it.timestamp },
+                acquireDepth = { it.acquireRawDepthImage16Bits() },
+                acquireConfidence = { it.acquireRawDepthConfidenceImage() },
+            ) { pair, depth, confidence ->
                 summarizeAndGate(
-                    cameraTimestampNs = cameraTimestampNs,
+                    pair = pair,
                     depth = depth,
                     confidence = confidence,
                     tracking = tracking,
                     receivedElapsedNs = receivedElapsedNs,
                 )
-            } catch (_: NotYetAvailableException) {
-                synchronized(statsLock) { notYetAvailableCount++ }
-            } finally {
-                confidenceImage?.close()
             }
         } catch (_: NotYetAvailableException) {
             synchronized(statsLock) { notYetAvailableCount++ }
@@ -466,19 +464,18 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             runOnUiThread {
                 requestStop("depth_process_${error.javaClass.simpleName}", failed = true)
             }
-        } finally {
-            depthImage?.close()
         }
     }
 
     private fun summarizeAndGate(
-        cameraTimestampNs: Long,
+        pair: RawDepthPairProof,
         depth: Image,
         confidence: Image,
         tracking: Boolean,
         receivedElapsedNs: Long,
     ) {
         if (stopping.get()) return
+        val cameraTimestampNs = pair.frameTimestampNs
         RawDepthImageFormat.requireRaw16BitDepth(depth.format)
         if (confidence.format != ImageFormat.Y8) {
             throw IllegalStateException("unexpected_confidence_format_${confidence.format}")
@@ -495,7 +492,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val depthTs = depth.timestamp
         val confidenceTs = confidence.timestamp
         synchronized(statsLock) {
-            newDepthAttempts++
+            acquiredPairAttempts++
             if (firstDepthTimestampNs == null) {
                 firstDepthTimestampNs = depthTs
                 firstConfidenceTimestampNs = confidenceTs
@@ -529,18 +526,24 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             return
         }
 
+        // Observed coverage includes decoded zero/rejected/reprojected pairs,
+        // not just admitted samples. It is not unique geometry or walkability.
+        if (stopping.get()) return
+        coverageStats.record(summary)
+
         // Empty depth/confidence must not become accepted or COMPLETE.
         if (summary.validDepthPixels <= 0 || summary.confidentPixels <= 0) {
             synchronized(statsLock) {
                 countRejection("no_valid_confident_pixels")
             }
+            maybeUpdateUi(SystemClock.elapsedRealtimeNanos())
             return
         }
 
         val completedElapsedNs = SystemClock.elapsedRealtimeNanos()
         if (stopping.get()) return
         val gateResult = sampleGate.accept(
-            cameraTimestampNs = cameraTimestampNs,
+            pair = pair,
             depthTimestampNs = depthTs,
             confidenceTimestampNs = confidenceTs,
             receivedElapsedNs = receivedElapsedNs,
@@ -559,9 +562,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                         "depth_ts_ns=$depthTs confidence_ts_ns=$confidenceTs " +
                         "depth_minus_confidence_ns=${depthTs - confidenceTs} " +
                         "valid_pixels=${summary.validDepthPixels} confident_pixels=${summary.confidentPixels} " +
+                        "sensor_age=unknown coverage=observed_only " +
                         "navigation=none metric_accuracy=unverified no_image_storage=true",
                 )
             }
+            maybeUpdateUi(completedElapsedNs)
             return
         }
         if (stopping.get()) return
@@ -613,10 +618,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         Log.i(
             TAG,
             "RAW_DEPTH_SAMPLE accepted=$accepted sampled_pixels=$sampledPixels " +
-                "valid_fraction=${format(validFraction)} confident_fraction=${format(confidentFraction)} " +
+                "valid_fraction=${fraction(validFraction)} confident_fraction=${fraction(confidentFraction)} " +
                 "median_depth_mm=${median ?: "null"} p90_depth_mm=${p90 ?: "null"} " +
                 "distances_label=NOT_calibrated receipt_to_summary_ms=${format(latencyMs)} " +
                 "admission_cap_hz=$SAMPLE_CAP_HZ not_full_camera_fps=true " +
+                "acceptance_scope=same_frame_processing_only sensor_age=unknown coverage=observed_only " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
         )
     }
@@ -648,8 +654,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val median: Int?
         val p90: Int?
         val accepted: Int
-        val valid: Double
-        val confident: Double
+        val valid: Double?
+        val confident: Double?
         synchronized(statsLock) {
             median = latestMedianMm
             p90 = latestP90Mm
@@ -657,12 +663,16 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             valid = latestValidFraction
             confident = latestConfidentFraction
         }
+        val observed = coverageStats.snapshot()
         val line =
-            "Accepted $accepted (cap ${SAMPLE_CAP_HZ} Hz samples, not camera FPS). " +
-                "Valid ${format(valid * 100)}% confident ${format(confident * 100)}%. " +
+            "Diagnostic pairs $accepted (cap ${SAMPLE_CAP_HZ} Hz, not camera FPS). " +
+                "Decoded ${observed.decodedPairs}; observed valid ${percent(observed.validFraction)} " +
+                "confident ${percent(observed.confidentFraction)} (not unique estimates). " +
+                "Last admitted valid ${percent(valid)} confident ${percent(confident)}. " +
                 "Median ${median ?: "—"} mm / p90 ${p90 ?: "—"} mm NOT calibrated. " +
-                "Missing depth = unknown. No walking cue. " +
-                "مقبول $accepted. المتوسط ${median ?: "—"} مم غير معاير. العمق الناقص = مجهول."
+                "Sensor age unknown; coverage not sufficient for navigation. No walking cue. " +
+                "عينات تشخيص $accepted، خرائط مفكوكة ${observed.decodedPairs}. " +
+                "الثقة المرصودة ${percent(observed.confidentFraction)}. عمر العمق مجهول ولا إذن للمشي."
         runOnUiThread {
             if (!stopping.get()) updateStatus(line)
         }
@@ -673,6 +683,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         this.failed = failed || this.failed
         stopReason = reason
         sampleGate.stop()
+        coverageStats.stop()
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Drain GL first (never hold frameInUseLock while waiting on GL), then pause session, then result.
@@ -725,14 +736,14 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val firstTs: String
         val median: Int?
         val p90: Int?
-        val valid: Double
-        val confident: Double
+        val valid: Double?
+        val confident: Double?
         synchronized(statsLock) {
             accepted = acceptedSamples
             unique = uniqueCameraTimestamps
             tracking = trackingFrames
             nonTracking = nonTrackingFrames
-            attempts = newDepthAttempts
+            attempts = acquiredPairAttempts
             nya = notYetAvailableCount
             summarizeBad = summarizeRejects
             rejections = gateRejections.entries.joinToString(",") { "${it.key}=${it.value}" }
@@ -763,18 +774,26 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 else -> "INTERRUPTED"
             }
         }
+        val observed = coverageStats.snapshot()
         Log.i(
             TAG,
             "RAW_DEPTH_RESULT status=$status reason=$stopReason " +
                 "unique_camera_frames=$unique tracking=$tracking nontracking=$nonTracking " +
-                "accepted=$accepted new_depth_attempts=$attempts " +
+                "schema_version=2 accepted=$accepted acquired_pair_attempts=$attempts " +
                 "notYetAvailable=$nya summarize_rejects=$summarizeBad gate_rejections=$rejections " +
                 "$dims $firstTs " +
-                "valid_fraction=${format(valid)} confident_fraction=${format(confident)} " +
+                "accepted_latest_valid_fraction=${fraction(valid)} accepted_latest_confident_fraction=${fraction(confident)} " +
+                "observed_decoded_pairs=${observed.decodedPairs} observed_sampled_pixels=${observed.sampledPixels} " +
+                "observed_valid_pixels=${observed.validDepthPixels} observed_confident_pixels=${observed.confidentPixels} " +
+                "observed_pairs_with_confident_pixels=${observed.pairsWithConfidentPixels} " +
+                "observed_valid_fraction=${fraction(observed.validFraction)} " +
+                "observed_confident_fraction=${fraction(observed.confidentFraction)} " +
+                "observed_capacity_reached=${observed.capacityReached} observed_counts_include_reprojection=true " +
                 "median_depth_mm=${median ?: "null"} p90_depth_mm=${p90 ?: "null"} " +
                 "distances_label=NOT_calibrated $latencyLine " +
                 "elapsed_s=${format(elapsedS)} duration_seconds=$durationSeconds " +
                 "depth_sample_admission_cap_hz=$SAMPLE_CAP_HZ " +
+                "acceptance_scope=same_frame_processing_only sensor_age=unknown coverage=observed_only " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
         )
     }
@@ -803,6 +822,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         if (!resultLogged.get()) {
             stopping.set(true)
             sampleGate.stop()
+            coverageStats.stop()
             pauseHardwareOnce()
             logResultOnce()
         }
@@ -811,6 +831,15 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
     private fun countRejection(reason: String) {
         gateRejections[reason] = (gateRejections[reason] ?: 0) + 1
+    }
+
+    // Keep sparse nonzero observations visible; two decimal places would print0.00.
+    private fun fraction(value: Double?): String = value?.toString() ?: "unavailable"
+
+    private fun percent(value: Double?): String = when {
+        value == null -> "unavailable"
+        value > 0.0 && value < 0.0001 -> "<0.01%"
+        else -> "${format(value * 100)}%"
     }
 
     private fun updateStatus(text: String) {

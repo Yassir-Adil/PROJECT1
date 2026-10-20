@@ -1,5 +1,20 @@
 # Progress Log
 
+## 2026-10-20 — Same-Frame pairing and honest observed coverage,0.9.27/40 installed
+
+Task list established before three bounded parallel Cursor workers (P/C/R).
+P/C tests first, Codex compile RED, then helper implementation. Independent R
+review and actual compiler exposed Kotlin nested-private access failure; Codex
+fixed via companion-owned co-acquisition without relaxing proof construction.
+48 focused tests pass (12 scope+23 gate+13 coverage). Full gate499 tests PASS,
+both builds/policy pass, Lint0 errors55/34 warnings; installed/hash verified.
+20.16s owner-coordinated phone run:553 frames/521 tracking,142 decoded pairs,
+9 diagnostic admits,113 empty-confidence/20 repeated-depth rejects; COMPLETE
+then CLOSED. Observed confidence0.411581%; admission is not calibrated geometry.
+RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md records source/APK hashes and results.
+Phone phase-start check: Android14, ARCore1.57.262640093 and previous TriGuide0.9.26.
+No model/download/permission/production guidance change, no private image upload.
+
 ## 2026-10-20 — Runtime format fix and bounded timing diagnosis,0.9.26/39
 
 Controlled phone test reached TRACKING and exposed a real guard bug:

@@ -1,5 +1,17 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 same-Frame / observed coverage
+
+P/C tests landed before source; Codex executed compile RED for each. Helpers
+implemented in disjoint scopes; Codex wired Activity and fixed a compiler-proven
+private nested constructor/method access error by moving full acquire/use inside
+Proof companion, keeping private state.48 focused and499 full tests pass, builds
+and APK policy pass, Lint0 errors55/34 warnings. R corrected-source review accepted.
+Installed0.9.27/40 hash verified.20.16s Redmi probe:142 decoded,9 admitted,
+113 empty-confidence and20 repeated-depth rejects; COMPLETE then CLOSED.
+Observed confidence0.411581%; no calibrated geometry/navigation eligibility.
+Evidence: RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md. No owner action needed now.
+
 ### CODEX_RECORD —2026-10-20,0.9.26 strict format fix and diagnostic telemetry
 
 Real0.9.23 probe exposed incorrect DEPTH16 guard for raw D_16=48. Four new

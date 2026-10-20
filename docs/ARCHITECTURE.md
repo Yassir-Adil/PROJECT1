@@ -1,5 +1,17 @@
 # Architecture
 
+## 0.9.27 debug same-Frame provenance / observed coverage —2026-10-20
+
+RawDepthPairScope brackets both SDK image acquires on one unchanged Frame;
+private proof lives only inside the callback, then invalidates before dual close.
+Gate compares source stamps only against previous stamps of that source, never
+Frame-versus-image clocks. Local processing-age bound250ms remains; physical
+sensor age is unknown. RawDepthCoverageStats independently records all decoded
+pairs (including rejected/reprojected), capped10000, weighted scalar coverage,
+null before observations. Neither component enters navigation or speech.
+Design/execution evidence: RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md.
+This supersedes0.9.26's diagnostic equality/lag policy below, not main safety.
+
 ## 0.9.26 debug Raw Depth contract correction —2026-10-20
 
 The acquired raw16-bit image is HardwareBuffer.D_16, not packed DEPTH16.

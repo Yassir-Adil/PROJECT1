@@ -1,5 +1,72 @@
 # Shared execution queue — 2026-10-19
 
+## Active pair — 2026-10-20, same-Frame provenance and honest observed coverage
+
+FINAL DISPOSITION:0.9.27/40 installed/hash verified;499-test full gate PASS
+(460+10+19+10),0 failure/error/skip; builds/APK policy pass, Lint0 errors55/34
+warnings.48 focused tests passed; R corrected-source review accepted. Actual
+20.16s Redmi probe:553 distinct/521 tracking frames,142 decoded pairs,9 diagnostic
+admits,113 empty-confidence and20 repeated-depth rejects; COMPLETE then CLOSED.
+Observed confident coverage0.411581% across all decoded/reprojected pairs, not
+navigation coverage. Sensor age/calibration/wall/step safety remain unverified.
+All Cursor workers finished; no owner action needed now. Main guidance unchanged.
+Full evidence/next ranked options: RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md.
+The phase instructions/RED records below are retained as execution history.
+
+Baseline f72e54e /0.9.26,467 tests; preserve unrelated owner-rule dirty edit.
+The prior equality/lag gate was conservative application policy, not a proven
+SDK timestamp contract. Official Frame documents same-current-Frame pixel
+correspondence; Image documents source-specific clocks. Diagnostic-only revision:
+prove co-acquisition within one unchanged Frame and active resource scope,
+compare camera/depth stamps only to prior stamps from their own source, and
+retain the250ms local monotonic processing-age gate. No tolerance, confidence
+threshold reduction, new dependency, camera sharing or production navigation.
+
+| Task | Owner | Exclusive write scope | Sequence |
+| --- | --- | --- | --- |
+| P tests then implementation | Cursor P | RawDepthSampleGate.kt, new RawDepthPairScope.kt and their testDebug tests; CURSOR_PAIR_SCOPE_RESULT_2026-10-20.md | Tests ONLY first; Codex records RED, then releases implementation |
+| C tests then implementation | Cursor C | new RawDepthCoverageStats.kt and its testDebug test; CURSOR_COVERAGE_RESULT_2026-10-20.md | Tests ONLY first; Codex records RED, then releases implementation |
+| Integration / QA / phone / backup | Codex | Activity, version/policy/shared docs, full gate, ADB, scoped Git | After independent review; no overlapping edits/builds |
+
+P contract: RawDepthPairScope.withFrame(frame, timestampOf, acquireDepth,
+acquireConfidence, block) captures one frame object, checks positive unchanged
+frame timestamp around acquisition, closes confidence then depth on all exits,
+and invalidates a private-constructor active proof after block. Generic
+AutoCloseable resources permit CPU tests. Block receives (scope, depth, confidence).
+Gate.accept(pair, depthTimestampNs, confidenceTimestampNs, receivedElapsedNs,
+completedElapsedNs, tracking) rejects inactive proof, invalid source stamps,
+tracking loss, local stale/rollback, duplicate/backward frame or depth, and stop.
+It never subtracts unrelated clocks or demands depth/confidence equality.
+Remove the obsolete maxSensorLagNs option; keep maxProcessingAgeNs default250ms.
+Test changed Frame, acquire/process/close failures, exact-once cleanup, closed
+proof, cross-clock unequal valid stamps, new/reprojected data and all negative
+gates. Rejections must not poison later valid admission. No navigation authority.
+
+C contract: RawDepthCoverageStats(maxPairs:Int=10000), record(summary):Boolean,
+snapshot():RawDepthCoverageSnapshot, stop(). Immutable scalar snapshot fields:
+decodedPairs, sampledPixels, validDepthPixels, confidentPixels,
+pairsWithConfidentPixels (Long); validFraction/confidentFraction (Double? null
+before observation); capacityReached (Boolean). Count all successfully decoded
+pairs regardless of later timing/pixel rejection; these are NOT accepted samples
+or unique new estimates. Validate sampled1..1048576 and0<=confident<=valid<=sampled
+before mutation; bounded maxPairs, reject after capacity or terminal stop.
+Test zero versus missing, weighted fractions, sparse/empty summaries, malformed
+counts, capacity, immutable snapshots, stopped/idempotent. No Images/buffers held.
+
+Workers read AGENTS/current scope, do not edit shared docs/Activity/Gradle/policy,
+run shells/build/ADB/Git, access private outputs, or bypass denied permissions.
+Stop after test phase until Codex explicitly resumes the same worker.
+
+C RED recorded by Codex: offline test compile fails in20s, unresolved
+RawDepthCoverageStats (and new PairScope tests); ignored coverage-red.log under
+outputs/reports/raw-depth-pair-20261020/. C is released for helper source only.
+P RED independently recorded in pair-red.log: missing RawDepthPairScope/Proof
+and pair API after both test files landed. P now released for source only.
+Cursor R design review requires private proof construction after both acquires,
+finally invalidation, dual cleanup even on close failures, and explicit unknown
+physical sensor age. Codex freshly fetched official Frame/Image contracts; R's
+own re-fetch was approval-blocked and is not counted as independent live fetch.
+
 ## Final0.9.26 checkpoint —2026-10-20
 
 Strict D_16 guard corrected and four RED-first tests pass. Direct SDK tracking

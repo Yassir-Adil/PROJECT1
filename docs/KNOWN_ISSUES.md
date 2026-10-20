@@ -1,5 +1,19 @@
 # Known Issues
 
+## 0.9.27/40 installed —2026-10-20
+
+Diagnostic cross-source equality/lag assumptions replaced with current-Frame
+provenance and per-source history; processing age remains bounded but physical
+sensor age remains unknown. Observed coverage now includes decoded rejected/
+empty pairs and distinguishes null from zero, without lowering confidence128.
+48 focused and499 full tests pass; builds/policy pass, Lint0 errors55/34 warnings.
+Actual20.16s phone probe:142 decoded,9 diagnostic admits, COMPLETE+CLOSED.
+Observed confident coverage is only0.411581% across all decoded/reprojected pairs.
+This is not calibrated wall/floor/step discrimination. Full evidence:
+RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md. Accepted pairs, single pixels,
+floor labels and COMPLETE must not be mistaken for calibrated geometry or safety.
+Unrelated dirty owner-rule stays preserved. No main guidance/permission change.
+
 ## Latest0.9.26/39 checkpoint —2026-10-20
 
 Wrong raw-depth format guard fixed with four regression tests. Final467-test gate

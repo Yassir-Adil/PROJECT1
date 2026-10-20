@@ -1,5 +1,17 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 same-Frame / coverage integration
+
+Read WORK_QUEUE active pair. Cursor P/C completed tests-first helpers after Codex
+RED; independent R design/source review found Kotlin access defect, fixed by
+Codex without exposing proof creation.48 focused and499 full tests passed;
+R corrected-source review accepted. Installed0.9.27/40 hash verified, actual20s
+probe admitted9 diagnostic pairs out of142 decoded; COMPLETE then CLOSED.
+Observed confident coverage0.411581%, physical age/calibration unknown; no safety
+or navigation eligibility. No worker active or owner action needed now.
+All earlier scopes below are historical. No worker builds/ADB/Git/private logs.
+Main guidance, confidence128, permissions, models and dependencies unchanged.
+
 ### CURRENT_SCOPE — 2026-10-20 D_16 and timestamp review complete
 
 Historical tasks below are closed/superseded. Current source is0.9.26/39,

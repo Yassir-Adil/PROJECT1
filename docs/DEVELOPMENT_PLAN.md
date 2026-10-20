@@ -2,6 +2,18 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Completed two improvements —2026-10-20,0.9.27/40
+
+Implement same-current-Frame pairing instead of unsupported cross-clock gates,
+and bounded observed coverage independent of admission.48 focused and499 full
+tests pass; installed/hash verified.20.16s phone probe:142 decoded,9 diagnostic
+admits, COMPLETE+CLOSED. Sparse observed confidence0.411581%; not geometry or
+safety acceptance. No navigation/floor/voice change. No owner action needed now.
+Ranked options/evidence/cost/deferrals and actual results:
+RAW_DEPTH_PAIRING_AND_COVERAGE_2026-10-20.md. Next reuse ARCore pose/intrinsics/
+planes for measured geometry only after pairing/coverage evidence; do not buy
+sensors or replace models to conceal the instrument defect. No clear-path claim.
+
 ## Current next gate —2026-10-20,0.9.26/39
 
 Corrected a device-exposed D_16 format guard, added bounded tracking/rejection
