@@ -1,5 +1,16 @@
 # Known Issues
 
+## 0.9.28/41 installed —2026-10-20
+
+Live debug camera+markers confirmed by owner. SDK upward-plane ray adapter
+exercised (11/19 samples in warm20s), but vertical/wall hits0 in both measured
+runs. This is not proof no wall/plane exists: only four rays queried; global
+plane counts and metric ground truth absent. Upward may be tabletop, not floor.
+539-test gate/build/policy pass, Lint55/34 warnings0 errors; timer and Back GL/
+Session close observed. Back under valid depth, physical rotation/crop, sustained
+thermal/energy, wall/step accuracy and real voice/TalkBack remain unverified.
+No threshold/model/main guidance change. See SURFACE_PREVIEW_2026-10-20.md.
+
 ## 0.9.27/40 installed —2026-10-20
 
 Diagnostic cross-source equality/lag assumptions replaced with current-Frame

@@ -1,5 +1,96 @@
 # Shared execution queue — 2026-10-19
 
+## Active pair —2026-10-20, SDK surfaces and visible camera
+
+FINAL:0.9.28/41 installed/hash verified,539 full tests PASS (500+10+19+10),
+builds/policy pass, Lint0 errors55/34 warnings.40 focused tests pass; R source
+review accepted. Owner confirms live camera+four markers visible.30s run:27
+depth admits,0 surface hits; later warm20s:41 admits,11/19 samples with upward
+surface hits,0 vertical. No calibrated wall/floor/clearance claim. Back test:
+4.65s INTERRUPTED/paused,234 draws, GL released then Session CLOSED;0 valid depth.
+All workers complete, app left stopped. No owner action required now.
+Authoritative results/limits: SURFACE_PREVIEW_2026-10-20.md. Phase scopes below
+are execution history, not permission to restart workers or alter production.
+
+Baseline e4bc1ec /0.9.27/40,499 full tests, nine admitted diagnostic depth pairs.
+Codex inspected current phone (ADB device) and SDK config: plane finding DISABLED,
+GL camera texture allocated but never drawn. Reuse ARCore1.57 planes/hitTest and
+Google v1.57 shared_camera BackgroundRenderer pattern (Apache notice already
+vendored); no new model/dependency, permission, cloud, recording or main guidance.
+Vertical surface is NOT guaranteed wall; upward surface is NOT guaranteed floor.
+
+| Task | Owner / exclusive files | Sequence |
+| --- | --- | --- |
+| S: pure surface evidence | Cursor S: SurfaceProbePolicy.kt, SurfaceProbePolicyTest.kt; CURSOR_SURFACE_RESULT_2026-10-20.md | Tests only, Codex RED, then source |
+| B: camera background | Cursor B: DiagnosticCameraBackground.kt, DiagnosticCameraBackgroundTest.kt; CURSOR_BACKGROUND_RESULT_2026-10-20.md | Tests only, Codex RED, then source |
+| R: independent integration review | Cursor R: CURSOR_SURFACE_REVIEW_2026-10-20.md only | Design then landed source; no product edits |
+| Integration / final QA | Codex: SDK adapter/Activity/UI, version/policy/notices/shared docs, builds/ADB/scoped backup | After review; no overlapping worker writes |
+
+Source roots: debug/java/com/triguide/ai/diagnostics; tests testDebug/kotlin/same.
+Worker helpers remain debug-only. Workers do not run shell/build/ADB/Git, access
+private outputs, edit shared docs/other scopes or bypass tool approval. Preserve
+unrelated dirty owner-rule. Finish each tests phase and await explicit release.
+
+S contract (pure CPU):
+SurfaceKind enum UNKNOWN, VERTICAL_SURFACE, HORIZONTAL_UPWARD, HORIZONTAL_DOWNWARD.
+SurfaceHitCandidate(kind:SurfaceKind,distanceMeters:Float,tracking:Boolean,
+subsumed:Boolean,insidePolygon:Boolean).
+SurfaceProbeReading(kind:SurfaceKind,distanceMeters:Float?,reason:String).
+SurfaceProbePolicy.select(candidates:List<SurfaceHitCandidate>,tracking:Boolean):
+SurfaceProbeReading. Tracking false => UNKNOWN/not_tracking regardless of hits.
+Valid candidate: kind!=UNKNOWN, tracking, !subsumed, insidePolygon, positive
+finite distance. Select minimum valid distance, independent of input order.
+Empty/no valid => UNKNOWN/no_valid_surface; >64 candidates => UNKNOWN/too_many_hits.
+Valid reason observed_surface. No semantics that call an upward plane floor,
+clear, walkable, or a vertical plane confirmed wall. No SDK objects retained.
+SurfaceProbeRay(name:String,xPx:Float,yPx:Float).
+SurfaceProbeLayout.points(width:Int,height:Int):List<SurfaceProbeRay>, invalid
+viewport => empty; exactly center(.5,.5),lower_left(.25,.8),lower_center(.5,.8),
+lower_right(.75,.8) in VIEW pixels. These match the current setDisplayGeometry
+viewport, not raw depth/CPU-image coordinates. Test invalid, sparse, nonfinite,
+subsumed/out-of-polygon/stopped planes, unsorted nearest and viewport mapping.
+
+B contract: CameraBackgroundGl interface createProgram():Int,
+draw(program:Int,textureId:Int,positions:FloatBuffer,texCoords:FloatBuffer):Unit,
+deleteProgram(program:Int):Unit. DiagnosticCameraBackground(gl:CameraBackgroundGl
+=GlesCameraBackgroundGl()) with onSurfaceCreated(), draw(frameTimestampNs:Long,
+textureId:Int,transformUv:(FloatBuffer,FloatBuffer)->Unit):Boolean,
+releaseOnGlThread(). Draw returns false before init/after release, nonpositive
+frame timestamp/texture id or nonfinite/incompletely written UVs; never reuse old
+UVs. Transform NDC quad via Frame.transformCoordinates2d to TEXTURE_NORMALIZED,
+not manual rotation/crop formulas. Quad four NDC corners; same direct buffers
+reused, rewind before transform/draw. onSurfaceCreated is a NEW context: forget
+old program handle without deleting it in the new context; create positive new
+program or throw. Release deletes current program once and disables draw;
+re-init permitted on a new context. Propagate transform/GL errors to caller.
+Use fake GL in CPU tests (zero Android GL calls); test lifecycle, zero stamp,
+invalid texture, changed UV transforms, incomplete/NaN UVs, errors and release.
+Implementation GL port adapts Google's licensed OES background shader pattern
+without depth visualization/shared-camera framework or new assets/dependencies.
+Strict shader compile/link checks, shader cleanup on errors, no per-frame buffer
+allocation, no retaining Frame/Image. SDK pins/source notice updated by Codex.
+
+Primary docs fetched by Codex: Plane / Plane.Type / Config.PlaneFindingMode /
+Frame.hitTest and pinned shared_camera BackgroundRenderer.java. hitTest permits
+geometric leeway, so polygon inclusion is mandatory; non-plane hit types ignored.
+Camera preview/context and hit selection are diagnostic, not sensor calibration.
+Main STOP/UNKNOWN/HOLD, confidence128, pair proof and age gates remain unchanged.
+
+Codex focused GREEN:19 surface-policy +21 fake-GL background tests=40,7s,
+no failure/error. SDK adapter performs bounded selection PER RAY, not concatenated
+hits. Equal nearest ties use first minimum in SDK encounter order; no semantic
+priority or navigation authority inferred. Preview and surface probing have
+independent boolean intent switches for diagnostic baseline comparisons.
+GL cleanup queued before terminal pause, current-EGL guard; context preservation
+disabled as cleanup backstop. Source review and full0.9.28/41 gate follow.
+
+S RED executed by Codex: missing SurfaceKind/SurfaceHitCandidate/policy/layout,
+surface-red.log, offline compile exit1 before helper source. S released for source.
+B RED executed by Codex: missing CameraBackgroundGl/DiagnosticCameraBackground,
+background-red.log, offline compile exit1 before helper source. B released.
+Existing DiagnosticSurfaces semantic-mask code stays separate: plane orientation
+does not share the ADE20K wall/floor class semantics.
+
 ## Active pair — 2026-10-20, same-Frame provenance and honest observed coverage
 
 FINAL DISPOSITION:0.9.27/40 installed/hash verified;499-test full gate PASS

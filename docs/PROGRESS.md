@@ -1,5 +1,19 @@
 # Progress Log
 
+## 2026-10-20 — SDK surface rays + visible camera,0.9.28/41 installed
+
+Task list preceded three bounded parallel Cursor S/B/R workers. Tests first,
+Codex recorded RED, then source/integration and independent review.40 focused
+and539 full tests PASS; builds/APK policy pass, Lint0 errors55/34 warnings.
+Installed APK hash verified, no data clear. Owner confirms actual camera image
+and four white markers.30s run:27 admitted depth samples;0 ray plane hits.
+Warm20s run:41 admits,11/19 samples with upward hits,0 vertical. SDK adapter is
+exercised, but wall/floor accuracy is NOT established. Back/background4.65s:
+234 preview draws, INTERRUPTED/paused, GL release+CLOSED;0 accepted depth.
+No images/logs uploaded, no model/dependency/permission/main guidance changes.
+Actual hashes, primary-source license pins, host guard corrections, latency and
+remaining gates: SURFACE_PREVIEW_2026-10-20.md. No owner action needed now.
+
 ## 2026-10-20 — Same-Frame pairing and honest observed coverage,0.9.27/40 installed
 
 Task list established before three bounded parallel Cursor workers (P/C/R).

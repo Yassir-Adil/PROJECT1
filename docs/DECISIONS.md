@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-10-20 — Reuse SDK geometry and make the diagnostic view observable
+
+Raw-depth sampling works but global coverage is sparse and uncalibrated. Current
+instrument disabled planes and never drew its texture. Prefer existing ARCore
+plane/ray contracts plus pinned Apache-2 OES background pattern, not new models,
+training, cloud, hardware or competing cameras. Strict polygon/tracking/subsumed
+checks and orientation-only semantics: an upward hit is not proof of floor.
+Source/UI remain debug-only, no guidance/voice/threshold/dependency/permission
+change. Three disjoint Cursor tasks, Codex RED/GREEN/integration/device and backup.
+539 tests and real preview/SDK upward hits observed; zero vertical hits is not
+wall-detector success or proof no wall exists. Negative data stay UNKNOWN.
+SURFACE_PREVIEW_2026-10-20.md records owner confirmation, runtime metrics, host
+guard correction, GL cleanup, license pins and ground-truth gaps.
+
 ## 2026-10-20 — Replace an unsupported diagnostic clock rule with provenance
 
 After fresh official Frame/Image review and tests-first independent design

@@ -2,6 +2,17 @@
 
 Statuses: NOT_STARTED | IN_PROGRESS | BLOCKED | PASS | PASS_WITH_WARNINGS | FAIL
 
+## 2026-10-20 —0.9.28 surfaces / camera: engineering PASS, wall accuracy NOT VERIFIED
+
+Separate missing-helper compile RED for surface and background before source.
+40 focused tests PASS; full offline539 tests PASS (500+10+19+10),0 failure/error/
+skip; both builds/APK policy pass, Lint0 errors55/34 warnings. Installed hash exact.
+Owner confirms live preview+markers. Actual30s:27 depth admits,0 selected ray hits;
+warm20s:41 admits,11/19 upward-hit samples,0 vertical. Both COMPLETE+CLOSED.
+Focused-window Back4.65s: INTERRUPTED/paused,234 draws, GL release+CLOSED,0 depth.
+Do not call this valid-depth Stop, ground-truth geometry or safe-walking PASS.
+SURFACE_PREVIEW_2026-10-20.md records evidence, limitations and host-test corrections.
+
 ## 2026-10-20 —0.9.27 pairing / coverage: engineering PASS, diagnostic phone run COMPLETE
 
 Missing-helper compile RED independently recorded before P/C implementation.

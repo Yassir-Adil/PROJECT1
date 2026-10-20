@@ -1,5 +1,14 @@
 # Bridge: External GPT → Cursor
 
+### CURRENT_SCOPE —2026-10-20 surface/preview pair complete,0.9.28/41
+
+Read WORK_QUEUE top. S/B tests-first source and R review finished; no active
+worker. Codex executed RED, focused40/full539 tests, builds/policy, hash-exact
+install and phone tests. Preview owner-confirmed; upward SDK hits11/19 warm-run
+samples, vertical0. No floor/wall accuracy or navigation approval. No current
+owner action. Earlier scopes are history; source/device evidence in
+SURFACE_PREVIEW_2026-10-20.md. Never restart a worker or expand its files silently.
+
 ### CURRENT_SCOPE —2026-10-20 same-Frame / coverage integration
 
 Read WORK_QUEUE active pair. Cursor P/C completed tests-first helpers after Codex

@@ -1,5 +1,16 @@
 # Open-source licenses
 
+## Debug camera background adaptation —2026-10-20
+
+DiagnosticCameraBackground.kt adapts the pinned Google ARCore SDK v1.57.0
+shared_camera_java OES background/shader pattern under Apache-2.0. Copyright,
+modifications, exact source and full upstream source license are retained in
+the Kotlin header, third_party/NOTICE.md and arcore-sample-LICENSE.txt. No sample
+framework/dependency tree or weights are imported. The existing SDK binary terms
+remain separate. Live preview is ephemeral and debug/DUMP-protected; no RGB
+Image acquisition, recording or upload is added. Plane orientation/ray distances
+are SDK estimates, not floor/wall identity, calibrated clearance or safe walking.
+
 ## Debug Raw Depth probe adaptation — 2026-10-20
 
 `RawDepthDiagnosticActivity.kt` adapts the lifecycle/GL texture pattern from

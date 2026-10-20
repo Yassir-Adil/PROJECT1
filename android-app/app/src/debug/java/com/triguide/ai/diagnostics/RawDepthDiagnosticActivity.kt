@@ -28,6 +28,7 @@ import android.graphics.Color
 import android.graphics.ImageFormat
 import android.media.Image
 import android.opengl.GLES11Ext
+import android.opengl.EGL14
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.os.Build
@@ -47,6 +48,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
+import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
@@ -75,9 +77,11 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private val handler = Handler(Looper.getMainLooper())
     private val sampleGate = RawDepthSampleGate()
     private val coverageStats = RawDepthCoverageStats()
+    private val cameraBackground = DiagnosticCameraBackground()
 
     private lateinit var surfaceView: GLSurfaceView
     private lateinit var statusView: TextView
+    private lateinit var surfaceStatusView: TextView
 
     private var session: Session? = null
     @Volatile private var sessionResumed = false
@@ -94,6 +98,15 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     private var stopReason = "unspecified"
     private var finishPosted = false
     private var hardwarePaused = false
+    private var cameraPreviewEnabled = true
+    private var surfaceProbingEnabled = true
+    private var lastSurfaceProbeElapsedNs = 0L
+    private var backgroundDraws = 0
+    private var surfaceProbeSamples = 0
+    private var verticalSurfaceSamples = 0
+    private var upwardSurfaceSamples = 0
+    private val sessionUpdateMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
+    private val surfaceProbeMs = ArrayList<Double>(MAX_LATENCY_SAMPLES)
 
     // Counters — bounded scalars only; latency list capped at MAX_LATENCY_SAMPLES (last N).
     private var uniqueCameraTimestamps = 0
@@ -134,6 +147,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         }
 
         durationSeconds = intent.getIntExtra(EXTRA_DURATION_SECONDS, DEFAULT_DURATION_SECONDS)
+        cameraPreviewEnabled = intent.getBooleanExtra(EXTRA_CAMERA_PREVIEW, true)
+        surfaceProbingEnabled = intent.getBooleanExtra(EXTRA_SURFACE_PROBE, true)
         if (durationSeconds !in MIN_DURATION_SECONDS..MAX_DURATION_SECONDS) {
             failClosedStartup("invalid_duration")
             return
@@ -178,6 +193,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         Log.i(
             TAG,
             "RAW_DEPTH_START duration_seconds=$durationSeconds " +
+                "camera_preview=$cameraPreviewEnabled surface_probe=$surfaceProbingEnabled " +
                 "depth_sample_admission_cap_hz=$SAMPLE_CAP_HZ " +
                 "confidence_threshold_diagnostic_only=128 " +
                 "no_image_storage=true navigation=none metric_accuracy=unverified",
@@ -199,6 +215,16 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             textSize = 18f
             setTextColor(Color.WHITE)
             setPadding(dp(16), dp(12), dp(16), dp(8))
+            maxLines = 6
+        }
+        surfaceStatusView = TextView(this).apply {
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setPadding(dp(16), 0, dp(16), dp(8))
+            maxLines = 5
+            text = if (surfaceProbingEnabled) {
+                "Surface probes: UNKNOWN. Geometry only; not floor/wall confirmation. لا إذن للمشي."
+            } else "Surface probes disabled / فحص الأسطح معطّل. لا إذن للمشي."
         }
         val disclosure = TextView(this).apply {
             textSize = 14f
@@ -211,7 +237,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                     "Privacy: https://policies.google.com/privacy"
         }
         surfaceView = GLSurfaceView(this).apply {
-            preserveEGLContextOnPause = true
+            // Probe pause is terminal. Destroy context as a cleanup backstop;
+            // no reason to retain GPU objects for an activity that never resumes.
+            preserveEGLContextOnPause = false
             setEGLContextClientVersion(2)
             setEGLConfigChooser(8, 8, 8, 8, 16, 0)
             setRenderer(this@RawDepthDiagnosticActivity)
@@ -231,6 +259,10 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             ),
         )
         root.addView(
+            surfaceStatusView,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
+        root.addView(
             disclosure,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -245,6 +277,10 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
                     ),
+                )
+                if (surfaceProbingEnabled) addView(
+                    SurfaceProbeOverlayView(this@RawDepthDiagnosticActivity),
+                    FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
                 )
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f),
@@ -263,7 +299,9 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val config = target.config
         config.depthMode = Config.DepthMode.RAW_DEPTH_ONLY
         config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-        config.planeFindingMode = Config.PlaneFindingMode.DISABLED
+        config.planeFindingMode = if (surfaceProbingEnabled) {
+            Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        } else Config.PlaneFindingMode.DISABLED
         config.lightEstimationMode = Config.LightEstimationMode.DISABLED
         config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
         config.cloudAnchorMode = Config.CloudAnchorMode.DISABLED
@@ -329,6 +367,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        try {
         GLES20.glClearColor(0.05f, 0.05f, 0.05f, 1f)
         val textures = IntArray(1)
         GLES20.glGenTextures(1, textures, 0)
@@ -354,6 +393,13 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             GLES20.GL_TEXTURE_MAG_FILTER,
             GLES20.GL_LINEAR,
         )
+        check(cameraTextureId > 0) { "invalid_camera_texture" }
+        if (cameraPreviewEnabled) cameraBackground.onSurfaceCreated()
+        Log.i(TAG, "CAMERA_BACKGROUND_READY enabled=$cameraPreviewEnabled no_image_storage=true navigation=none")
+        } catch (error: Exception) {
+            Log.e(TAG, "camera background initialization failed", error)
+            runOnUiThread { requestStop("background_init_${error.javaClass.simpleName}", failed = true) }
+        }
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -376,7 +422,23 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                     viewportChanged = false
                 }
                 active.setCameraTextureNames(intArrayOf(cameraTextureId))
+                val updateStarted = SystemClock.elapsedRealtimeNanos()
                 val frame = active.update()
+                synchronized(statsLock) {
+                    if (sessionUpdateMs.size >= MAX_LATENCY_SAMPLES) sessionUpdateMs.removeAt(0)
+                    sessionUpdateMs += (SystemClock.elapsedRealtimeNanos() - updateStarted) / NS_PER_MS
+                }
+                if (!stopping.get() && cameraPreviewEnabled && cameraBackground.draw(
+                    frameTimestampNs = frame.timestamp,
+                    textureId = cameraTextureId,
+                ) { positions, uv ->
+                    frame.transformCoordinates2d(
+                        Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES, positions,
+                        Coordinates2d.TEXTURE_NORMALIZED, uv,
+                    )
+                }) {
+                    synchronized(statsLock) { backgroundDraws++ }
+                }
                 processFrame(frame)
             } catch (error: CameraNotAvailableException) {
                 Log.e(TAG, "camera/config error on GL thread", error)
@@ -388,6 +450,35 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 }
             }
         }
+    }
+
+    /** SDK plane hits use VIEW pixels; never infer floor, wall identity or walkability. */
+    private fun maybeSampleSurfaces(frame: Frame) {
+        if (!surfaceProbingEnabled || stopping.get() || viewportWidth <= 0 || viewportHeight <= 0) return
+        val started = SystemClock.elapsedRealtimeNanos()
+        if (started - lastSurfaceProbeElapsedNs < UI_LOG_MIN_INTERVAL_NS) return
+        lastSurfaceProbeElapsedNs = started
+        val observations = ArCoreSurfaceProbe.sample(frame, viewportWidth, viewportHeight)
+        val latencyMs = (SystemClock.elapsedRealtimeNanos() - started) / NS_PER_MS
+        if (stopping.get()) return
+        synchronized(statsLock) {
+            surfaceProbeSamples++
+            if (observations.any { it.reading.kind == SurfaceKind.VERTICAL_SURFACE }) verticalSurfaceSamples++
+            if (observations.any { it.reading.kind == SurfaceKind.HORIZONTAL_UPWARD }) upwardSurfaceSamples++
+            if (surfaceProbeMs.size >= MAX_LATENCY_SAMPLES) surfaceProbeMs.removeAt(0)
+            surfaceProbeMs += latencyMs
+        }
+        val logReadings = observations.joinToString(" ") {
+            "${it.ray.name}=${it.reading.kind}:${it.reading.distanceMeters ?: "null"}:${it.reading.reason}"
+        }
+        Log.i(TAG, "SURFACE_SAMPLE frame_ts_ns=${frame.timestamp} viewport=${viewportWidth}x$viewportHeight " +
+            "$logReadings processing_ms=${format(latencyMs)} coordinate_space=VIEW_PIXELS " +
+            "distance_kind=sdk_hit_ray_m semantics=orientation_only no_floor_or_wall_confirmation=true " +
+            "metric_accuracy=unverified navigation=none no_image_storage=true")
+        val description = observations.joinToString(" | ") {
+            "${it.ray.name}: ${it.reading.kind} ${it.reading.distanceMeters?.let { m -> "~${format(m.toDouble())}m" } ?: "—"}"
+        } + "\nSDK estimates only; upward may be a table. تقديرات أسطح فقط، لا إذن للمشي."
+        runOnUiThread { if (!stopping.get()) surfaceStatusView.text = description }
     }
 
     /** API 30+ Context.display; API 26–29 WindowManager.defaultDisplay. */
@@ -422,6 +513,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             }
         }
         if (!isNewDistinctFrame) return
+        maybeSampleSurfaces(frame)
         // Do not acquire depth while not TRACKING (startup NotTracking must not become fatal).
         if (!tracking) {
             maybeReportTracking(
@@ -701,6 +793,24 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         hardwarePaused = true
         if (::surfaceView.isInitialized) {
             try {
+                surfaceView.queueEvent {
+                    try {
+                        // queueEvent is on the GL thread, but a lost context needs
+                        // no delete. Context destruction on pause is the backstop.
+                        if (EGL14.eglGetCurrentContext() != EGL14.EGL_NO_CONTEXT) {
+                            try {
+                                cameraBackground.releaseOnGlThread()
+                            } finally {
+                                if (cameraTextureId > 0) GLES20.glDeleteTextures(1, intArrayOf(cameraTextureId), 0)
+                            }
+                        }
+                    } catch (error: Exception) {
+                        Log.w(TAG, "GL resource cleanup", error)
+                    } finally {
+                        cameraTextureId = 0
+                        Log.i(TAG, "CAMERA_BACKGROUND_RELEASED navigation=none no_image_storage=true")
+                    }
+                }
                 surfaceView.onPause()
             } catch (error: Exception) {
                 Log.w(TAG, "GLSurfaceView.onPause", error)
@@ -738,6 +848,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
         val p90: Int?
         val valid: Double?
         val confident: Double?
+        val surfaceLine: String
         synchronized(statsLock) {
             accepted = acceptedSamples
             unique = uniqueCameraTimestamps
@@ -766,6 +877,10 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
             p90 = latestP90Mm
             valid = latestValidFraction
             confident = latestConfidentFraction
+            surfaceLine = "camera_preview=$cameraPreviewEnabled background_draws=$backgroundDraws " +
+                "surface_probe=$surfaceProbingEnabled surface_probe_samples=$surfaceProbeSamples " +
+                "surface_samples_with_vertical=$verticalSurfaceSamples surface_samples_with_upward=$upwardSurfaceSamples " +
+                percentiles("session_update", sessionUpdateMs) + " " + percentiles("surface_probe", surfaceProbeMs)
             status = when {
                 this.failed -> "FAIL"
                 stopReason == "duration" && accepted == 0 -> "NO_DEPTH"
@@ -789,6 +904,7 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
                 "observed_valid_fraction=${fraction(observed.validFraction)} " +
                 "observed_confident_fraction=${fraction(observed.confidentFraction)} " +
                 "observed_capacity_reached=${observed.capacityReached} observed_counts_include_reprojection=true " +
+                "$surfaceLine surface_semantics=orientation_only no_floor_or_wall_confirmation=true " +
                 "median_depth_mm=${median ?: "null"} p90_depth_mm=${p90 ?: "null"} " +
                 "distances_label=NOT_calibrated $latencyLine " +
                 "elapsed_s=${format(elapsedS)} duration_seconds=$durationSeconds " +
@@ -864,6 +980,8 @@ class RawDepthDiagnosticActivity : ComponentActivity(), GLSurfaceView.Renderer {
 
     companion object {
         const val EXTRA_DURATION_SECONDS = "triguide.diagnostic.duration_seconds"
+        const val EXTRA_CAMERA_PREVIEW = "triguide.diagnostic.camera_preview"
+        const val EXTRA_SURFACE_PROBE = "triguide.diagnostic.surface_probe"
 
         private const val TAG = "TriGuideRawDepth"
         private const val DEFAULT_DURATION_SECONDS = 20

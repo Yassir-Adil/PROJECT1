@@ -1,5 +1,19 @@
 # Adapted ARCore sample pattern
 
+## Debug live camera background —2026-10-20
+
+DiagnosticCameraBackground.kt adapts the OES screen-quad background/shader
+pattern from Google ARCore SDK v1.57.0 shared_camera_java sample, Copyright2017
+Google LLC; modifications Copyright2026 TriGuide-AI contributors.
+Source: https://github.com/google-ar/arcore-android-sdk/blob/v1.57.0/samples/shared_camera_java/app/src/main/java/com/google/ar/core/examples/java/common/rendering/BackgroundRenderer.java
+Shaders: same sample assets/shaders/screenquad.vert and screenquad.frag.
+Apache-2.0 source notice retained in Kotlin; full license arcore-sample-LICENSE.txt.
+Changes: minimal Kotlin/fake-GL seam, checked shader/program lifecycle, SDK UV
+mapping, no depth visualization/shared-camera framework/assets, ephemeral display
+only. No RGB Image acquisition, saved pixels, recording or navigation authority.
+
+## Earlier raw-depth lifecycle adaptation
+
 `RawDepthDiagnosticActivity.kt` adapts the GLSurfaceView/session lifecycle pattern
 from Google's ARCore SDK v1.57.0 `samples/raw_depth_java/.../RawDepthActivity.java`.
 Copyright 2021 Google LLC. Modifications Copyright 2026 TriGuide-AI contributors.

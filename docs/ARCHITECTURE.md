@@ -1,5 +1,18 @@
 # Architecture
 
+## 0.9.28 debug surface probes / camera preview —2026-10-20
+
+One existing ARCore Session owns all camera work. Optional horizontal+vertical
+planes feed four bounded VIEW-pixel hit queries, filtered by tracking, subsumption,
+polygon and finite positive distance. Only primitive orientation/ray-distance
+observations leave the GL callback; not ADE20K semantics or navigation evidence.
+Same-frame NDC-to-texture SDK transform drives a licensed OES background helper
+with reused buffers, strict shader checks, private program lifecycle and queued
+GL cleanup before pause. Context destruction backs up terminal cleanup. Preview
+and surfaces have independent debug intent switches; no RGB Image/store/upload.
+Raw-depth proof/gates and all main guidance remain unchanged. Evidence:
+SURFACE_PREVIEW_2026-10-20.md. SDK upward hits observed; wall accuracy not proven.
+
 ## 0.9.27 debug same-Frame provenance / observed coverage —2026-10-20
 
 RawDepthPairScope brackets both SDK image acquires on one unchanged Frame;

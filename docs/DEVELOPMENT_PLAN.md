@@ -2,6 +2,17 @@
 
 **Principle:** Software + APK first. No physical robot chassis until the user explicitly asks.
 
+## Completed pair —2026-10-20,0.9.28/41
+
+Reused SDK planes/ray hits and licensed Google OES preview pattern; no new model/
+dependency.539-test gate passes; installed/hash verified. Owner confirms preview.
+Actual SDK upward hits11/19 in a warm run; no vertical hits, so wall recognition
+and ground-reference accuracy remain open. Four negative rays do not prove no
+plane exists. Next priority pair: instrument plane availability versus ray misses
+and held-out measured wall/floor/table/mat/edge geometry; only then evaluate a
+single ARCore-owned camera path for detector/segmentation/depth. Avoid competing
+CameraX session or premature navigation fusion. Evidence: SURFACE_PREVIEW_2026-10-20.md.
+
 ## Completed two improvements —2026-10-20,0.9.27/40
 
 Implement same-current-Frame pairing instead of unsupported cross-clock gates,

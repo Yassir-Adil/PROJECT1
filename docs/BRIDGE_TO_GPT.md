@@ -1,5 +1,15 @@
 # Bridge: Cursor → Codex
 
+### CODEX_RECORD —2026-10-20 surfaces+preview,0.9.28/41 installed
+
+S/B/R disjoint tasks complete. Codex RED before source;40 focused and539 full
+tests pass, both builds/policy pass, Lint0 errors55/34 warnings. Installed hash
+verified. Owner confirms live preview and markers.30s:27 diagnostic admits,
+0 plane-ray hits; warm20s:41 admits,11/19 upward-hit samples,vertical0. No wall
+accuracy proof. Focused Back4.65s:234 draws, paused+GL release+CLOSED,0 depth.
+All source license pins, metrics, corrections and limits recorded in
+SURFACE_PREVIEW_2026-10-20.md. No guidance/model/permission/private-upload change.
+
 ### CODEX_RECORD —2026-10-20 same-Frame / observed coverage
 
 P/C tests landed before source; Codex executed compile RED for each. Helpers
